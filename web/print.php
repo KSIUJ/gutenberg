@@ -23,7 +23,7 @@ else{
 		}
 		else{
 			echo "The file ". basename( $_FILES["fileToUpload"]["name"]). " has been uploaded.";
-			$output=shell_exec(' "C:\Program Files (x86)\SumatraPDF\SumatraPDF.exe" -print-to "'.$printerName.'" '.$target_file." 2>&1");
+			$output=shell_exec(' "C:\Program Files (x86)\SumatraPDF\SumatraPDF.exe" -print-to "'.$printerName.'" "'.$target_file.'" 2>&1');
 			if ($output==""){
 				echo '<h1 style="color: green">Print OK</h1><script>window.location.replace("ok.php");</script>';
 				//unlink($target_file); //store files
