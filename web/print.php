@@ -29,7 +29,7 @@ else{
 				//unlink($target_file); //store files
 			}
 			else{
-				echo '<h1 style="color: red">Error printing, see log below for details</h1>';
+				echo '<h1 style="color: yellow">Printing engine reported something, see log below for details</h1>';
 				echo "<pre>".$output."</pre>";
 				echo '<a href="/gutenberg">Main page</a>';
 			}
