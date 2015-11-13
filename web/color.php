@@ -1,15 +1,7 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>Project: Gutenberg</title>
-</head>
-<body>
-<h1>Project: Gutenberg</h1><hr />
 <?php
 require_once("config.php");
 $PASSWD = $_POST['passwd'];
 $COLOR = $_POST['enableColor']=='true' ? 'EnableColor' : 'DisableColor';
-
 
 $loginURL = 'http://'.$printerIP.'/hp/device/SignIn/Index';
 $colorURL = 'http://'.$printerIP.'/hp/device/RestrictColor/Save';
@@ -41,12 +33,9 @@ $return = curl_exec($process);
 curl_close($process);
 
 if (strpos($return, "HTTP/1.1 200 OK")!==false){
-	echo "<h1 style='color: green'>Color options successufully set to ".$COLOR."</h1>";
+	header('Location: index.php?action=print&type=success&msg=Color policy successfully changed.'); die();
 }
 else{
-	echo "<h1 style='color: red'>Error changing color - check admin password</h1>";
+	header('Location: index.php?action=color&type=error&msg=Unknown error - try again or change color policy manually and cotact admin.'); die();
 }
 ?>
-<a href="/gutenberg">Main page</a>
-</body>
-</html>
