@@ -6,7 +6,7 @@ version 2 - UI + printing options
 ## setup
   - printer: make printing and http web panel available for server network 
   - windows server: configure hp printer
-  - windows server: install sumatrapdf
+  - windows server: install sumatrapdf - latest version (at least 3.1.1 !)
   - webserver on windows: unpack web/ to public html directory
   - change settings in config.php !!!
 
