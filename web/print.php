@@ -40,6 +40,10 @@ if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file)) {
 			header('Location: index.php?action=print&type=success&msg=Document is printing now.'); 
 			file_put_contents("log.txt", date('Y/m/d H:i:s')." - OK - ".$cmd."\n", FILE_APPEND | LOCK_EX); die();
 		}
+		else if (strpos($output,"font.c:63: not building glyph bbox table")){
+			header('Location: index.php?action=print&type=success&msg=Document is printing now. There was font warning but don\'t worry.'); 
+			file_put_contents("log.txt", date('Y/m/d H:i:s')." - OK (font) - ".$cmd."\n".$output."\n\n", FILE_APPEND | LOCK_EX); die();
+		}
 		else{
 			header('Location: index.php?action=print&type=warning&msg=There was some kind of unexpected system behaviour, but document should printing now. If not - contact admin.');
 			file_put_contents("log.txt", date('Y/m/d H:i:s')." - ERROR - ".$_FILES["fileToUpload"]["name"]."\n".$output."\n\n", FILE_APPEND | LOCK_EX); die();
