@@ -42,63 +42,67 @@
     <div class="container">
       <br />
       <?php if ($_GET['type']=="success"): ?>
-      	<div class="alert alert-success" role="alert"><strong>Success!</strong> <?php echo(htmlspecialchars($_GET['msg'])); ?></div>
+        <div class="alert alert-success" role="alert"><strong>Success!</strong> <?php echo(htmlspecialchars($_GET['msg'])); ?></div>
       <?php elseif ($_GET['type']=="error"): ?>
-      	<div class="alert alert-danger" role="alert"><strong>Error occured!</strong> <?php echo(htmlspecialchars($_GET['msg'])); ?></div>
+        <div class="alert alert-danger" role="alert"><strong>Error occured!</strong> <?php echo(htmlspecialchars($_GET['msg'])); ?></div>
       <?php elseif ($_GET['type']=="warning"): ?>
-      	<div class="alert alert-danger " role="alert"><strong>Warning!</strong> <?php echo(htmlspecialchars($_GET['msg'])); ?></div>
+        <div class="alert alert-danger " role="alert"><strong>Warning!</strong> <?php echo(htmlspecialchars($_GET['msg'])); ?></div>
       <?php elseif ($_COOKIE["myAlertDismissed"]!="true"): ?>
-      	<script>
-      	$( document ).ready(function() {
-      	$('#myAlert').on('closed.bs.alert', function () {
-  			document.cookie = "myAlertDismissed=true; expires=Sun, 01 Jan 2017 00:00:00 UTC"; 
-		});});</script>
-      	<div id="myAlert" class="alert alert-info alert-dismissible" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>This system has been recently rebuilt!</strong> If you find any bug please add issue at <a href="https://github.com/KSIUJ/gutenberg/issues/new">Github</a>.</div>
+        <script>
+        $( document ).ready(function() {
+        $('#myAlert').on('closed.bs.alert', function () {
+        document.cookie = "myAlertDismissed=true; expires=Sun, 01 Jan 2017 00:00:00 UTC"; 
+    });});</script>
+        <div id="myAlert" class="alert alert-info alert-dismissible" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>This system has been recently rebuilt!</strong> If you find any bug please add issue at <a href="https://github.com/KSIUJ/gutenberg/issues/new">Github</a>.</div>
       <?php endif; ?>
       <div class="starter-template" style="padding: 0">
         <!--<h1>Gutenberg</h1>-->
       </div>
       <?php if ($_GET['action']=='color'): ?>
         <h2> Admin: change color restriction policies </h2>
-		<form action="color.php" method="post" enctype="multipart/form-data">
-			Provide target printer admin password: <input type="password" name="passwd"  class="form-control" id="passwd">
-			<br />
-			<input type="radio" name="enableColor" value="true">Enable color<br />
-			<input type="radio" name="enableColor" value="false">Disable color (enforce white-black mode)<br />
-			<br />
-		    <button type="submit" name="submit" class="btn btn-default">Change settings</button>
-		</form>
-	  <?php else: ?>
-	  	<form action="print.php" method="post" enctype="multipart/form-data">
-      	<h3>1)</h3>
+    <form action="color.php" method="post" enctype="multipart/form-data">
+      Provide target printer admin password: <input type="password" name="passwd"  class="form-control" id="passwd">
+      <br />
+      <input type="radio" name="enableColor" value="true">Enable color<br />
+      <input type="radio" name="enableColor" value="false">Disable color (enforce white-black mode)<br />
+      <br />
+        <button type="submit" name="submit" class="btn btn-default">Change settings</button>
+    </form>
+    <?php else: ?>
+      <form action="print.php" method="post" enctype="multipart/form-data">
+        <h3>1)</h3>
         Select <strong>PDF</strong> file to print:
-	    <input type="file" class="btn btn-default" name="fileToUpload" id="fileToUpload" />	
-		<h3>2)</h3>	
-		Provide printing authorization key:<br />
-		<input type="text" name="passwd"  class="form-control" id="passwd"><br />	
-		<h3>3) <span class="label label-default">New!</span></h3>	
-		<input type="checkbox" name="duplex" value="enabled"> Duplex enabled<br />
-		<table border=0>
-		<tr><td> <label for="pages">Pages to print*&nbsp;</label></td><td><input type="text" class="form-control"  name="pages" id="pages"></td></tr>
-		<tr><td> <label for="copies">How many copies&nbsp;</label></td><td><input type="number"  class="form-control" name="copies" id="copies" value=1 size="2"></td></tr>
-		</table>
-		*) you can type values as in normal printer dialog, eg. 1-7,9,12; empty = all
-		<h3>4)</h3>
-		<button type="submit" name="submit"  class="btn btn-default">
-		  <span class='glyphicon glyphicon-print' aria-hidden='true'></span>
-		  <span class='glyphicon glyphicon-upload' aria-hidden='true'></span>
-		  Upload and print file
-		</button>
-	  </form>
-	  <?php endif; ?>
+      <input type="file" class="btn btn-default" name="fileToUpload" id="fileToUpload" /> 
+    <h3>2)</h3> 
+    Provide ksi WiFi WPA2 key as authorization:<br />
+    <input type="text" name="passwd"  class="form-control" id="passwd"><br /> 
+    <h3>3)</h3> 
+    <input type="checkbox" name="duplex" value="enabled"> Duplex enabled<br />
+    <table border=0>
+    <tr><td> <label for="pages">Pages to print*&nbsp;</label></td><td><input type="text" class="form-control"  name="pages" id="pages"></td></tr>
+    <tr><td> <label for="copies">How many copies&nbsp;</label></td><td><input type="number"  class="form-control" name="copies" id="copies" value=1 size="2"></td></tr>
+    </table>
+    *) you can type values as in normal printer dialog, eg. 1-7,9,12; empty = all
+    <h3>4)</h3>
+    <button type="submit" name="submit"  class="btn btn-default">
+      <span class='glyphicon glyphicon-print' aria-hidden='true'></span>
+      <span class='glyphicon glyphicon-upload' aria-hidden='true'></span>
+      Upload and print file
+    </button>
+    
+    <h3>*)</h3> 
+    <input type="checkbox" name="sudo" value="enabled"> SUDO printing (enable color, print file, disable color)<br />
+    <input type="password" name="passwd_sudo"  class="form-control" id="passwd"><br />
+    </form>
+    <?php endif; ?>
 
       <br />
       <hr />
       <center>
-      	<br />
-      	<img src="https://upload.wikimedia.org/wikipedia/commons/3/33/Gutenberg.jpg" height="200px"/><br />
-      	<br />
-      	&copy; <a href="http;//dsinf.net">Daniel Skowroński</a> &amp; <a href="http://ksi.ii.uj.edu.pl">KSI UJ</a>
+        <br />
+        <img src="https://upload.wikimedia.org/wikipedia/commons/3/33/Gutenberg.jpg" height="200px"/><br />
+        <br />
+        &copy; <a href="http://dsinf.net">Daniel Skowroński</a> &amp; <a href="http://ksi.ii.uj.edu.pl">KSI UJ</a>
       </center>
     </div><!-- /.container -->
 

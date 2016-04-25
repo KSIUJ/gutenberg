@@ -3,6 +3,12 @@ simple proxy for hp laserjet 500 printer: print pdf and change color restriction
 
 version 2 - UI + printing options
 
+## features
+  - upload PDF and print
+  - customize print: enable duplex, number of copies, select some pages to print
+  - change color policy (allow color or enforce black-white)
+  - sudo printing - enable color, print, disable color
+
 ## setup
   - printer: make printing and http web panel available for server network 
   - windows server: configure hp printer
