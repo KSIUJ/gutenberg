@@ -72,8 +72,23 @@
     <?php elseif ($_GET['action']=='lcd'): ?>
       <h2> Preview LCD </h2>
       <div id="divp" style="width:160px;height: 80px;"><img src="lcd.php" id="lcdp" style="overlow: hidden;"/></div>
+      Please do not stay on this page too long to limit network load.
+      <div id="divp" style="width:160px;height: 80px;"><img src="lcd.php" id="lcdp" style="overlow: hidden;"/></div>
       <script>
-      setInterval(function(){ document.getElementById("lcdp").src = "lcd.php?"+ new Date().getTime(); }, 7500);
+      function IsImageOk(img) {
+        if (!img.complete) {
+          return false;
+        }
+        if (typeof img.naturalWidth !== "undefined" && img.naturalWidth === 0) {
+          return false;
+        }
+        return true;
+      }
+      setInterval(function(){ 
+        var img = document.getElementById("lcdp"); 
+        if (IsImageOk(img)) 
+          img.src = "lcd.php?"+ new Date().getTime(); 
+      }, 500);
       </script>
     <?php else: ?>
       <form action="print.php" method="post" enctype="multipart/form-data">
