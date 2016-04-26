@@ -33,6 +33,7 @@
         <div id="navbar" class="collapse navbar-collapse">
           <ul class="nav navbar-nav">
             <li class="active"><a href="?action=print">Print PDF</a></li>
+            <li><a href="?action=lcd">Preview LCD</a></li>
             <li><a href="?action=color">Change color policy</a></li>
           </ul>
         </div><!--/.nav-collapse -->
@@ -68,6 +69,12 @@
       <br />
         <button type="submit" name="submit" class="btn btn-default">Change settings</button>
     </form>
+    <?php elseif ($_GET['action']=='lcd'): ?>
+      <h2> Preview LCD </h2>
+      <div id="divp" style="width:160px;height: 80px;"><img src="lcd.php" id="lcdp" style="overlow: hidden;"/></div>
+      <script>
+      setInterval(function(){ document.getElementById("lcdp").src = "lcd.php?"+ new Date().getTime(); }, 7500);
+      </script>
     <?php else: ?>
       <form action="print.php" method="post" enctype="multipart/form-data">
         <h3>1)</h3>
