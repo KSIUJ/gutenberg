@@ -1,11 +1,14 @@
 <?php
 require_once("config.php");require_once("funcs.php");
 
+$timestamp = microtime(true);
+
 function putToLog($text){
 	file_put_contents("log.txt", date('Y/m/d H:i:s')." - ".$text."\n", FILE_APPEND | LOCK_EX);
 }
 function redir($type,$msg){
-	header('Location: index.php?action=print&type='.$type.'&msg='.$msg);
+	global $timestamp;
+	header('Location: index.php?action=print&type='.$type.'&msg='.$msg.'&timestamp='.$timestamp);
 }
 
 if ($_POST['passwd']!=$printPassword){
@@ -25,12 +28,12 @@ if ($_POST['copies']>10) {
 
 
 $_FILES["fileToUpload"]["name"] = preg_replace("/[^A-Za-z0-9\.]/", '-', $_FILES["fileToUpload"]["name"]);
-$target_file = $target_dir.basename($_FILES["fileToUpload"]["name"]);
+$target_file = $target_dir."/".$timestamp."__".basename($_FILES["fileToUpload"]["name"]);
 $uploadOk = 1;
 
 if (!move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file)) {
 	if ($_POST["sudo"]=='enabled'){changeColor($PASSWD,'DisableColor');	}
-	redir("error","Cannot upload file. Maybe it\'s too big? Please try again!!!");
+	redir("error","Cannot upload file. Maybe it's too big? Please try again!!!");
 	putToLog("failed to move_uploaded_file() - ".$target_file); 	die();
 }
 if (pathinfo($target_file)["extension"] != "pdf"){
@@ -63,7 +66,7 @@ if ($output==""){
 }
 else if (strpos($output,"font.c:63: not building glyph bbox table")){
 	if ($_POST["sudo"]=='enabled'){changeColor($PASSWD,'DisableColor');	}
-	redir("success","Document is printing now. There was font warning but don\'t worry.");
+	redir("success","Document is printing now. There was font warning but don't worry.");
 	putToLog("OK (font!) - ".$cmd); die();
 }
 else{

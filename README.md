@@ -20,3 +20,4 @@ version 2 - UI + printing options
 ## debuging
   - if warning is reported - check log.txt file
   - you can inspect uploaded files in files/ directory
+  - if you want just to try uploading without actual printing just change number of copies to 0
