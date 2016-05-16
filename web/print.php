@@ -36,7 +36,7 @@ if (!move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file)) {
 	redir("error","Cannot upload file. Maybe it's too big? Please try again!!!");
 	putToLog("failed to move_uploaded_file() - ".$target_file); 	die();
 }
-if (pathinfo($target_file)["extension"] != "pdf"){
+if (strtolower(pathinfo($target_file)["extension"]) != "pdf"){
 	redir("error","Currently you can print PDFs only. Tip: you can print to PDF on your computer using Bullzip PDF printer and then upload file here."); 
 	die();
 }
