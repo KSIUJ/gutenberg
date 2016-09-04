@@ -33,8 +33,9 @@
         <div id="navbar" class="collapse navbar-collapse">
           <ul class="nav navbar-nav">
             <li class="active"><a href="?action=print">Print PDF</a></li>
-            <li><a href="?action=lcd">Preview LCD</a></li>
             <li><a href="?action=color">Change color policy</a></li>
+			<li><a href="?action=lcd">Preview LCD</a></li>
+			<li><a href="?action=queue">Print queue</a></li>
           </ul>
         </div><!--/.nav-collapse -->
       </div>
@@ -43,88 +44,115 @@
     <div class="container">
       <br />
       <?php if ($_GET['type']=="success"): ?>
-        <div class="alert alert-success" role="alert"><strong>Success!</strong> <?php echo(htmlspecialchars($_GET['msg'])); ?></div>
+      	<div class="alert alert-success" role="alert"><strong>Success!</strong> <?php echo(htmlspecialchars($_GET['msg'])); ?></div>
       <?php elseif ($_GET['type']=="error"): ?>
-        <div class="alert alert-danger" role="alert"><strong>Error occured!</strong> <?php echo(htmlspecialchars($_GET['msg'])); ?></div>
+      	<div class="alert alert-danger" role="alert"><strong>Error occured!</strong> <?php echo(htmlspecialchars($_GET['msg'])); ?></div>
       <?php elseif ($_GET['type']=="warning"): ?>
-        <div class="alert alert-danger " role="alert"><strong>Warning!</strong> <?php echo(htmlspecialchars($_GET['msg'])); ?></div>
+      	<div class="alert alert-danger " role="alert"><strong>Warning!</strong> <?php echo(htmlspecialchars($_GET['msg'])); ?></div>
       <?php elseif ($_COOKIE["myAlertDismissed"]!="true"): ?>
-        <script>
-        $( document ).ready(function() {
-        $('#myAlert').on('closed.bs.alert', function () {
-        document.cookie = "myAlertDismissed=true; expires=Sun, 01 Jan 2017 00:00:00 UTC"; 
-    });});</script>
-        <div id="myAlert" class="alert alert-info alert-dismissible" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>This system has been recently rebuilt!</strong> If you find any bug please add issue at <a href="https://github.com/KSIUJ/gutenberg/issues/new">Github</a>.</div>
+      	<script>
+      	$( document ).ready(function() {
+      	$('#myAlert').on('closed.bs.alert', function () {
+  			document.cookie = "myAlertDismissed=true; expires=Sun, 01 Jan 2017 00:00:00 UTC"; 
+		});});</script>
+      	<div id="myAlert" class="alert alert-info alert-dismissible" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>Something does not work?</strong><br />If you find any <strike>bug</strike> <i>undocummented feature</i> please add issue at <a href="https://github.com/KSIUJ/gutenberg/issues/new">Github</a>. If system just got stuck please email at admin@ksi.ii.uj.edu.pl</div>
       <?php endif; ?>
       <div class="starter-template" style="padding: 0">
         <!--<h1>Gutenberg</h1>-->
       </div>
       <?php if ($_GET['action']=='color'): ?>
         <h2> Admin: change color restriction policies </h2>
-    <form action="color.php" method="post" enctype="multipart/form-data">
-      Provide target printer admin password: <input type="password" name="passwd"  class="form-control" id="passwd">
-      <br />
-      <input type="radio" name="enableColor" value="true">Enable color<br />
-      <input type="radio" name="enableColor" value="false">Disable color (enforce white-black mode)<br />
-      <br />
-        <button type="submit" name="submit" class="btn btn-default">Change settings</button>
-    </form>
-    <?php elseif ($_GET['action']=='lcd'): ?>
-      <h2> Preview LCD </h2>
-      <div id="divp" style="width:160px;height: 80px;"><img src="lcd.php" id="lcdp" style="overlow: hidden;"/></div>
-      Please do not stay on this page too long to limit network load.
-      <div id="divp" style="width:160px;height: 80px;"><img src="lcd.php" id="lcdp" style="overlow: hidden;"/></div>
-      <script>
-      function IsImageOk(img) {
-        if (!img.complete) {
-          return false;
-        }
-        if (typeof img.naturalWidth !== "undefined" && img.naturalWidth === 0) {
-          return false;
-        }
-        return true;
-      }
-      setInterval(function(){ 
-        var img = document.getElementById("lcdp"); 
-        if (IsImageOk(img)) 
-          img.src = "lcd.php?"+ new Date().getTime(); 
-      }, 500);
-      </script>
-    <?php else: ?>
-      <form action="print.php" method="post" enctype="multipart/form-data">
-        <h3>1)</h3>
+		<form action="color.php" method="post" enctype="multipart/form-data">
+			Provide target printer admin password: <input type="password" name="passwd"  class="form-control" id="passwd">
+			<br />
+			<input type="radio" name="enableColor" value="true">Enable color<br />
+			<input type="radio" name="enableColor" value="false">Disable color (enforce white-black mode)<br />
+			<br />
+		    <button type="submit" name="submit" class="btn btn-default">Change settings</button>
+		</form>
+	  <?php elseif ($_GET['action']=='lcd'): ?>
+        <h2> Preview LCD </h2>
+		Please do not stay on this page too long to limit network load.
+		<div id="divp" style="width:160px;height: 80px;"><img src="lcd.php" id="lcdp" style="overlow: hidden;"/></div>
+		<script>
+		function IsImageOk(img) {
+			if (!img.complete) {
+				return false;
+			}
+			if (typeof img.naturalWidth !== "undefined" && img.naturalWidth === 0) {
+				return false;
+			}
+			return true;
+		}
+		setInterval(function(){ 
+			var img = document.getElementById("lcdp"); 
+			if (IsImageOk(img)) 
+				img.src = "lcd.php?"+ new Date().getTime(); 
+		}, 500);
+		</script>
+	  <?php elseif ($_GET['action']=='queue'): ?>
+        <h2> Print queue </h2>
+		Does not reload automatically - use F5. This will also include print jobs issued by secret admin on terminal.
+		<table class="table">
+		<tr><th>Job ID</th><th>Status</th><th>Submit time</th><th>Temporal file identifier</th><th>Page count</th><th>UID</th></tr>
+		<?php 
+			require_once("config.php");require_once("funcs.php");
+			$cmd = 'powershell  "Get-PrintJob '.$printerName.' | ConvertTo-Csv"';
+			$output=shell_exec($cmd);
+			$lines = explode("\n", $output);
+			$data = array();
+			foreach ($lines as $l){
+				$data[] = str_getcsv($l);
+			}
+			for ($i=2; $i<count($data); $i++){
+				$r = $data[$i];
+				$pattern = '/\\\\\\d.*\.pdf/';
+				preg_match($pattern, $r[17], $matches);
+				$fname = $matches[0];
+				$status = $r[0]; 
+					     if ($status=="Prinitng") $color="green";
+					else if ($status=="Normal")   $color="blue";
+					else $color="red";
+				$status="<span style='color: $color'>$status</span>";
+				echo "<tr><td>$r[18]</td><td>$status</td><td>$r[25]</td><td>$fname</td><td>$r[26]</td><td>$r[27]</td></tr>";
+			}
+		?>
+		</table>
+	  <?php else: ?>
+	  	<form action="print.php" method="post" enctype="multipart/form-data">
+      	<h3>1)</h3>
         Select <strong>PDF</strong> file to print:
-      <input type="file" class="btn btn-default" name="fileToUpload" id="fileToUpload" /> 
-    <h3>2)</h3> 
-    Provide ksi WiFi WPA2 key as authorization:<br />
-    <input type="text" name="passwd"  class="form-control" id="passwd"><br /> 
-    <h3>3)</h3> 
-    <input type="checkbox" name="duplex" value="enabled"> Duplex enabled<br />
-    <table border=0>
-    <tr><td> <label for="pages">Pages to print*&nbsp;</label></td><td><input type="text" class="form-control"  name="pages" id="pages"></td></tr>
-    <tr><td> <label for="copies">How many copies&nbsp;</label></td><td><input type="number"  class="form-control" name="copies" id="copies" value=1 size="2"></td></tr>
-    </table>
-    *) you can type values as in normal printer dialog, eg. 1-7,9,12; empty = all
-    <h3>4)</h3>
-    <button type="submit" name="submit"  class="btn btn-default">
-      <span class='glyphicon glyphicon-print' aria-hidden='true'></span>
-      <span class='glyphicon glyphicon-upload' aria-hidden='true'></span>
-      Upload and print file
-    </button>
-    
-    <h3>*)</h3> 
-    <input type="checkbox" name="sudo" value="enabled"> SUDO printing (enable color, print file, disable color)<br />
-    <input type="password" name="passwd_sudo"  class="form-control" id="passwd"><br />
-    </form>
-    <?php endif; ?>
+	    <input type="file" class="btn btn-default" name="fileToUpload" id="fileToUpload" />	
+		<h3>2)</h3>	
+		Provide ksi WiFi WPA2 key as authorization:<br />
+		<input type="text" name="passwd"  class="form-control" id="passwd"><br />	
+		<h3>3)</h3>	
+		<input type="checkbox" name="duplex" value="enabled" checked> Duplex enabled<br />
+		<table border=0>
+		<tr><td> <label for="pages">Pages to print*&nbsp;</label></td><td><input type="text" class="form-control"  name="pages" id="pages"></td></tr>
+		<tr><td> <label for="copies">How many copies&nbsp;</label></td><td><input type="number"  class="form-control" name="copies" id="copies" value=1 size="2"></td></tr>
+		</table>
+		*) you can type values as in normal printer dialog, eg. 1-7,9,12; empty = all
+		<h3>4)</h3>
+		<button type="submit" name="submit"  class="btn btn-default">
+		  <span class='glyphicon glyphicon-print' aria-hidden='true'></span>
+		  <span class='glyphicon glyphicon-upload' aria-hidden='true'></span>
+		  Upload and print file
+		</button>
+		
+		<h3>*)</h3>	
+		<input type="checkbox" name="sudo" value="enabled"> SUDO printing (enable color, print file, disable color)<br />
+		<input type="password" name="passwd_sudo"  class="form-control" id="passwd"><br />
+	  </form>
+	  <?php endif; ?>
 
       <br />
       <hr />
       <center>
-        <br />
-        <img src="https://upload.wikimedia.org/wikipedia/commons/3/33/Gutenberg.jpg" height="200px"/><br />
-        <br />
-        &copy; <a href="http://dsinf.net">Daniel Skowroński</a> &amp; <a href="http://ksi.ii.uj.edu.pl">KSI UJ</a>
+      	<br />
+      	<img src="https://upload.wikimedia.org/wikipedia/commons/3/33/Gutenberg.jpg" height="200px"/><br />
+      	<br />
+      	&copy; <a href="http://dsinf.net">Daniel Skowroński</a> &amp; <a href="http://ksi.ii.uj.edu.pl">KSI UJ</a>
       </center>
     </div><!-- /.container -->
 
