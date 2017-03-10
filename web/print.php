@@ -22,8 +22,8 @@ if ($_POST["sudo"]=='enabled'){
 
 $_POST['pages'] = preg_replace('/[^0-9\-\,]/', '', $_POST['pages']);
 $_POST['copies'] = intval($_POST['copies']);
-if ($_POST['copies']>10) {
-	header('Location: index.php?action=print&type=error&msg=Are you kidding me? Don\'t waste paper! MAX = 10 copies'); die();
+if ($_POST['copies']>100) {
+	header('Location: index.php?action=print&type=error&msg=Are you kidding me? Don\'t waste paper! MAX = 100 copies'); die();
 }
 
 
@@ -34,7 +34,7 @@ $uploadOk = 1;
 if (!move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file)) {
 	if ($_POST["sudo"]=='enabled'){changeColor($PASSWD,'DisableColor');	}
 	redir("error","Cannot upload file. Maybe it's too big? Please try again!!!");
-	putToLog("failed to move_uploaded_file() - ".$target_file); 	die();
+	putToLog("failed to move_uploaded_file() - ".$target_file." - ".$_FILES["fileToUpload"]["tmp_name"]); 	die();
 }
 if (strtolower(pathinfo($target_file)["extension"]) != "pdf"){
 	redir("error","Currently you can print PDFs only. Tip: you can print to PDF on your computer using Bullzip PDF printer and then upload file here."); 
@@ -63,6 +63,11 @@ if ($output==""){
 	if ($_POST["sudo"]=='enabled'){changeColor($PASSWD,'DisableColor');	}
 	redir("success","Document is printing now. If not - check printer display.");
 	putToLog("OK - ".$cmd); die();
+}
+else if (strpos($output,"SnmpChannel::Open()")){
+	if ($_POST["sudo"]=='enabled'){changeColor($PASSWD,'DisableColor');	}
+	redir("success","Document is printing now. If not - check printer display.");
+	putToLog("OK (snmp!) - ".$cmd); die();
 }
 else if (strpos($output,"font.c:63: not building glyph bbox table")){
 	if ($_POST["sudo"]=='enabled'){changeColor($PASSWD,'DisableColor');	}
