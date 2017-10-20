@@ -1,23 +1,22 @@
-# project: gutenberg
-simple proxy for hp laserjet 500 printer: print pdf and change color restriction policies via web gui - made for internal use of KSI UJ [http://ksi.ii.uj.edu.pl] 
+# project: gutenberg (linux mutation)
+simple proxy for hp laserjet 500 printer: print pdf via web gui - made for internal use of KSI UJ [http://ksi.ii.uj.edu.pl] 
 
-version 2 - UI + printing options
+version 2.1 - Quick and dirty port of gutenberg to work on linux
+**NOT SUPPORTED**
+
 
 ## features
   - upload PDF and print
-  - customize print: enable duplex, number of copies, select some pages to print
-  - change color policy (allow color or enforce black-white)
-  - sudo printing - enable color, print, disable color
-  - live preview LCD
+  - customize print: enable duplex, number of copies
+  - sudo printing - color print
 
 ## setup
-  - printer: make printing and http web panel available for server network 
-  - windows server: configure hp printer
-  - windows server: install sumatrapdf - latest version (at least 3.1.1 !)
-  - webserver on windows: unpack web/ to public html directory
-  - change settings in config.php !!!
+  - printer: make printing available for server network 
+  - linux server: install drivers, configure cups
+  - linux server: test lp command
+  - setup web server with php (tested with nginx + php-fpm)
+  - (optional) configure basic auth for /print.php and /print-color.php
 
 ## debuging
-  - if warning is reported - check log.txt file
-  - you can inspect uploaded files in files/ directory
-  - if you want just to try uploading without actual printing just change number of copies to 0
+  - if warning is reported - check /var/log/gutenberg.log, web server and php log files
+  - you can inspect uploaded files in /tmp directory
