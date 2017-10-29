@@ -1,0 +1,8 @@
+{% extends 'bootstrap4/bootstrap4.html' %}
+
+{% load staticfiles %}
+
+{% block bootstrap4_extra_head %}
+    <link rel="stylesheet" href="{% static 'main.css' %}">
+    <title>{% block title %}{% endblock %} - Gutenberg</title>
+{% endblock %}

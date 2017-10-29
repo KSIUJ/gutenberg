@@ -1,0 +1,32 @@
+{% extends 'common/bootstrap.html' %}
+
+{% load bootstrap4 %}
+{% load static %}
+
+{% block bootstrap4_content %}
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
+        <a class="navbar-brand" href="{% url 'print' %}">
+            <img srcset="{% static 'logo30.png' %},
+                         {% static 'logo60.png' %} 2x"
+                 src="{% static 'logo30.png' %}" alt="">
+            Gutenberg
+        </a>
+    </nav>
+
+    <main class="container">
+        <h1 class="display-4 mt-3">{% block title %}{% endblock %}</h1>
+
+        {% autoescape off %}{% bootstrap_messages %}{% endautoescape %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+        <span class="text-muted">
+            &copy; <a href="https://ksi.ii.uj.edu.pl">KSI UJ</a> |
+            <a href="https://github.com/KSIUJ/gutenberg">Source</a>
+        </span>
+        </div>
+    </footer>
+{% endblock %}

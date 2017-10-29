@@ -1,0 +1,28 @@
+{% extends 'common/base.html' %}
+{% load bootstrap4 %}
+
+{% block title %}Print{% endblock %}
+
+{% block content %}
+    <form role="form" class="form" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        {% bootstrap_form_errors form type='non_fields' layout='horizontal' %}
+
+        {% include 'common/forms/auth.html' %}
+
+        <h4>File upload</h4>
+        {% bootstrap_field form.file_to_print layout='horizontal' %}
+
+        <h4>Print settings</h4>
+        {% bootstrap_field form.copy_number layout='horizontal' %}
+        {% bootstrap_field form.two_sided_enabled layout='horizontal' label_class='d-none d-md-block col-md-3 col-lg-2' %}
+        {% bootstrap_field form.color_enabled layout='horizontal' label_class='d-none d-md-block col-md-3 col-lg-2' %}
+
+        {% buttons %}
+            <button type="submit" class="btn btn-primary">
+                Print
+            </button>
+        {% endbuttons %}
+    </form>
+{% endblock %}
