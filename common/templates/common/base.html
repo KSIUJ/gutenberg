@@ -6,9 +6,11 @@
 {% block bootstrap4_content %}
     <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
         <a class="navbar-brand" href="{% url 'print' %}">
-            <img srcset="{% static 'logo30.png' %},
-                         {% static 'logo60.png' %} 2x"
-                 src="{% static 'logo30.png' %}" alt="">
+            <img srcset="{% static 'img/logo-30.png' %},
+                         {% static 'img/logo-60.png' %} 2x,
+                         {% static 'img/logo-90.png' %} 3x,
+                         {% static 'img/logo-120.png' %} 4x"
+                 src="{% static 'img/logo-30.png' %}" alt="">
             Gutenberg
         </a>
     </nav>
