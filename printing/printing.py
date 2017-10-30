@@ -53,7 +53,7 @@ def generate_hp500_options(copy_number: int, color_enabled: bool,
                            two_sided_enabled: bool):
     options = []
     options += ['-n', str(copy_number)]
-    options += ['-o', 'HPColorAsGray={}'.format(color_enabled)]
+    options += ['-o', 'HPColorAsGray={}'.format(not color_enabled)]
     options += ['-o', 'Duplex={}'.format(
         'DuplexNoTumble' if two_sided_enabled else 'None')]
     return options
