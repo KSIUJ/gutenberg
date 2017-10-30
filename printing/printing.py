@@ -16,6 +16,11 @@ SUPPORTED_FILE_FORMATS = DOCUMENT_FORMATS + IMAGE_FORMATS + PDF_FORMAT
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SANDBOX_PATH = os.path.join(BASE_DIR, 'sandbox.sh')
 
+CONVERT_OPTIONS = [
+    '-resize', '2365x3335', '-gravity', 'center', '-background', 'white',
+    '-extent', '2490x3510', '-units', 'PixelsPerInch', '-density 300x300'
+]
+
 
 def convert_to_pdf(filename):
     tmpdir = tempfile.mkdtemp()
@@ -31,7 +36,8 @@ def convert_to_pdf(filename):
     if is_image:
         out = tmpdir + '/out.pdf'
         subprocess.check_call(
-            [SANDBOX_PATH, tmpdir, 'convert', tmpname, out])
+            [SANDBOX_PATH, tmpdir, 'convert', tmpname] + CONVERT_OPTIONS +
+            [out])
     elif is_pdf:
         out = tmpname
     elif is_doc:
