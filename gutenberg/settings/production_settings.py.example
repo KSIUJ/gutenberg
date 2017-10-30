@@ -9,7 +9,8 @@ ALLOWED_HOSTS = []
 ADMINS = []
 
 # Logging
-LOGGING['handlers']['file']['filename'] = '/var/log/gutenberg.log'
+LOGGING['handlers']['print_file']['filename'] = '/var/log/gutenberg/print.log'
+LOGGING['handlers']['django_file']['filename'] = '/var/log/gutenberg/django.log'
 
 # Printing
 # Directory to store the printed files in

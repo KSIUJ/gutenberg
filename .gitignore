@@ -54,6 +54,8 @@ coverage.xml
 *.log
 .static_storage/
 .media/
+gutenberg/settings/local_settings.py
+gutenberg/settings/production_settings.py
 
 # Flask stuff:
 instance/

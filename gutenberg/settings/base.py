@@ -114,10 +114,18 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple'
         },
-        'file': {
+        'print_file': {
             'level': 'INFO',
             'class': 'logging.handlers.TimedRotatingFileHandler',
-            'filename': os.path.join(BASE_DIR, 'gutenberg.log'),
+            'filename': os.path.join(BASE_DIR, 'print.log'),
+            'formatter': 'verbose',
+            'when': 'midnight',
+            'backupCount': '365',
+        },
+        'django_file': {
+            'level': 'WARNING',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': os.path.join(BASE_DIR, 'django.log'),
             'formatter': 'verbose',
             'when': 'midnight',
             'backupCount': '365',
@@ -129,7 +137,7 @@ LOGGING = {
     },
     'loggers': {
         'django': {
-            'handlers': ['console'],
+            'handlers': ['console', 'django_file'],
             'propagate': True,
         },
         'django.request': {
@@ -138,8 +146,9 @@ LOGGING = {
             'propagate': False,
         },
         'gutenberg': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console', 'print_file'],
             'level': 'INFO',
+            'propagate': True,
         }
     }
 }
