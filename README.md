@@ -23,16 +23,16 @@ for internal use of [KSI UJ](http://ksi.ii.uj.edu.pl).
 ### Setting up the webapp (for the lazy people)
 First, set the temporary `GUTENBERG_ENV` environment variable to one of these
 two values: 
-```
+```sh
 export GUTENBERG_ENV=local # local development
 export GUTENBERG_ENV=production # production settings
 ```
 And, if you haven't done it yet, set your `$EDITOR` variable:
-```
+```sh
 export EDITOR=vim # flamewar starting in 3, 2, 1...
 ```
 Now, execute the followind commands:
-```
+```sh
 export DJANGO_SETTINGS_MODULE=gutenberg.settings.${GUTENBERG_ENV}_settings
 virtualenv -p python3 venv
 source venv/bin/activate
