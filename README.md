@@ -31,7 +31,7 @@ And, if you haven't done it yet, set your `$EDITOR` variable:
 ```sh
 export EDITOR=vim # flamewar starting in 3, 2, 1...
 ```
-Now, execute the followind commands:
+Now, execute the following commands:
 ```sh
 export DJANGO_SETTINGS_MODULE=gutenberg.settings.${GUTENBERG_ENV}_settings
 virtualenv -p python3 venv
