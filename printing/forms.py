@@ -16,10 +16,6 @@ logger = logging.getLogger('gutenberg.printing')
 
 
 class PrintForm(forms.Form):
-    username = forms.CharField(label='Username', max_length=50, required=True)
-    password = forms.CharField(label='Password', max_length=200, required=True,
-                               widget=forms.PasswordInput)
-
     file_to_print = forms.FileField(
         required=True,
         help_text='Supported formats: {}'.format(
@@ -59,26 +55,40 @@ class PrintForm(forms.Form):
         return pages_to_print.translate(
             str.maketrans('', '', string.whitespace))
 
+
+class LoginForm(forms.Form):
+    username = forms.CharField(label='Username', max_length=50, required=True)
+    password = forms.CharField(label='Password', max_length=200, required=True,
+                               widget=forms.PasswordInput)
+
     def clean(self):
-        cleaned_data = super(PrintForm, self).clean()
+        cleaned_data = super(LoginForm, self).clean()
 
         # Check the credentials
         username = cleaned_data.get('username')
         password = cleaned_data.get('password')
-        color_enabled = cleaned_data.get('color_enabled')
+
+        color_enabled = True
 
         if (settings.PRINT_AUTHENTICATE and username and password and
                 color_enabled is not None):
             p = pam.pam()
+
+            # Try to authenticate with with color enabled first
             authenticated = p.authenticate(
-                username, password,
-                settings.PRINT_COLOR_SERVICE_NAME if color_enabled else
-                settings.PRINT_SERVICE_NAME)
+                username, password, settings.PRINT_COLOR_SERVICE_NAME)
+            if not authenticated:
+                authenticated = p.authenticate(
+                    username, password, settings.PRINT_SERVICE_NAME)
+                color_enabled = False
+
             if not authenticated:
                 self.add_error('password',
                                'Could not authenticate: {}'.format(p.reason))
                 logger.info(
                     'Could not authenticate user %s: %s (sudo printing: %s)',
                     username, p.reason, color_enabled)
+
+        cleaned_data['color_enabled'] = color_enabled
 
         return cleaned_data
