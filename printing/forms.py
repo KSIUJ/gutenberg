@@ -1,4 +1,6 @@
 import logging
+import string
+
 import os
 import pam
 from django import forms
@@ -7,6 +9,8 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import UploadedFile
 
 from printing.printing import SUPPORTED_FILE_FORMATS
+
+PAGES_REGEX = r"^\s*\d+(?:\s*-\s*\d+)?(\s*,\s*\d+(?:\s*-\s*\d+)?)*\s*$"
 
 logger = logging.getLogger('gutenberg.printing')
 
@@ -23,6 +27,13 @@ class PrintForm(forms.Form):
 
     copy_number = forms.IntegerField(label='Copies', initial=1, required=True,
                                      min_value=1, max_value=100)
+    pages_to_print = forms.RegexField(
+        regex=PAGES_REGEX, label='Pages', max_length=200, required=False,
+        help_text='Pages to print, e.g. 1-4, 7, 13-21',
+        widget=forms.TextInput(attrs={
+            'placeholder': 'All pages',
+            'pattern': PAGES_REGEX
+        }))
     two_sided_enabled = forms.BooleanField(
         label='Two-sided', initial=True, required=False,
         help_text='Please consider the environment before disabling this '
@@ -41,6 +52,12 @@ class PrintForm(forms.Form):
                 params={'ext': ext})
 
         return file_to_print
+
+    def clean_pages_to_print(self):
+        pages_to_print: str = self.cleaned_data['pages_to_print']
+        # Remove all whitespace
+        return pages_to_print.translate(
+            str.maketrans('', '', string.whitespace))
 
     def clean(self):
         cleaned_data = super(PrintForm, self).clean()
