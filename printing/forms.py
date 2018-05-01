@@ -50,10 +50,20 @@ class PrintForm(forms.Form):
         return file_to_print
 
     def clean_pages_to_print(self):
-        pages_to_print: str = self.cleaned_data['pages_to_print']
+        pages: str = self.cleaned_data['pages_to_print']
         # Remove all whitespace
-        return pages_to_print.translate(
-            str.maketrans('', '', string.whitespace))
+        pages = pages.translate(str.maketrans('', '', string.whitespace))
+
+        # Check for invalid page ranges (e.g. 3-1)
+        parts = [part.split('-') for part in pages.split(',')]
+        for part in parts:
+            # In case of single page numbers, part[0] and part[-1] is the
+            # same thing, so we don't have to separately check for that
+            if part[0] > part[-1]:
+                raise ValidationError('Invalid page range: {}-{}'
+                                      .format(part[0], part[-1]))
+
+        return pages
 
 
 class LoginForm(forms.Form):
