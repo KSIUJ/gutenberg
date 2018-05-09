@@ -47,8 +47,8 @@ class PrintView(LoginRequiredMixin, SuccessMessageMixin, FormView):
 
     def get_form(self, form_class=None):
         form = super(PrintView, self).get_form(form_class)
-        if not self.request.session['color_enabled']:
-            form.fields.pop('color_enabled')
+        if not self.request.session[USER_COLOR_ENABLED_SESSION_KEY]:
+            form.fields.pop(COLOR_ENABLED_FIELD_NAME)
         return form
 
     def get_initial(self):
@@ -65,7 +65,7 @@ class PrintView(LoginRequiredMixin, SuccessMessageMixin, FormView):
         # If the user does not have permission to use color printing,
         # ensure the document will not print with colors
         if not self.request.session[USER_COLOR_ENABLED_SESSION_KEY]:
-            form.cleaned_data[USER_COLOR_ENABLED_SESSION_KEY] = False
+            form.cleaned_data[COLOR_ENABLED_FIELD_NAME] = False
 
         self.upload_and_print_file(username=self.request.session['user'],
                                    **form.cleaned_data)
