@@ -32,7 +32,8 @@ class LoginRequiredMixin:
     """Verify that the current user is authenticated."""
 
     def dispatch(self, request, *args, **kwargs):
-        if 'user' not in request.session:
+        if (USERNAME_SESSION_KEY not in request.session or
+                USER_COLOR_ENABLED_SESSION_KEY not in request.session):
             return HttpResponseRedirect(reverse('login'))
         return super(LoginRequiredMixin, self).dispatch(
             request, *args, **kwargs)
@@ -63,7 +64,7 @@ class PrintView(LoginRequiredMixin, SuccessMessageMixin, FormView):
 
         # If the user does not have permission to use color printing,
         # ensure the document will not print with colors
-        if not self.request.session.get(USER_COLOR_ENABLED_SESSION_KEY, False):
+        if not self.request.session[USER_COLOR_ENABLED_SESSION_KEY]:
             form.cleaned_data[USER_COLOR_ENABLED_SESSION_KEY] = False
 
         self.upload_and_print_file(username=self.request.session['user'],
