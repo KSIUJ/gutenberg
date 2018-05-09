@@ -16,6 +16,15 @@ from printing.printing import print_file
 # Time for a session to expire: 30 days
 SESSION_EXPIRY = 60 * 60 * 24 * 30
 
+# Session/form keys
+USERNAME_SESSION_KEY = 'user'
+# Whether or not user is allowed to color print
+USER_COLOR_ENABLED_SESSION_KEY = 'user_color_enabled'
+# "Color print" form field name
+COLOR_ENABLED_FIELD_NAME = 'color_enabled'
+# Whether or not user has recently used color printing
+COLOR_ENABLED_SESSION_KEY = 'color_last_enabled'
+
 logger = logging.getLogger('gutenberg.printing')
 
 
@@ -30,9 +39,6 @@ class LoginRequiredMixin:
 
 
 class PrintView(LoginRequiredMixin, SuccessMessageMixin, FormView):
-    COLOR_ENABLED_FIELD_NAME = 'color_enabled'
-    COLOR_ENABLED_SESSION_KEY = 'color_enabled'
-
     template_name = 'printing/print.html'
     form_class = PrintForm
     success_url = reverse_lazy('print')
@@ -46,16 +52,19 @@ class PrintView(LoginRequiredMixin, SuccessMessageMixin, FormView):
 
     def get_initial(self):
         initial = super(PrintView, self).get_initial()
-        initial[self.COLOR_ENABLED_FIELD_NAME] = self.request.session.get(
-            self.COLOR_ENABLED_SESSION_KEY, False)
+        initial[COLOR_ENABLED_FIELD_NAME] = self.request.session.get(
+            COLOR_ENABLED_SESSION_KEY, False)
         return initial
 
     def form_valid(self, form):
-        self.request.session[self.COLOR_ENABLED_SESSION_KEY] = (
-            form.cleaned_data[self.COLOR_ENABLED_FIELD_NAME])
+        # Save "last color enabled" value in session
+        self.request.session[COLOR_ENABLED_SESSION_KEY] = (
+            form.cleaned_data.get(COLOR_ENABLED_FIELD_NAME, False))
 
-        if not self.request.session['color_enabled']:
-            form.cleaned_data['color_enabled'] = False
+        # If the user does not have permission to use color printing,
+        # ensure the document will not print with colors
+        if not self.request.session[USER_COLOR_ENABLED_SESSION_KEY]:
+            form.cleaned_data[USER_COLOR_ENABLED_SESSION_KEY] = False
 
         self.upload_and_print_file(username=self.request.session['user'],
                                    **form.cleaned_data)
@@ -91,13 +100,14 @@ class LoginView(FormView):
     success_url = reverse_lazy('print')
 
     def form_valid(self, form):
+        # "color_enabled" form field is added by our clean() method
         self.login_user(form.cleaned_data['username'],
                         form.cleaned_data['color_enabled'])
         return super(LoginView, self).form_valid(form)
 
     def login_user(self, username: str, color_enabled: bool):
-        self.request.session['user'] = username
-        self.request.session['color_enabled'] = color_enabled
+        self.request.session[USERNAME_SESSION_KEY] = username
+        self.request.session[USER_COLOR_ENABLED_SESSION_KEY] = color_enabled
         self.request.session.set_expiry(SESSION_EXPIRY)
 
 
@@ -111,5 +121,5 @@ class LogoutView(LoginRequiredMixin, RedirectView):
         return super(LogoutView, self).get_redirect_url(*args, **kwargs)
 
     def logout_user(self):
-        del self.request.session['user']
-        del self.request.session['color_enabled']
+        del self.request.session[USERNAME_SESSION_KEY]
+        del self.request.session[USER_COLOR_ENABLED_SESSION_KEY]
