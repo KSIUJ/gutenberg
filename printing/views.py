@@ -63,7 +63,7 @@ class PrintView(LoginRequiredMixin, SuccessMessageMixin, FormView):
 
         # If the user does not have permission to use color printing,
         # ensure the document will not print with colors
-        if not self.request.session[USER_COLOR_ENABLED_SESSION_KEY]:
+        if not self.request.session.get(USER_COLOR_ENABLED_SESSION_KEY, False):
             form.cleaned_data[USER_COLOR_ENABLED_SESSION_KEY] = False
 
         self.upload_and_print_file(username=self.request.session['user'],
@@ -74,7 +74,8 @@ class PrintView(LoginRequiredMixin, SuccessMessageMixin, FormView):
     @staticmethod
     def upload_and_print_file(file_to_print: UploadedFile, username: str,
                               copy_number: int, pages_to_print: str,
-                              color_enabled: bool, two_sided_enabled: bool, **_):
+                              color_enabled: bool, two_sided_enabled: bool,
+                              **_):
         name, ext = os.path.splitext(file_to_print.name)
         file_name = '{}_{}_{}'.format(
             name, username,
