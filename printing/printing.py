@@ -18,7 +18,7 @@ SANDBOX_PATH = os.path.join(BASE_DIR, 'sandbox.sh')
 
 CONVERT_OPTIONS = [
     '-resize', '2365x3335', '-gravity', 'center', '-background', 'white',
-    '-extent', '2490x3510', '-units', 'PixelsPerInch', '-density 300x300'
+    '-extent', '2490x3510', '-units', 'PixelsPerInch', '-density', '300x300'
 ]
 
 
