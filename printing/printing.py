@@ -47,13 +47,10 @@ def convert_to_pdf(filename):
     else:
         raise ValueError()
 
-    subprocess.check_call(
-        [SANDBOX_PATH, tmpdir, 'gs', '-sDEVICE=pdfwrite', '-dNOPAUSE',
-         '-dBATCH', '-dSAFER', '-dCompatibilityLevel=1.4',
-         '-sOutputFile=' + tmpdir + '/final.pdf', out])
-
+    subprocess.check_call(['./sandbox.sh', tmpdir, 'gs', '-sDEVICE=pdfwrite', '-dNOPAUSE', '-dBATCH', '-dSAFER', '-dCompatibilityLevel=1.4',
+                          '-sOutputFile=' + tmpdir + '/final-unsized.pdf', out])
+    subprocess.check_call(['./sandbox.sh', tmpdir, 'pdfjam', '--outfile', tmpdir + '/final.pdf', '--paper', 'a4paper', tmpdir + '/final-unsized.pdf'])
     return tmpdir + '/final.pdf', lambda: shutil.rmtree(tmpdir)
-
 
 def generate_hp500_options(copy_number: int, pages_to_print: str,
                            color_enabled: bool, two_sided_enabled: bool):
