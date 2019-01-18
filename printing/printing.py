@@ -64,6 +64,7 @@ def generate_hp500_options(copy_number: int, pages_to_print: str,
     options += ['-o', 'HPColorAsGray={}'.format(not color_enabled)]
     options += ['-o', 'Duplex={}'.format(
         'DuplexNoTumble' if two_sided_enabled else 'None')]
+    options += ['-o', 'fit-to-page']
     return options
 
 
