@@ -6,6 +6,7 @@ bwrap --ro-bind / / \
       --tmpfs /home \
       --tmpfs /run \
       --tmpfs /tmp \
+      --tmpfs /var/www/.cache \
       --bind "$dir" "$dir" \
       --proc /proc \
       --dev /dev \
