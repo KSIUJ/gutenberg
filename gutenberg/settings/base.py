@@ -159,11 +159,6 @@ BOOTSTRAP4 = {
     'horizontal_field_class': 'col-md-9 col-lg-10',
     'include_jquery': True,
 
-    # todo remove when https://github.com/zostera/django-bootstrap4/pull/39
-    # is merged
-    'error_css_class': 'is-invalid',
-    'success_css_class': 'is-valid',
-
     'field_renderers': {
         'default': 'common.renderers.FieldRenderer',
     },
