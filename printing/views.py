@@ -57,8 +57,7 @@ class PrintView(LoginRequiredMixin, SuccessMessageMixin, FormView):
 
     def upload_and_print_file(self, file_to_print: UploadedFile,
                               copy_number: int, pages_to_print: str,
-                              color_enabled: bool, two_sided_enabled: bool,
-                              **_):
+                              color_enabled: bool, two_sided: str, **_):
         name, ext = os.path.splitext(file_to_print.name)
         file_name = '{}_{}_{}'.format(
             name, self.request.user.username,
@@ -72,7 +71,7 @@ class PrintView(LoginRequiredMixin, SuccessMessageMixin, FormView):
 
         print_file(
             file_path, copy_number=copy_number, pages_to_print=pages_to_print,
-            color_enabled=color_enabled, two_sided_enabled=two_sided_enabled)
+            color_enabled=color_enabled, two_sided=two_sided)
 
         logger.info('User %s printed file: "%s" (sudo printing: %s)',
                     self.request.user.username, file_path, color_enabled)

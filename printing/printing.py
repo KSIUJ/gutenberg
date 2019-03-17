@@ -21,6 +21,10 @@ CONVERT_OPTIONS = [
     '-extent', '2490x3510', '-units', 'PixelsPerInch', '-density', '300x300'
 ]
 
+TWO_SIDED_DISABLED = 'None'
+TWO_SIDED_LONG_EDGE = 'LongEdge'
+TWO_SIDED_SHORT_EDGE = 'ShortEdge'
+
 
 def convert_to_pdf(filename):
     tmpdir = tempfile.mkdtemp()
@@ -56,14 +60,19 @@ def convert_to_pdf(filename):
 
 
 def generate_hp500_options(copy_number: int, pages_to_print: str,
-                           color_enabled: bool, two_sided_enabled: bool):
+                           color_enabled: bool, two_sided: str):
     options = []
     options += ['-n', str(copy_number)]
     if pages_to_print:
         options += ['-P', pages_to_print]
     options += ['-o', 'HPColorAsGray={}'.format(not color_enabled)]
-    options += ['-o', 'Duplex={}'.format(
-        'DuplexNoTumble' if two_sided_enabled else 'None')]
+
+    two_sided_opt = {
+        TWO_SIDED_DISABLED: 'None',
+        TWO_SIDED_LONG_EDGE: 'DuplexNoTumble',
+        TWO_SIDED_SHORT_EDGE: 'DuplexTumble',
+    }[two_sided]
+    options += ['-o', 'Duplex={}'.format(two_sided_opt)]
     options += ['-o', 'fit-to-page']
     return options
 

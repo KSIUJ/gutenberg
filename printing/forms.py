@@ -8,11 +8,19 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import UploadedFile
 
-from printing.printing import SUPPORTED_FILE_FORMATS
+from printing.printing import (
+    SUPPORTED_FILE_FORMATS, TWO_SIDED_SHORT_EDGE, TWO_SIDED_LONG_EDGE,
+    TWO_SIDED_DISABLED)
 
 PAGES_REGEX = r"^\s*\d+(?:\s*-\s*\d+)?(\s*,\s*\d+(?:\s*-\s*\d+)?)*\s*$"
 
 logger = logging.getLogger('gutenberg.printing')
+
+TWO_SIDED_CHOICES = (
+    (TWO_SIDED_DISABLED, 'Disabled'),
+    (TWO_SIDED_LONG_EDGE, 'Flip on Long Edge'),
+    (TWO_SIDED_SHORT_EDGE, 'Flip on Short Edge'),
+)
 
 
 class PrintForm(forms.Form):
@@ -30,8 +38,9 @@ class PrintForm(forms.Form):
             'placeholder': 'All pages',
             'pattern': PAGES_REGEX
         }))
-    two_sided_enabled = forms.BooleanField(
-        label='Two-sided', initial=True, required=False,
+    two_sided = forms.ChoiceField(
+        label='Two-sided', choices=TWO_SIDED_CHOICES,
+        initial=TWO_SIDED_LONG_EDGE,
         help_text='Please consider the environment before disabling this '
                   'setting')
     color_enabled = forms.BooleanField(
