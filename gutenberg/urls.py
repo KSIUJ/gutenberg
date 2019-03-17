@@ -13,10 +13,19 @@ Including another URLconf
     1. Import the include() function: from django.conf.urls import url, include
     2. Add a URL to urlpatterns:  url(r'^blog/', include('blog.urls'))
 """
-from django.conf.urls import url, include
+import django_cas_ng.views
+from django.conf.urls import include
+from django.urls import path
 
 import printing.urls
 
 urlpatterns = [
-    url(r'^', include(printing.urls))
+    path('', include(printing.urls)),
+
+    path('accounts/login/', django_cas_ng.views.LoginView.as_view(),
+         name='cas_ng_login'),
+    path('accounts/logout/', django_cas_ng.views.LogoutView.as_view(),
+         name='cas_ng_logout'),
+    path('accounts/callback/', django_cas_ng.views.CallbackView.as_view(),
+         name='cas_ng_proxy_callback'),
 ]
