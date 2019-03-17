@@ -51,19 +51,17 @@ class PrintView(LoginRequiredMixin, SuccessMessageMixin, FormView):
         if not self.request.user.can_color_print:
             form.cleaned_data[COLOR_ENABLED_FIELD_NAME] = False
 
-        self.upload_and_print_file(username=self.request.session['user'],
-                                   **form.cleaned_data)
+        self.upload_and_print_file(**form.cleaned_data)
 
         return super(PrintView, self).form_valid(form)
 
-    @staticmethod
-    def upload_and_print_file(file_to_print: UploadedFile, username: str,
+    def upload_and_print_file(self, file_to_print: UploadedFile,
                               copy_number: int, pages_to_print: str,
                               color_enabled: bool, two_sided_enabled: bool,
                               **_):
         name, ext = os.path.splitext(file_to_print.name)
         file_name = '{}_{}_{}'.format(
-            name, username,
+            name, self.request.user.username,
             datetime.now().strftime(settings.PRINT_DATE_FORMAT))
         file_path = os.path.join(settings.PRINT_DIRECTORY, file_name + ext)
 
@@ -77,4 +75,4 @@ class PrintView(LoginRequiredMixin, SuccessMessageMixin, FormView):
             color_enabled=color_enabled, two_sided_enabled=two_sided_enabled)
 
         logger.info('User %s printed file: "%s" (sudo printing: %s)',
-                    username, file_path, color_enabled)
+                    self.request.user.username, file_path, color_enabled)
