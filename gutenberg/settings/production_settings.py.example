@@ -10,6 +10,19 @@ STATIC_ROOT = '/var/www/gutenberg/static'
 # Admin e-mail addresses to send messages to when errors occur
 ADMINS = []
 
+# Database
+# https://docs.djangoproject.com/en/2.1/ref/settings/#databases
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'gutenberg',
+        'USER': 'gutenberg',
+        'PASSWORD': '',
+        'HOST': '127.0.0.1',
+        'PORT': '5432',
+    }
+}
+
 # Logging
 LOGGING['handlers']['print_file']['filename'] = '/var/log/gutenberg/print.log'
 LOGGING['handlers']['django_file']['filename'] = '/var/log/gutenberg/django.log'
@@ -22,3 +35,7 @@ PRINTER_NAME = 'PUT_PRINTER_NAME_HERE'
 # PAM settings
 PRINT_SERVICE_NAME = 'login'
 PRINT_COLOR_SERVICE_NAME = 'login'
+
+# CAS Settings
+CAS_SERVER_URL = 'https://auth.ksi.ii.uj.edu.pl/auth/realms/KSI/protocol/cas/'
+CAS_VERSION = '3'

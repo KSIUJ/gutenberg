@@ -24,6 +24,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 DJANGO_INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
@@ -32,6 +34,7 @@ DJANGO_INSTALLED_APPS = [
 
 THIRD_PARTY_APPS = [
     'bootstrap4',
+    'django_cas_ng',
 ]
 
 PROJECT_APPS = [
@@ -39,7 +42,7 @@ PROJECT_APPS = [
     'printing',
 ]
 
-INSTALLED_APPS = DJANGO_INSTALLED_APPS + PROJECT_APPS + THIRD_PARTY_APPS
+INSTALLED_APPS = DJANGO_INSTALLED_APPS + THIRD_PARTY_APPS + PROJECT_APPS
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -48,9 +51,19 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django_cas_ng.middleware.CASMiddleware',
 ]
 
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'django_cas_ng.backends.CASBackend',
+)
+
 SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
+
+AUTH_USER_MODEL = 'common.User'
+LOGIN_URL = 'accounts/login/'
 
 ROOT_URLCONF = 'gutenberg.urls'
 
@@ -61,6 +74,7 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.contrib.auth.context_processors.auth',
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.messages.context_processors.messages',
@@ -171,7 +185,10 @@ PRINT_DIRECTORY = os.path.join(BASE_DIR, 'print/')
 PRINT_DATE_FORMAT = '%Y-%m-%dT%H-%M-%S-%f'
 PRINTER_NAME = 'PUT_PRINTER_NAME_HERE'
 
-# PAM settings
-PRINT_AUTHENTICATE = True
-PRINT_SERVICE_NAME = 'login'
-PRINT_COLOR_SERVICE_NAME = 'login'
+# CAS Settings
+CAS_LOGIN_MSG = None
+CAS_LOGGED_MSG = None
+FIRST_NAME_ATTR_NAME = 'givenName'
+LAST_NAME_ATTR_NAME = 'sn'
+GROUPS_ATTR_NAME = 'groups'
+ADMIN_GROUP_NAME = '/gutenbergadmins'

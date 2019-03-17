@@ -14,27 +14,26 @@
             Gutenberg
         </a>
 
-        {% if request.session.user %}
-            <ul class="navbar-nav ml-auto">
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#"
-                       id="nav_dropdown" role="button"
-                       data-toggle="dropdown" aria-haspopup="true"
-                       aria-expanded="false">
-                        {{ request.session.user }}
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="nav_dropdown"
+                   role="button" data-toggle="dropdown" aria-haspopup="true"
+                   aria-expanded="false">
+                    {% if request.user.last_name %}
+                        {{ request.user.first_name }}
+                        {{ request.user.last_name }}
+                    {% else %}
+                        {{ request.user }}
+                    {% endif %}
+                </a>
+                <div class="dropdown-menu dropdown-menu-right"
+                     aria-labelledby="nav_dropdown">
+                    <a class="dropdown-item" href="{% url 'cas_ng_logout' %}">
+                        Sign out
                     </a>
-                    <div class="dropdown-menu dropdown-menu-right"
-                         aria-labelledby="nav_dropdown">
-                        <a class="dropdown-item" href="{% url 'login' %}">
-                            Sign in as another user
-                        </a>
-                        <a class="dropdown-item" href="{% url 'logout' %}">
-                            Sign out
-                        </a>
-                    </div>
-                </li>
-            </ul>
-        {% endif %}
+                </div>
+            </li>
+        </ul>
     </nav>
 
     <main class="container">

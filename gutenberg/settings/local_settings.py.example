@@ -9,3 +9,16 @@ DEBUG = True
 # Disable authentication for easier development
 PRINT_AUTHENTICATE = False
 PRINTER_NAME = 'PUT_PRINTER_NAME_HERE'
+
+# Database
+# https://docs.djangoproject.com/en/2.1/ref/settings/#databases
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    }
+}
+
+# CAS Settings
+CAS_SERVER_URL = 'https://auth.ksi.ii.uj.edu.pl/auth/realms/KSI/protocol/cas/'
+CAS_VERSION = '3'
