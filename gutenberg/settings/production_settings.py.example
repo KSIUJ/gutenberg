@@ -32,10 +32,6 @@ LOGGING['handlers']['django_file']['filename'] = '/var/log/gutenberg/django.log'
 PRINT_DIRECTORY = '/srv/printing/'
 PRINTER_NAME = 'PUT_PRINTER_NAME_HERE'
 
-# PAM settings
-PRINT_SERVICE_NAME = 'login'
-PRINT_COLOR_SERVICE_NAME = 'login'
-
 # CAS Settings
 CAS_SERVER_URL = 'https://auth.ksi.ii.uj.edu.pl/auth/realms/KSI/protocol/cas/'
 CAS_VERSION = '3'
