@@ -19,6 +19,7 @@ for internal use of [KSI UJ](http://ksi.ii.uj.edu.pl).
     `unoconv`, `gs` (`ghostscript`), and `bbwrap` (`bubblewrap`) 
     - Debian/Ubuntu: `sudo apt install imagemagick unoconv ghostscript
       bubblewrap`
+    - Arch Linux: `sudo pacman -S imagemagick unoconv ghostscript bubblewrap`
 
 ### Setting up the webapp (for the lazy people)
 First, set the temporary `GUTENBERG_ENV` environment variable to one of these
