@@ -8,8 +8,8 @@ for internal use of [KSI UJ](http://ksi.ii.uj.edu.pl).
   - Support for printing PDFs, images (JPEG, PNG), documents (DOC, DOCX, ODT,
     RTF) 
   - Customize print: enable duplex, number of copies
-  - Authentication via PAM
-  - sudo printing - color print (only for whitelisted people via PAM)
+  - Authentication via CAS
+  - sudo printing - color print (only for whitelisted people via CAS group)
 
 ## Setup
   - Printer: make printing available for server network
