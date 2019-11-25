@@ -1,7 +1,8 @@
 import logging
-import string
-
 import os
+import string
+from typing import List
+
 import pam
 from django import forms
 from django.conf import settings
@@ -24,10 +25,11 @@ TWO_SIDED_CHOICES = (
 
 
 class PrintForm(forms.Form):
-    file_to_print = forms.FileField(
+    files_to_print = forms.FileField(
         required=True,
         help_text='Supported formats: {}'.format(
-            ', '.join(SUPPORTED_FILE_FORMATS)))
+            ', '.join(SUPPORTED_FILE_FORMATS)),
+        widget=forms.ClearableFileInput(attrs={'multiple': True}))
 
     copy_number = forms.IntegerField(label='Copies', initial=1, required=True,
                                      min_value=1, max_value=100)
@@ -47,16 +49,17 @@ class PrintForm(forms.Form):
         label='Enable color (sudo printing)', required=False,
         help_text='Requires being a superuser')
 
-    def clean_file_to_print(self):
-        file_to_print: UploadedFile = self.cleaned_data['file_to_print']
-        name, ext = os.path.splitext(file_to_print.name)
-        ext = ext.replace('.', '')
-        if ext.lower() not in SUPPORTED_FILE_FORMATS:
-            raise ValidationError(
-                'Unsupported file format: %(ext)s', code='unsupported_format',
-                params={'ext': ext})
+    def clean_files_to_print(self):
+        files_to_print: List[UploadedFile] = self.files.getlist('files_to_print')
+        for file in files_to_print:
+            name, ext = os.path.splitext(file.name)
+            ext = ext.replace('.', '')
+            if ext.lower() not in SUPPORTED_FILE_FORMATS:
+                raise ValidationError(
+                    'Unsupported file format: %(ext)s', code='unsupported_format',
+                    params={'ext': ext})
 
-        return file_to_print
+        return files_to_print
 
     def clean_pages_to_print(self):
         pages: str = self.cleaned_data['pages_to_print']

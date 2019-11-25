@@ -1,6 +1,8 @@
 import logging
 import os
 from datetime import datetime
+from typing import List
+
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
@@ -55,23 +57,24 @@ class PrintView(LoginRequiredMixin, SuccessMessageMixin, FormView):
 
         return super(PrintView, self).form_valid(form)
 
-    def upload_and_print_file(self, file_to_print: UploadedFile,
+    def upload_and_print_file(self, files_to_print: List[UploadedFile],
                               copy_number: int, pages_to_print: str,
                               color_enabled: bool, two_sided: str, **_):
-        name, ext = os.path.splitext(file_to_print.name)
-        file_name = '{}_{}_{}'.format(
-            name, self.request.user.username,
-            datetime.now().strftime(settings.PRINT_DATE_FORMAT))
-        file_path = os.path.join(settings.PRINT_DIRECTORY, file_name + ext)
+        for file in files_to_print:
+            name, ext = os.path.splitext(file.name)
+            file_name = '{}_{}_{}'.format(
+                name, self.request.user.username,
+                datetime.now().strftime(settings.PRINT_DATE_FORMAT))
+            file_path = os.path.join(settings.PRINT_DIRECTORY, file_name + ext)
 
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        with open(file_path, 'wb+') as destination:
-            for chunk in file_to_print.chunks():
-                destination.write(chunk)
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            with open(file_path, 'wb+') as destination:
+                for chunk in file.chunks():
+                    destination.write(chunk)
 
-        print_file(
-            file_path, copy_number=copy_number, pages_to_print=pages_to_print,
-            color_enabled=color_enabled, two_sided=two_sided)
+            print_file(
+                file_path, copy_number=copy_number, pages_to_print=pages_to_print,
+                color_enabled=color_enabled, two_sided=two_sided)
 
-        logger.info('User %s printed file: "%s" (sudo printing: %s)',
-                    self.request.user.username, file_path, color_enabled)
+            logger.info('User %s printed file: "%s" (sudo printing: %s)',
+                        self.request.user.username, file_path, color_enabled)
