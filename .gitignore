@@ -108,3 +108,6 @@ venv.bak/
 # Gutenberg
 # Upload directory (local_settings only)
 print/
+
+# Pycharm
+.idea/
