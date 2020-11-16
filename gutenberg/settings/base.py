@@ -40,6 +40,7 @@ THIRD_PARTY_APPS = [
 PROJECT_APPS = [
     'common',
     'printing',
+    'control',
 ]
 
 INSTALLED_APPS = DJANGO_INSTALLED_APPS + THIRD_PARTY_APPS + PROJECT_APPS
@@ -180,7 +181,7 @@ BOOTSTRAP4 = {
 
 # Print settings
 # Directory to store the printed files in
-PRINT_DIRECTORY = os.path.join(BASE_DIR, 'print/')
+PRINT_DIRECTORY = '/tmp/print/'
 # Format of date to append to each filename
 PRINT_DATE_FORMAT = '%Y-%m-%dT%H-%M-%S-%f'
 PRINTER_NAME = 'PUT_PRINTER_NAME_HERE'
