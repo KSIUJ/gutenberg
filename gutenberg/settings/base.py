@@ -41,6 +41,7 @@ PROJECT_APPS = [
     'common',
     'printing',
     'control',
+    'ipp',
 ]
 
 INSTALLED_APPS = DJANGO_INSTALLED_APPS + THIRD_PARTY_APPS + PROJECT_APPS
