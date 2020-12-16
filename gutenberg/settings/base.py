@@ -54,18 +54,17 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django_cas_ng.middleware.CASMiddleware',
+    'mozilla_django_oidc.middleware.SessionRefresh',
 ]
 
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
-    'django_cas_ng.backends.CASBackend',
+    'gutenberg.auth.OIDCAuthenticationBackend',
 )
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
 AUTH_USER_MODEL = 'common.User'
-LOGIN_URL = 'accounts/login/'
 
 ROOT_URLCONF = 'gutenberg.urls'
 
@@ -125,7 +124,7 @@ LOGGING = {
     },
     'handlers': {
         'console': {
-            'level': 'INFO',
+            'level': 'DEBUG',
             'filters': ['require_debug_true'],
             'class': 'logging.StreamHandler',
             'formatter': 'simple'
@@ -187,10 +186,17 @@ PRINT_DIRECTORY = '/tmp/print/'
 PRINT_DATE_FORMAT = '%Y-%m-%dT%H-%M-%S-%f'
 PRINTER_NAME = 'PUT_PRINTER_NAME_HERE'
 
-# CAS Settings
-CAS_LOGIN_MSG = None
-CAS_LOGGED_MSG = None
-FIRST_NAME_ATTR_NAME = 'givenName'
-LAST_NAME_ATTR_NAME = 'sn'
-GROUPS_ATTR_NAME = 'groups'
-ADMIN_GROUP_NAME = '/gutenbergadmins'
+# # CAS Settings
+# CAS_LOGIN_MSG = None
+# CAS_LOGGED_MSG = None
+# FIRST_NAME_ATTR_NAME = 'givenName'
+# LAST_NAME_ATTR_NAME = 'sn'
+# GROUPS_ATTR_NAME = 'groups'
+# ADMIN_GROUP_NAME = '/gutenbergadmins'
+
+OIDC_OP_LOGOUT_URL_METHOD = 'gutenberg.auth.oidc_op_logout'
+OIDC_RP_SIGN_ALGO = 'RS256'
+OIDC_RP_SCOPES = 'openid email'
+LOGIN_URL = 'oidc_authentication_init'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'

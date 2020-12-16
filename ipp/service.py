@@ -4,7 +4,6 @@ from datetime import datetime
 from typing import Tuple, Callable
 
 from django.conf import settings
-from django.db.models import Q
 from django.http import HttpResponse
 from django.template.defaultfilters import slugify
 from django.utils import timezone
