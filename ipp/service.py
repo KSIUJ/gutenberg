@@ -2,6 +2,7 @@ from typing import Tuple, Callable
 
 from django.http import HttpResponse
 
+from control.models import PrintingProperties
 from ipp.constants import OperationEnum, StatusCodeEnum, PrinterStateEnum
 from ipp.exceptions import IppError, DocumentFormatError
 from ipp.proto import IppRequest, IppResponse, BaseOperationGroup, \
@@ -25,7 +26,9 @@ def get_printer_attrs(request: IppRequest) -> IppResponse:
             printer_more_info="http://127.0.0.1/",
             printer_state=PrinterStateEnum.idle,
             printer_state_message="idle",
-            queued_job_count=0)
+            queued_job_count=0,
+            printer_uuid='urn:uuid:12345678-9ABC-DEF0-1234-56789ABCDEF0',
+            device_uuid='urn:uuid:12345678-9ABC-DEF0-1234-56789ABCDEF0')
     ])
 
 
@@ -33,8 +36,10 @@ def print_job(request: IppRequest) -> IppResponse:
     operation = request.read_group(PrintJobRequestOperationGroup)
     if operation.document_format and operation.document_format not in SUPPORTED_FORMATS:
         raise DocumentFormatError("Unsupported format: {}".format(operation.document_format))
+    props = PrintingProperties()
     if request.has_next():
         job_template = request.read_group(JobTemplateAttributeGroup)
+
     data = request.raw_request().read()
 
     return response_for(request, [
@@ -93,3 +98,6 @@ class IppService:
             return self._response(minimal_valid_response(req, ex.error_code()))
         except ValueError as ex:
             return self._response(internal_error(req))
+        except Exception as ex:
+            print(ex)
+            raise ex

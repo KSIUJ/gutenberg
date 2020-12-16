@@ -1,18 +1,19 @@
 import os
+import shutil
 import subprocess
 from abc import ABC, abstractmethod
 from collections import deque, defaultdict
+from itertools import chain
 from typing import List, Type, Set, Union
 
 import magic
-
-from control.models import PrintJob
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 class Converter(ABC):
     supported_types = []
+    supported_extensions = []
     output_type = None
 
     def __init__(self, work_dir):
@@ -20,6 +21,11 @@ class Converter(ABC):
 
     @abstractmethod
     def convert(self, input_file: str) -> str:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def is_available(cls):
         pass
 
 
@@ -30,9 +36,14 @@ class SandboxConverter(Converter, ABC):
         subprocess.check_call(
             [SandboxConverter.SANDBOX_PATH, self.work_dir] + command)
 
+    @staticmethod
+    def binary_exists(name: str):
+        return shutil.which(name) is not None
+
 
 class ImageConverter(SandboxConverter):
     supported_types = ['image/png', 'image/jpeg']
+    supported_extensions = ['png', 'jpg', 'jpeg']
     output_type = 'application/pdf'
 
     CONVERT_OPTIONS = [
@@ -45,9 +56,14 @@ class ImageConverter(SandboxConverter):
         self.run_in_sandbox(['convert', input_file] + self.CONVERT_OPTIONS + [out])
         return out
 
+    @classmethod
+    def is_available(cls):
+        return cls.binary_exists('convert')
+
 
 class PDFConverter(SandboxConverter):
     supported_types = ['application/pdf']
+    supported_extensions = ['pdf']
     output_type = 'gutenberg/pdf'
 
     def convert(self, input_file: str) -> str:
@@ -57,10 +73,15 @@ class PDFConverter(SandboxConverter):
                              '-sOutputFile=' + out, input_file])
         return out
 
+    @classmethod
+    def is_available(cls):
+        return cls.binary_exists('gs')
+
 
 class DocConverter(SandboxConverter):
     supported_types = ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessing',
                        'application/rtf', 'application/vnd.oasis.opendocument.text']
+    supported_extensions = ['doc', 'docx', 'rtf', 'odt']
     output_type = 'application/pdf'
 
     def convert(self, input_file: str) -> str:
@@ -68,8 +89,15 @@ class DocConverter(SandboxConverter):
         self.run_in_sandbox(['unoconv', '-o', out, input_file])
         return out
 
+    @classmethod
+    def is_available(cls):
+        return cls.binary_exists('unoconv')
 
-CONVERTERS = [ImageConverter, DocConverter, PDFConverter]
+
+CONVERTERS_ALL = [ImageConverter, DocConverter, PDFConverter]
+CONVERTERS = [conv for conv in CONVERTERS_ALL if conv.is_available()]
+SUPPORTED_FILE_FORMATS = list(chain.from_iterable(conv.supported_types for conv in CONVERTERS))
+SUPPORTED_EXTENSIONS = list(chain.from_iterable(conv.supported_extensions for conv in CONVERTERS))
 
 
 class NoConverterAvailableError(ValueError):

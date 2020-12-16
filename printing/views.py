@@ -61,7 +61,6 @@ class PrintView(LoginRequiredMixin, SuccessMessageMixin, FormView):
     def upload_and_print_file(self, file_to_print: UploadedFile,
                               copy_number: int, pages_to_print: str,
                               color_enabled: bool, two_sided: str, **_):
-        job = PrintJob.objects.create(name=file_to_print.name, status=JobStatus.INCOMING, owner=self.request.user)
         name, ext = os.path.splitext(file_to_print.name)
         name = slugify(name)
         file_name = '{}_{}_{}'.format(
@@ -78,8 +77,7 @@ class PrintView(LoginRequiredMixin, SuccessMessageMixin, FormView):
             TWO_SIDED_LONG_EDGE: TwoSidedPrinting.TWO_SIDED_LONG_EDGE,
             TWO_SIDED_SHORT_EDGE: TwoSidedPrinting.TWO_SIDED_SHORT_EDGE,
         }.get(two_sided, TwoSidedPrinting.TWO_SIDED_LONG_EDGE)
-        job.status = JobStatus.PENDING
-        job.save()
+        job = PrintJob.objects.create(name=file_to_print.name, status=JobStatus.PENDING, owner=self.request.user)
         PrintingProperties.objects.create(color=color_enabled, copies=copy_number, two_sides=ts,
                                           pages_to_print=pages_to_print, job=job)
 

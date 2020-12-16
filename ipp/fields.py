@@ -176,6 +176,17 @@ class TextField(ValueField, ABC):
         return super().read_value(readable).decode('utf-8', errors='ignore')
 
 
+class OctetStringField(ValueField):
+    _tag = TagEnum.octet_str
+
+    def write_value(self, writable, value):
+        assert isinstance(value, bytes)
+        super().write_value(writable, value)
+
+    def read_value(self, readable):
+        return super().read_value(readable)
+
+
 class TextWLField(TextField):
     _tag = TagEnum.text_without_language
 

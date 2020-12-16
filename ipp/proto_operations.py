@@ -3,7 +3,7 @@ from django.utils import timezone
 from ipp.constants import SectionEnum, OperationEnum, FinishingEnum, PageOrientationEnum, PrintQualityEnum
 from ipp.fields import MimeTypeField, UriField, CharsetField, OneSetField, BooleanField, KeywordField, NaturalLangField, \
     IntegerField, EnumField, TextWLField, DateTimeField, NameWLField, IntRangeField, IntRange, ResolutionField, \
-    Resolution
+    Resolution, OctetStringField
 from ipp.proto import BaseOperationGroup, AttributeGroup, ipp_timestamp, MergedGroup
 
 
@@ -52,6 +52,10 @@ class PrinterDescriptionGroup(AttributeGroup):
     printer_up_time = IntegerField(required=True, default=ipp_timestamp(timezone.now()))
     uri_authentication_supported = OneSetField(accepted_fields=[KeywordField()], required=True, default=['basic'])
     uri_security_supported = OneSetField(accepted_fields=[KeywordField()], required=True, default=['tls', 'none'])
+    device_service_count = IntegerField(default=1)
+    print_color_mode_default = KeywordField(default='monochrome')
+    print_color_mode_supported = OneSetField(accepted_fields=[KeywordField()], default=['monochrome', 'color', 'auto'])
+    printer_get_attributes_supported = OneSetField(accepted_fields=[KeywordField()], default=['document-format'])
 
     # no default value
     printer_uri_supported = OneSetField(accepted_fields=[UriField()], required=True)
@@ -60,6 +64,8 @@ class PrinterDescriptionGroup(AttributeGroup):
     printer_state = IntegerField(required=True)
     printer_state_message = TextWLField()
     queued_job_count = IntegerField(required=True)
+    printer_uuid = UriField(required=True)
+    device_uuid = UriField(required=True)
 
 
 class JobTemplatePrinterGroup(AttributeGroup):
@@ -116,6 +122,9 @@ class PrintJobRequestOperationGroup(BaseOperationGroup):
     job_impressions = IntegerField()
     job_media_sheets = IntegerField()
 
+    document_metadata = OneSetField(accepted_fields=[OctetStringField()])
+    first_index = IntegerField()
+
 
 class JobTemplateAttributeGroup(AttributeGroup):
     _tag = SectionEnum.job
@@ -130,3 +139,5 @@ class JobTemplateAttributeGroup(AttributeGroup):
     output_bin = KeywordField(default='face-up')
     print_quality = EnumField(default=PrintQualityEnum.normal)
     printer_resolution = ResolutionField(default=Resolution(300, 300, Resolution.Units.DOTS_PER_INCH))
+
+    print_color_mode = KeywordField(default='auto')
