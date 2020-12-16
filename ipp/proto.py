@@ -49,7 +49,7 @@ class AttributeGroup(IppFieldsStruct):
                     continue
                 read_fields[field_name] = field.read(readable, state)
             else:
-                pass
+                NullField().read(readable, state)
 
     @classmethod
     def _filter_fields(cls, requested_attrs: List[str]):
