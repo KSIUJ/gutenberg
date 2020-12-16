@@ -6,6 +6,7 @@ from typing import Tuple, Callable
 from django.conf import settings
 from django.http import HttpResponse
 from django.template.defaultfilters import slugify
+from django.urls import reverse
 from django.utils import timezone
 
 from common.models import User
@@ -76,9 +77,9 @@ class IppService:
         return response_for(request, [
             BaseOperationGroup(),
             PrinterAttributesGroup(
-                printer_uri_supported=["ipps://192.168.64.1:443/ipp/print"],
+                printer_uri_supported=[self.get_printer_uri(request, user)],
                 printer_name="Gutenberg",
-                printer_more_info="https://192.168.64.1:443/",
+                printer_more_info=request.http_request.build_absolute_uri('/'),
                 printer_state=PrinterStateEnum.idle,
                 printer_state_message="idle",
                 queued_job_count=1,
@@ -109,7 +110,7 @@ class IppService:
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, 'wb+') as destination:
             while True:
-                chunk = request.http_request().read(100000)
+                chunk = request.http_request.read(100000)
                 if not chunk:
                     break
                 destination.write(chunk)
@@ -132,7 +133,7 @@ class IppService:
         return response_for(request, [
             BaseOperationGroup(),
             JobPrintResponseAttributes(
-                job_uri='ipps://192.168.64.1:443ipp/job/{}'.format(job.id),
+                job_uri=self.get_job_uri(request, user, job.id),
                 job_id=job.id,
                 job_state=JobStateEnum.pending,
             )
@@ -172,10 +173,10 @@ class IppService:
 
         job_groups = [
             JobObjectAttributeGroup(
-                job_uri='ipps://192.168.64.1:443/ipp/job/{}'.format(job.id),
+                job_uri=self.get_job_uri(request, user, job.id),
                 job_id=job.id,
                 job_state=job_status_to_ipp(job.status),
-                job_printer_uri='ipps://192.168.64.1:443/ipp/print',
+                job_printer_uri=self.get_printer_uri(request, user),
                 job_name=job.name,
                 job_originating_user_name=job.owner.username,
                 time_at_creation=ipp_timestamp(job.date_created),
@@ -206,10 +207,10 @@ class IppService:
             return not_found(request)
 
         return response_for(request, [BaseOperationGroup(), JobObjectAttributeGroupFull(
-            job_uri='ipps://127.0.0.1/ipp/job/{}'.format(job.id),
+            job_uri=self.get_job_uri(request, user, job.id),
             job_id=job.id,
             job_state=job_status_to_ipp(job.status),
-            job_printer_uri='ipps://127.0.0.1/ipp/print',
+            job_printer_uri=self.get_printer_uri(request, user),
             job_name=job.name,
             job_originating_user_name=job.owner.username,
             time_at_creation=ipp_timestamp(job.date_created),
@@ -222,6 +223,16 @@ class IppService:
         # TODO: add cancellation logic once we support it on backend.
         logging.debug("CancelJob")
         return not_possible(request)
+
+    def get_printer_uri(self, request: IppRequest, user: User):
+        uri = request.http_request.build_absolute_uri(
+            reverse('ipp_endpoint', kwargs={'token': user.api_key, 'rel_path': 'print'}))
+        return uri.replace('http', 'ipp')
+
+    def get_job_uri(self, request: IppRequest, user: User, job_id: int):
+        uri = request.http_request.build_absolute_uri(
+            reverse('ipp_endpoint', kwargs={'token': user.api_key, 'rel_path': 'job/{}'.format(job_id)}))
+        return uri.replace('http', 'ipp')
 
     def _dispatch(self, version: Tuple[int, int], op_id: int) -> Callable[[IppRequest, User], IppResponse]:
         # we ignore ipp version for now
@@ -257,12 +268,8 @@ class IppService:
             return self._response(res)
         except IppError as ex:
             return self._response(minimal_valid_response(req, ex.error_code()))
-        except NotAuthenticatedError as ex:
-            resp = self._response(minimal_valid_response(req, ex.error_code()), http_code=401)
-            resp['WWW-Authenticate'] = 'Basic realm="gutenberg"'
-            return resp
         # except ValueError as ex:
         #     return self._response(internal_error(req))
-        # except Exception as ex:
-        #     print(ex)
-        #     raise ex
+        except Exception as ex:
+            print(repr(ex))
+            raise ex
