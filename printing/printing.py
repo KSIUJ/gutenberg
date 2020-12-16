@@ -8,9 +8,11 @@ import os
 
 from celery import shared_task
 from django.conf import settings
+from django.utils import timezone
 
 from control.models import PrintJob, PrintingProperties, TwoSidedPrinting, JobStatus
 from printing.converter import auto_convert
+from printing.postprocess import postprocess_pdf
 
 DOCUMENT_FORMATS = ('doc', 'docx', 'rtf', 'odt')
 IMAGE_FORMATS = ('png', 'jpg', 'jpeg')
@@ -25,8 +27,6 @@ TWO_SIDED_SHORT_EDGE = 'ShortEdge'
 def generate_hp500_options(properties: PrintingProperties):
     options = []
     options += ['-n', str(properties.copies)]
-    if properties.pages_to_print:
-        options += ['-P', properties.pages_to_print]
     options += ['-o', 'HPColorAsGray={}'.format(not properties.color)]
 
     two_sided_opt = {
@@ -53,14 +53,18 @@ def print_file(file_path, job_id):
         ext = file_path.lower().rsplit('.', 1)[-1]
         tmp_input = os.path.join(tmpdir, 'input.' + ext)
         shutil.copyfile(file_path, os.path.join(tmpdir, 'input.' + ext))
-        out = auto_convert(tmp_input, 'gutenberg/pdf', tmpdir)
+        out = auto_convert(tmp_input, 'application/pdf', tmpdir)
+        out, num_pages = postprocess_pdf(out, tmpdir, job.properties)
         job.status = JobStatus.PRINTING
+        job.date_processed = timezone.now()
+        job.pages = num_pages * job.properties.copies
         job.save()
         subprocess.check_call(
             ['lp', out] + ['-d', settings.PRINTER_NAME] +
             generate_options(job.properties))
         shutil.rmtree(tmpdir)
         job.status = JobStatus.COMPLETED
+        job.finished = timezone.now()
         job.save()
     except Exception as ex:
         job.status = JobStatus.ERROR

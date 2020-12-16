@@ -8,7 +8,7 @@ from typing import List, Type, Set, Union
 
 import magic
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from printing import SANDBOX_PATH
 
 
 class Converter(ABC):
@@ -30,11 +30,9 @@ class Converter(ABC):
 
 
 class SandboxConverter(Converter, ABC):
-    SANDBOX_PATH = os.path.join(BASE_DIR, 'sandbox.sh')
-
     def run_in_sandbox(self, command: List[str]):
         subprocess.check_call(
-            [SandboxConverter.SANDBOX_PATH, self.work_dir] + command)
+            [SANDBOX_PATH, self.work_dir] + command)
 
     @staticmethod
     def binary_exists(name: str):
@@ -61,21 +59,17 @@ class ImageConverter(SandboxConverter):
         return cls.binary_exists('convert')
 
 
-class PDFConverter(SandboxConverter):
+class PDFNullConverter(SandboxConverter):
     supported_types = ['application/pdf']
     supported_extensions = ['pdf']
-    output_type = 'gutenberg/pdf'
+    output_type = 'application/pdf'
 
     def convert(self, input_file: str) -> str:
-        out = os.path.join(self.work_dir, 'final.pdf')
-        self.run_in_sandbox(['gs', '-sDEVICE=pdfwrite', '-dNOPAUSE',
-                             '-dBATCH', '-dSAFER', '-dCompatibilityLevel=1.4',
-                             '-sOutputFile=' + out, input_file])
-        return out
+        return input_file
 
     @classmethod
     def is_available(cls):
-        return cls.binary_exists('gs')
+        return True
 
 
 class DocConverter(SandboxConverter):
@@ -94,7 +88,7 @@ class DocConverter(SandboxConverter):
         return cls.binary_exists('unoconv')
 
 
-CONVERTERS_ALL = [ImageConverter, DocConverter, PDFConverter]
+CONVERTERS_ALL = [ImageConverter, DocConverter, PDFNullConverter]
 CONVERTERS = [conv for conv in CONVERTERS_ALL if conv.is_available()]
 SUPPORTED_FILE_FORMATS = list(chain.from_iterable(conv.supported_types for conv in CONVERTERS))
 SUPPORTED_EXTENSIONS = list(chain.from_iterable(conv.supported_extensions for conv in CONVERTERS))
@@ -143,7 +137,7 @@ def auto_convert(input_file: str, out_types: Union[str, List[str]], work_dir: st
     mime_detector = magic.Magic(mime=True)
     input_type = mime_detector.from_file(input_file)
     if input_type in out_types:
-        return input_type
+        return input_file
     pipeline = get_converter_chain(input_type, out_types)
     file = input_file
     for conv_class in pipeline:
