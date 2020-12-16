@@ -67,7 +67,7 @@ def job_status_to_ipp(status: JobStatus):
 
 
 class IppService:
-    def get_printer_attrs(self, request: IppRequest) -> IppResponse:
+    def get_printer_attrs(self, request: IppRequest, user: User) -> IppResponse:
         operation = request.read_group(GetPrinterAttributesRequestOperationGroup)
         # logger.debug("GetPrinterAttrs:\n" + str(operation))
         if operation.document_format and operation.document_format not in SUPPORTED_FORMATS:
@@ -76,9 +76,9 @@ class IppService:
         return response_for(request, [
             BaseOperationGroup(),
             PrinterAttributesGroup(
-                printer_uri_supported=["ipp://127.0.0.1/ipp/print", "ipps://127.0.0.1/ipp/print"],
+                printer_uri_supported=["ipps://192.168.64.1:443/ipp/print"],
                 printer_name="Gutenberg",
-                printer_more_info="http://127.0.0.1/",
+                printer_more_info="https://192.168.64.1:443/",
                 printer_state=PrinterStateEnum.idle,
                 printer_state_message="idle",
                 queued_job_count=1,
@@ -86,7 +86,7 @@ class IppService:
                 device_uuid='urn:uuid:12345678-9ABC-DEF0-1234-56789ABCDEF0')
         ], requested_attrs_oneset=operation.requested_attributes)
 
-    def print_job(self, request: IppRequest) -> IppResponse:
+    def print_job(self, request: IppRequest, user: User) -> IppResponse:
         operation = request.read_group(PrintJobRequestOperationGroup)
         logger.debug("PrintJob\n" + str(operation))
         if operation.document_format and operation.document_format not in SUPPORTED_FORMATS:
@@ -97,9 +97,6 @@ class IppService:
             job_template = JobTemplateAttributeGroup()
 
         logger.debug("Print template\n" + str(job_template))
-
-        # TODO
-        user = User.objects.first()
 
         name = slugify(operation.job_name) if operation.job_name else 'ipp'
         file_name = '{}_{}_{}'.format(
@@ -117,8 +114,7 @@ class IppService:
                     break
                 destination.write(chunk)
 
-        # TODO: auth
-        job = PrintJob.objects.create(name=name, status=JobStatus.PENDING, owner=User.objects.first())
+        job = PrintJob.objects.create(name=name, status=JobStatus.PENDING, owner=user)
         PrintingProperties.objects.create(
             color=job_template.print_color_mode != 'monochrome',
             copies=job_template.copies,
@@ -136,13 +132,13 @@ class IppService:
         return response_for(request, [
             BaseOperationGroup(),
             JobPrintResponseAttributes(
-                job_uri='ipps://127.0.0.1/ipp/job/{}'.format(job.id),
+                job_uri='ipps://192.168.64.1:443ipp/job/{}'.format(job.id),
                 job_id=job.id,
                 job_state=JobStateEnum.pending,
             )
         ])
 
-    def validate_job(self, request: IppRequest) -> IppResponse:
+    def validate_job(self, request: IppRequest, user: User) -> IppResponse:
         operation = request.read_group(PrintJobRequestOperationGroup)
         logger.debug("ValidateJob:\n" + str(operation))
         if operation.document_format and operation.document_format not in SUPPORTED_FORMATS:
@@ -156,11 +152,9 @@ class IppService:
         #     job_template = JobTemplateAttributeGroup()
         # TODO: extend validation.
 
-
-    def get_jobs(self, request: IppRequest):
+    def get_jobs(self, request: IppRequest, user: User):
         operation = request.read_group(GetJobsRequestOperationGroup)
         # logger.debug("GetJob:\n" + str(operation))
-        user = User.objects.first()
 
         if operation.requesting_user_name and operation.requesting_user_name != 'adam':
             return response_for(request, [BaseOperationGroup()],
@@ -178,10 +172,10 @@ class IppService:
 
         job_groups = [
             JobObjectAttributeGroup(
-                job_uri='ipps://127.0.0.1/ipp/job/{}'.format(job.id),
+                job_uri='ipps://192.168.64.1:443/ipp/job/{}'.format(job.id),
                 job_id=job.id,
                 job_state=job_status_to_ipp(job.status),
-                job_printer_uri='ipps://127.0.0.1/ipp/print',
+                job_printer_uri='ipps://192.168.64.1:443/ipp/print',
                 job_name=job.name,
                 job_originating_user_name=job.owner.username,
                 time_at_creation=ipp_timestamp(job.date_created),
@@ -194,13 +188,12 @@ class IppService:
         return response_for(request, [BaseOperationGroup()] + job_groups,
                             requested_attrs_oneset=operation.requested_attributes)
 
-    def get_job_attrs(self, request: IppRequest):
+    def get_job_attrs(self, request: IppRequest, user: User):
         operation = request.read_group(GetJobAttributesRequestOperationGroup)
         # logger.debug("GetJobAttrs:\n" + str(operation))
 
         if not (operation.printer_uri and operation.job_id) and not operation.job_uri:
             return bad_request(request)
-        user = User.objects.first()
         jobs = PrintJob.objects
         jobs = jobs.filter(owner=user)
 
@@ -225,12 +218,12 @@ class IppService:
             job_printer_up_time=ipp_timestamp(timezone.now()),
         )], requested_attrs_oneset=operation.requested_attributes)
 
-    def cancel_job(self, request: IppRequest):
+    def cancel_job(self, request: IppRequest, user: User):
         # TODO: add cancellation logic once we support it on backend.
         logging.debug("CancelJob")
         return not_possible(request)
 
-    def _dispatch(self, version: Tuple[int, int], op_id: int) -> Callable[[IppRequest], IppResponse]:
+    def _dispatch(self, version: Tuple[int, int], op_id: int) -> Callable[[IppRequest, User], IppResponse]:
         # we ignore ipp version for now
         _ = version
         commands = {
@@ -249,7 +242,10 @@ class IppService:
         ipp_response.write_to(http_response)
         return http_response
 
-    def handle_request(self, http_request):
+    def handle_request(self, http_request, token: str, rel_path: str):
+        user = User.objects.filter(api_key=token).first()
+        if not user:
+            return HttpResponse(status=403, content_type='plain/text')
         try:
             req = IppRequest.from_http_request(http_request)
         except BadRequestError:
@@ -257,12 +253,16 @@ class IppService:
         try:
             req.validate()
             handler = self._dispatch(req.version, req.opid_or_status)
-            res = handler(req)
+            res = handler(req, user)
             return self._response(res)
         except IppError as ex:
             return self._response(minimal_valid_response(req, ex.error_code()))
-        except ValueError as ex:
-            return self._response(internal_error(req))
-        except Exception as ex:
-            print(ex)
-            raise ex
+        except NotAuthenticatedError as ex:
+            resp = self._response(minimal_valid_response(req, ex.error_code()), http_code=401)
+            resp['WWW-Authenticate'] = 'Basic realm="gutenberg"'
+            return resp
+        # except ValueError as ex:
+        #     return self._response(internal_error(req))
+        # except Exception as ex:
+        #     print(ex)
+        #     raise ex

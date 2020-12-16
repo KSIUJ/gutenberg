@@ -7,6 +7,8 @@ from django.views.decorators.csrf import csrf_exempt
 
 from ipp.service import IppService
 
+service = IppService()
+
 
 class IppView(View):
     http_method_names = ['get', 'post', 'options']
@@ -23,6 +25,5 @@ class IppView(View):
         else:
             return HttpResponse(b'Page does not exist', status=404, content_type='text/plain')
 
-    def post(self, request: HttpRequest, *args, **kwargs):
-        service = IppService()
-        return service.handle_request(request)
+    def post(self, request: HttpRequest, token, rel_path, *args, **kwargs):
+        return service.handle_request(request, token, rel_path)
