@@ -67,7 +67,7 @@ class PrintForm(forms.Form):
         for part in parts:
             # In case of single page numbers, part[0] and part[-1] is the
             # same thing, so we don't have to separately check for that
-            if part[0] > part[-1]:
+            if int(part[0]) > int(part[-1]):
                 raise ValidationError('Invalid page range: {}-{}'
                                       .format(part[0], part[-1]))
 
