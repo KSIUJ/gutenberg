@@ -19,6 +19,17 @@ DATABASES = {
     }
 }
 
-# CAS Settings
-CAS_SERVER_URL = 'https://auth.ksi.ii.uj.edu.pl/auth/realms/KSI/protocol/cas/'
-CAS_VERSION = '3'
+OIDC_ADMIN_ROLE = 'ksi'
+OIDC_OP_AUTHORIZATION_ENDPOINT = ''
+OIDC_OP_TOKEN_ENDPOINT = ''
+OIDC_OP_USER_ENDPOINT = 'o'
+OIDC_OP_JWKS_ENDPOINT = ''
+OIDC_OP_LOGOUT_ENDPOINT = ''
+OIDC_RP_CLIENT_ID = ''
+OIDC_RP_CLIENT_SECRET = None
+
+# Celery
+CELERY_BROKER_URL = 'redis://localhost:6379'
+
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
