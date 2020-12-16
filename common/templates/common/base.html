@@ -45,6 +45,13 @@
         {% autoescape off %}{% bootstrap_messages %}{% endautoescape %}
 
         {% block content %}{% endblock %}
+
+        <div class="alert alert-secondary mt-5" role="alert">
+            <h5>You can print directly from your device using IPP</h5>
+            {% url 'ipp_endpoint' request.user.api_key 'print' as ipp_url %}
+            <div>Your personal IPP endpoint: <b>ipp{% if request.is_secure %}s{% endif %}://{{request.META.HTTP_HOST}}:{% if request.is_secure %}443{% else %}80{% endif %}{{ ipp_url }}</b></div>
+            <div>Do not share this with others - all files printed using this address will be accounted to your quota</div>
+        </div>
     </main>
 
     <footer class="footer">
