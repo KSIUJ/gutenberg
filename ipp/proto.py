@@ -156,6 +156,7 @@ class IppRequest(IppMessage):
                 "Expected {}, got {}".format(attribute_group_type.get_tag(), self._parser_state.current_tag))
         return attribute_group_type.read_from(self._http_request, self._parser_state)
 
+    @property
     def http_request(self):
         return self._http_request
 
