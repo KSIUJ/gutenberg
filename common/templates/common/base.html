@@ -28,7 +28,10 @@
                 </a>
                 <div class="dropdown-menu dropdown-menu-right"
                      aria-labelledby="nav_dropdown">
-                    <a class="dropdown-item" href="{% url 'cas_ng_logout' %}">
+                    <form action="{% url 'oidc_logout' %}" method="post" id="logout-form">
+                        {% csrf_token %}
+                    </form>
+                    <a class="dropdown-item" href="#" onclick="document.getElementById('logout-form').submit();">
                         Sign out
                     </a>
                 </div>
