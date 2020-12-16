@@ -142,3 +142,9 @@ class PrintQualityEnum(IntEnum):
     draft = 3
     normal = 4
     high = 5
+
+
+class ValueTagsEnum(IntEnum):
+    unsupported = 0x10
+    unknown = 0x12
+    no_value = 0x13

@@ -32,14 +32,18 @@ class PrintJob(models.Model):
     pages = models.IntegerField(null=True, blank=True)
     status = models.CharField(max_length=10, default=JobStatus.UNKNOWN, choices=JobStatus.choices)
     status_reason = models.TextField(max_length=2000, null=True, blank=True)
-    date = models.DateTimeField(auto_now_add=True)
+    date_created = models.DateTimeField(auto_now_add=True)
+    date_processed = models.DateTimeField(null=True, blank=True)
+    date_finished = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
-        return "{} - {} - {}".format(self.date, self.name, self.owner)
+        return "{} - {} - {}".format(self.date_created, self.name, self.owner)
+
+    COMPLETED_STATUSES = [JobStatus.COMPLETED, JobStatus.CANCELED, JobStatus.ERROR, JobStatus.UNKNOWN]
 
     @property
     def completed(self):
-        return self.status in [JobStatus.COMPLETED, JobStatus.CANCELED, JobStatus.ERROR, JobStatus.UNKNOWN]
+        return self.status in self.COMPLETED_STATUSES
 
     @property
     def not_completed(self):
