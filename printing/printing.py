@@ -30,9 +30,9 @@ def generate_hp500_options(properties: PrintingProperties):
     options += ['-o', 'HPColorAsGray={}'.format(not properties.color)]
 
     two_sided_opt = {
-        TwoSidedPrinting.ONE_SIDED: 'None',
-        TwoSidedPrinting.TWO_SIDED_LONG_EDGE: 'DuplexNoTumble',
-        TwoSidedPrinting.TWO_SIDED_SHORT_EDGE: 'DuplexTumble',
+        TwoSidedPrinting.ONE_SIDED.name: 'None',
+        TwoSidedPrinting.TWO_SIDED_LONG_EDGE.name: 'DuplexNoTumble',
+        TwoSidedPrinting.TWO_SIDED_SHORT_EDGE.name: 'DuplexTumble',
     }[properties.two_sides]
     options += ['-o', 'Duplex={}'.format(two_sided_opt)]
     options += ['-o', 'fit-to-page']
@@ -47,6 +47,7 @@ def print_file(file_path, job_id):
     job = PrintJob.objects.get(id=job_id)
     job.status = JobStatus.PROCESSING
     job.save()
+    tmpdir = None
     try:
         tmpdir = tempfile.mkdtemp()
         ext = file_path.lower().rsplit('.', 1)[-1]
@@ -65,4 +66,6 @@ def print_file(file_path, job_id):
         job.status = JobStatus.ERROR
         job.status_reason = repr(ex)[:1999]
         job.save()
+        if tmpdir:
+            shutil.rmtree(tmpdir)
         raise ex

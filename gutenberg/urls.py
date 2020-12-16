@@ -18,12 +18,14 @@ from django.conf.urls import include
 from django.contrib import admin
 from django.urls import path
 
+import ipp.urls
 import printing.urls
 
 urlpatterns = [
     path('admin/', admin.site.urls),
 
     path('', include(printing.urls)),
+    path('ipp/', include(ipp.urls)),
 
     path('accounts/login/', django_cas_ng.views.LoginView.as_view(),
          name='cas_ng_login'),

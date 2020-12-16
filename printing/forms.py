@@ -6,8 +6,9 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import UploadedFile
 
+from printing.converter import SUPPORTED_EXTENSIONS
 from printing.printing import (
-    SUPPORTED_FILE_FORMATS, TWO_SIDED_SHORT_EDGE, TWO_SIDED_LONG_EDGE,
+    TWO_SIDED_SHORT_EDGE, TWO_SIDED_LONG_EDGE,
     TWO_SIDED_DISABLED)
 
 PAGES_REGEX = r"^\s*\d+(?:\s*-\s*\d+)?(\s*,\s*\d+(?:\s*-\s*\d+)?)*\s*$"
@@ -25,7 +26,7 @@ class PrintForm(forms.Form):
     file_to_print = forms.FileField(
         required=True,
         help_text='Supported formats: {}'.format(
-            ', '.join(SUPPORTED_FILE_FORMATS)))
+            ', '.join(sorted(SUPPORTED_EXTENSIONS))))
 
     copy_number = forms.IntegerField(label='Copies', initial=1, required=True,
                                      min_value=1, max_value=100)
@@ -49,7 +50,7 @@ class PrintForm(forms.Form):
         file_to_print: UploadedFile = self.cleaned_data['file_to_print']
         name, ext = os.path.splitext(file_to_print.name)
         ext = ext.replace('.', '')
-        if ext.lower() not in SUPPORTED_FILE_FORMATS:
+        if ext.lower() not in SUPPORTED_EXTENSIONS:
             raise ValidationError(
                 'Unsupported file format: %(ext)s', code='unsupported_format',
                 params={'ext': ext})
