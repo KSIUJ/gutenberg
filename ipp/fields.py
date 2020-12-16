@@ -57,7 +57,7 @@ class IppField(ABC):
     def get_tag(cls):
         if hasattr(cls, '_tag'):
             return cls._tag
-        return None
+        return 9999999
 
 
 class IppFieldsStruct:
@@ -100,6 +100,9 @@ class IppFieldsStruct:
         all_fields = dir(cls)
         return {name: getattr(cls, name) for name in all_fields if isinstance(getattr(cls, name), IppField)}
 
+    def __str__(self):
+        return '\n'.join('   {}: {}'.format(field, getattr(self, field)) for field in self._get_proto_fields())
+
 
 class ValueField(IppField, ABC):
     @abstractmethod
@@ -119,9 +122,11 @@ class ValueField(IppField, ABC):
         return readable.read(length)
 
     def read(self, readable, state: ParserState):
-        if state.current_tag != self.get_tag():
+        if self.get_tag() and state.current_tag != self.get_tag():
             raise InvalidTagError()
-        return self.read_value(readable)
+        value = self.read_value(readable)
+        state.read_field_header(readable)
+        return value
 
 
 class StructField(ValueField, ABC):
@@ -135,6 +140,18 @@ class StructField(ValueField, ABC):
         if self.struct.size != len(data):
             raise ValueError
         return self.struct.unpack(data)
+
+
+class NullField(ValueField):
+    struct = None
+    _tag = None
+
+    def write_value(self, writable, value):
+        raise NotImplementedError("unsupported")
+
+    def read_value(self, readable):
+        _ = super().read_value(readable)
+        return None
 
 
 class BooleanField(StructField):
@@ -156,6 +173,8 @@ class IntegerField(StructField):
     _tag = TagEnum.integer
 
     def write_value(self, writable, value):
+        if isinstance(value, IntEnum):
+            value = value.value
         assert isinstance(value, int)
         super().write_value(writable, (value,))
 
@@ -305,7 +324,6 @@ class OneSetField(IppField):
             field = self.tag_ids_map[state.current_tag]
             val = field.read(readable, state)
             values.append((field.__class__, val))
-            state.read_field_header(readable)
             if not state.is_next_set_attr():
                 return values
 

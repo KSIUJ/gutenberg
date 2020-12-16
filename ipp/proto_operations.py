@@ -20,7 +20,7 @@ class PrinterDescriptionGroup(AttributeGroup):
     charset_configured = CharsetField(required=True, default='utf-8')
     charset_supported = OneSetField(accepted_fields=[CharsetField()], required=True, default=['utf-8'])
     color_supported = BooleanField(default=True)
-    compression_supported = OneSetField(accepted_fields=[KeywordField()], required=True, default=['none', 'deflate'])
+    compression_supported = OneSetField(accepted_fields=[KeywordField()], required=True, default=['none'])
     document_format_supported = OneSetField(accepted_fields=[MimeTypeField()], required=True,
                                             default=['application/pdf'])
     document_format_default = MimeTypeField(required=True, default='application/pdf')
@@ -50,8 +50,9 @@ class PrinterDescriptionGroup(AttributeGroup):
     printer_is_accepting_jobs = BooleanField(required=True, default=True)
     printer_state_reasons = OneSetField(accepted_fields=[KeywordField()], required=True, default=['none'])
     printer_up_time = IntegerField(required=True, default=ipp_timestamp(timezone.now()))
-    uri_authentication_supported = OneSetField(accepted_fields=[KeywordField()], required=True, default=['basic'])
-    uri_security_supported = OneSetField(accepted_fields=[KeywordField()], required=True, default=['tls', 'none'])
+    uri_authentication_supported = OneSetField(accepted_fields=[KeywordField()], required=True,
+                                               default=['none', 'basic'])
+    uri_security_supported = OneSetField(accepted_fields=[KeywordField()], required=True, default=['none', 'tls'])
     device_service_count = IntegerField(default=1)
     print_color_mode_default = KeywordField(default='monochrome')
     print_color_mode_supported = OneSetField(accepted_fields=[KeywordField()], default=['monochrome', 'color', 'auto'])
@@ -61,7 +62,7 @@ class PrinterDescriptionGroup(AttributeGroup):
     printer_uri_supported = OneSetField(accepted_fields=[UriField()], required=True)
     printer_name = NameWLField(required=True)
     printer_more_info = UriField()
-    printer_state = IntegerField(required=True)
+    printer_state = EnumField(required=True)
     printer_state_message = TextWLField()
     queued_job_count = IntegerField(required=True)
     printer_uuid = UriField(required=True)
@@ -93,6 +94,8 @@ class JobTemplatePrinterGroup(AttributeGroup):
     printer_resolution_supported = OneSetField(accepted_fields=[ResolutionField()],
                                                default=[Resolution(300, 300, Resolution.Units.DOTS_PER_INCH)])
     printer_resolution_default = ResolutionField(default=Resolution(300, 300, Resolution.Units.DOTS_PER_INCH))
+    print_color_mode_supported = OneSetField(accepted_fields=[KeywordField()], default=['auto', 'color', 'monochrome'])
+    print_color_mode_default = KeywordField(default='monochrome')
 
 
 class PrinterAttributesGroup(MergedGroup):
@@ -104,8 +107,9 @@ class GetJobsRequestOperationGroup(BaseOperationGroup):
     printer_uri = UriField(required=True)
     requesting_user_name = NameWLField()
     requested_attributes = OneSetField(accepted_fields=[KeywordField()])
-    limit = IntegerField()
-    which_jobs = KeywordField()
+    limit = IntegerField(default=10000)
+    first_index = IntegerField(default=0)
+    which_jobs = KeywordField(default='not-completed')
     my_jobs = BooleanField()
 
 
@@ -121,9 +125,18 @@ class PrintJobRequestOperationGroup(BaseOperationGroup):
     job_k_octets = IntegerField()
     job_impressions = IntegerField()
     job_media_sheets = IntegerField()
-
     document_metadata = OneSetField(accepted_fields=[OctetStringField()])
-    first_index = IntegerField()
+
+
+class JobPrintResponseAttributes(AttributeGroup):
+    _tag = SectionEnum.job
+
+    job_state_reasons = OneSetField(accepted_fields=[KeywordField()], default=['none'])
+    job_state_message = TextWLField(default='')
+
+    job_uri = UriField(required=True)
+    job_id = IntegerField(required=True)
+    job_state = EnumField(required=True)
 
 
 class JobTemplateAttributeGroup(AttributeGroup):
@@ -141,3 +154,47 @@ class JobTemplateAttributeGroup(AttributeGroup):
     printer_resolution = ResolutionField(default=Resolution(300, 300, Resolution.Units.DOTS_PER_INCH))
 
     print_color_mode = KeywordField(default='auto')
+
+
+class JobDescriptionAttributeGroup(AttributeGroup):
+    _tag = SectionEnum.job
+    _filter = 'job-description'
+
+    job_state_reasons = OneSetField(accepted_fields=[KeywordField()], default=['none'])
+    job_state_message = TextWLField(default='')
+
+    job_uri = UriField(required=True)
+    job_id = IntegerField(required=True)
+    job_state = EnumField(required=True)
+    job_printer_uri = UriField(required=True)
+    job_name = NameWLField(required=True)
+    job_more_info = UriField()
+    job_originating_user_name = NameWLField(required=True)
+    time_at_creation = IntegerField(required=True)
+    time_at_processing = IntegerField(required=True)
+    time_at_completed = IntegerField(required=True)
+    job_printer_up_time = IntegerField(required=True)
+    date_time_at_creation = DateTimeField()
+    date_time_at_processing = DateTimeField()
+    date_time_at_completed = DateTimeField()
+    job_media_sheets = IntegerField()
+    job_media_sheets_completed = IntegerField()
+
+
+class JobObjectAttributeGroup(MergedGroup):
+    _tag = SectionEnum.job
+    merged_groups = [JobTemplateAttributeGroup, JobDescriptionAttributeGroup]
+    _default_filter = ['job-id', 'job-uri']
+
+
+class JobObjectAttributeGroupFull(MergedGroup):
+    _tag = SectionEnum.job
+    merged_groups = [JobTemplateAttributeGroup, JobDescriptionAttributeGroup]
+
+
+class GetJobAttributesRequestOperationGroup(BaseOperationGroup):
+    printer_uri = UriField()
+    job_id = IntegerField()
+    job_uri = UriField()
+    requesting_user_name = NameWLField()
+    requested_attributes = OneSetField(accepted_fields=[KeywordField()])
