@@ -79,7 +79,7 @@ class PrintView(LoginRequiredMixin, SuccessMessageMixin, FormView):
         PrintingProperties.objects.create(color=color_enabled, copies=copy_number, two_sides=two_sided,
                                           pages_to_print=pages_to_print, job=job)
 
-        print_file(file_path, file_type, job.id)
+        print_file.delay(file_path, file_type, job.id)
 
         logger.info('User %s printed file: "%s" (sudo printing: %s)',
                     self.request.user.username, file_path, color_enabled)

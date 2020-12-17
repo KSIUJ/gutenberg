@@ -27,7 +27,7 @@ class AttributeGroup(IppFieldsStruct):
 
     def write_to(self, writable, requested_attrs: List[str] = None):
         fields = [(name, clazz, getattr(self, name)) for name, clazz in self._filter_fields(requested_attrs).items() if
-                  getattr(self, name)]
+                  getattr(self, name) is not None]
         fields = sorted(fields, key=lambda x: x[1].order if x[1].order else math.inf)
         for name, field, value in fields:
             field.write(writable, name, value)

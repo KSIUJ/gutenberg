@@ -75,7 +75,7 @@ class DocConverter(SandboxConverter):
         return cls.binary_exists('unoconv')
 
 
-NATIVE_FILE_FORMATS = ['appliation/pdf', 'image/pwg-raster']
+NATIVE_FILE_FORMATS = ['application/pdf', 'image/pwg-raster']
 NATIVE_FILE_EXTENSIONS = ['pdf', 'pwg']
 CONVERTERS_ALL = [ImageConverter, DocConverter]
 CONVERTERS = [conv for conv in CONVERTERS_ALL if conv.is_available()]

@@ -6,6 +6,7 @@ from typing import Tuple, Callable
 from django.conf import settings
 from django.http import HttpResponse
 from django.template.defaultfilters import slugify
+from django.templatetags.static import static
 from django.urls import reverse
 from django.utils import timezone
 
@@ -19,7 +20,8 @@ from ipp.proto import IppRequest, IppResponse, BaseOperationGroup, \
 from ipp.proto_operations import GetPrinterAttributesRequestOperationGroup, PrinterAttributesGroup, \
     PrintJobRequestOperationGroup, JobTemplateAttributeGroup, JobObjectAttributeGroup, GetJobsRequestOperationGroup, \
     JobPrintResponseAttributes, GetJobAttributesRequestOperationGroup, CreateJobRequestOperationGroup, \
-    SendDocumentRequestOperationGroup, JobObjectAttributeGroupFull, CancelJobRequestOperationGroup
+    SendDocumentRequestOperationGroup, JobObjectAttributeGroupFull, CancelJobRequestOperationGroup, \
+    CloseJobRequestOperationGroup, IdentifyPrinterRequestOperationGroup
 from printing.converter import detect_file_format
 from printing.printing import print_file
 
@@ -60,25 +62,6 @@ class IppService:
     def __init__(self, user: User) -> None:
         self.user = user
 
-    def get_printer_attrs(self, request: IppRequest) -> IppResponse:
-        operation = request.read_group(GetPrinterAttributesRequestOperationGroup)
-        # logger.debug("GetPrinterAttrs:\n" + str(operation))
-        if operation.document_format and operation.document_format not in SUPPORTED_IPP_FORMATS:
-            raise DocumentFormatError("Unsupported format: {}".format(operation.document_format))
-
-        return response_for(request, [
-            BaseOperationGroup(),
-            PrinterAttributesGroup(
-                printer_uri_supported=[self.get_printer_uri(request)],
-                printer_name="Gutenberg",
-                printer_more_info=request.http_request.build_absolute_uri('/'),
-                printer_state=PrinterStateEnum.idle,
-                printer_state_message="idle",
-                queued_job_count=1,
-                printer_uuid='urn:uuid:12345678-9ABC-DEF0-1234-56789ABCDEF0',
-                device_uuid='urn:uuid:12345678-9ABC-DEF0-1234-56789ABCDEF0')
-        ], requested_attrs_oneset=operation.requested_attributes)
-
     def _handle_file_upload(self, request: IppRequest, name: str, operation):
         file_name = '{}_{}_{}'.format(
             name, self.user.username,
@@ -104,6 +87,9 @@ class IppService:
 
     def _create_job_from_template(self, job_template, name: str, status: JobStatus) -> PrintJob:
         job = PrintJob.objects.create(name=name, status=status, owner=self.user)
+        pages_to_print = None
+        if job_template.page_ranges:
+            pages_to_print = ','.join(['{}-{}'.format(x.lower, x.upper) for x in job_template.page_ranges])
         PrintingProperties.objects.create(
             color=job_template.print_color_mode != 'monochrome',
             copies=job_template.copies,
@@ -112,8 +98,67 @@ class IppService:
                 'two-sided-long-edge': TwoSidedPrinting.TWO_SIDED_LONG_EDGE,
                 'two-sided-short-edge': TwoSidedPrinting.TWO_SIDED_SHORT_EDGE,
             }.get(job_template.sides, TwoSidedPrinting.TWO_SIDED_LONG_EDGE),
-            pages_to_print=None, job=job)
+            pages_to_print=pages_to_print, job=job)
         return job
+
+    def _find_job(self, operation) -> PrintJob:
+        if not (operation.printer_uri and operation.job_id) and not operation.job_uri:
+            raise BadRequestError('no job info provided')
+        jobs = PrintJob.objects
+        jobs = jobs.filter(owner=self.user)
+        if operation.job_id:
+            job = jobs.filter(id=operation.job_id).first()
+        else:
+            idx = int(operation.job_uri.slice('/')[-1])
+            job = jobs.filter(id=idx).first()
+        if not job:
+            raise NotFoundError('job not found')
+        return job
+
+    def _build_job_proto(self, job: PrintJob, request: IppRequest, full: bool = True):
+        clazz = JobObjectAttributeGroupFull if full else JobObjectAttributeGroup
+        return clazz(
+            job_uri=self._get_job_uri(request, job.id),
+            job_id=job.id,
+            job_state=job_status_to_ipp(job.status),
+            job_printer_uri=self._get_printer_uri(request),
+            job_name=job.name,
+            job_originating_user_name=job.owner.username,
+            time_at_creation=ipp_timestamp(job.date_created),
+            time_at_processing=ipp_timestamp(job.date_processed) if job.date_processed else ValueTagsEnum.no_value,
+            time_at_completed=ipp_timestamp(job.date_finished) if job.date_finished else ValueTagsEnum.no_value,
+            job_printer_up_time=ipp_timestamp(timezone.now()),
+        )
+
+    def _get_printer_uri(self, request: IppRequest):
+        uri = request.http_request.build_absolute_uri(
+            reverse('ipp_endpoint', kwargs={'token': self.user.api_key, 'rel_path': 'print'}))
+        return uri.replace('http', 'ipp')
+
+    def _get_job_uri(self, request: IppRequest, job_id: int):
+        uri = request.http_request.build_absolute_uri(
+            reverse('ipp_endpoint', kwargs={'token': self.user.api_key, 'rel_path': 'job/{}'.format(job_id)}))
+        return uri.replace('http', 'ipp')
+
+    def get_printer_attrs(self, request: IppRequest) -> IppResponse:
+        operation = request.read_group(GetPrinterAttributesRequestOperationGroup)
+        # logger.debug("GetPrinterAttrs:\n" + str(operation))
+        if operation.document_format and operation.document_format not in SUPPORTED_IPP_FORMATS:
+            raise DocumentFormatError("Unsupported format: {}".format(operation.document_format))
+
+        return response_for(request, [
+            BaseOperationGroup(),
+            PrinterAttributesGroup(
+                printer_uri_supported=[self._get_printer_uri(request)],
+                printer_name="Gutenberg",
+                printer_more_info=request.http_request.build_absolute_uri('/'),
+                printer_state=PrinterStateEnum.idle,
+                printer_state_message="idle",
+                queued_job_count=1,
+                printer_uuid='urn:uuid:12345678-9ABC-DEF0-1234-56789ABCDEF0',
+                device_uuid='urn:uuid:12345678-9ABC-DEF0-1234-56789ABCDEF0',
+                printer_icons=[request.http_request.build_absolute_uri(static('img/logo-128.png'))])
+        ], requested_attrs_oneset=operation.requested_attributes)
 
     def print_job(self, request: IppRequest) -> IppResponse:
         operation = request.read_group(PrintJobRequestOperationGroup)
@@ -137,7 +182,7 @@ class IppService:
         return response_for(request, [
             BaseOperationGroup(),
             JobPrintResponseAttributes(
-                job_uri=self.get_job_uri(request, job.id),
+                job_uri=self._get_job_uri(request, job.id),
                 job_id=job.id,
                 job_state=JobStateEnum.pending,
             )
@@ -165,7 +210,7 @@ class IppService:
         return response_for(request, [
             BaseOperationGroup(),
             JobPrintResponseAttributes(
-                job_uri=self.get_job_uri(request, job.id),
+                job_uri=self._get_job_uri(request, job.id),
                 job_id=job.id,
                 job_state=JobStateEnum.pending,
             )
@@ -183,7 +228,7 @@ class IppService:
                     return response_for(request, [
                         BaseOperationGroup(),
                         JobPrintResponseAttributes(
-                            job_uri=self.get_job_uri(request, job.id),
+                            job_uri=self._get_job_uri(request, job.id),
                             job_id=job.id,
                             job_state=job_status_to_ipp(job.status),
                         )
@@ -200,7 +245,7 @@ class IppService:
         return response_for(request, [
             BaseOperationGroup(),
             JobPrintResponseAttributes(
-                job_uri=self.get_job_uri(request, job.id),
+                job_uri=self._get_job_uri(request, job.id),
                 job_id=job.id,
                 job_state=job_status_to_ipp(job.status),
             )
@@ -221,6 +266,8 @@ class IppService:
             jobs = jobs.filter(owner=self.user)
         if operation.which_jobs == 'completed':
             jobs = jobs.filter(status__in=PrintJob.COMPLETED_STATUSES)
+        elif operation.which_jobs == 'all':
+            pass
         else:
             jobs = jobs.exclude(status__in=PrintJob.COMPLETED_STATUSES)
 
@@ -231,35 +278,6 @@ class IppService:
         return response_for(request, [BaseOperationGroup()] + job_groups,
                             requested_attrs_oneset=operation.requested_attributes)
 
-    def _find_job(self, operation) -> PrintJob:
-        if not (operation.printer_uri and operation.job_id) and not operation.job_uri:
-            raise BadRequestError('no job info provided')
-        jobs = PrintJob.objects
-        jobs = jobs.filter(owner=self.user)
-        if operation.job_id:
-            job = jobs.filter(id=operation.job_id).first()
-        else:
-            idx = int(operation.job_uri.slice('/')[-1])
-            job = jobs.filter(id=idx).first()
-        if not job:
-            raise NotFoundError('job not found')
-        return job
-
-    def _build_job_proto(self, job: PrintJob, request: IppRequest, full: bool = True):
-        clazz = JobObjectAttributeGroupFull if full else JobObjectAttributeGroup
-        return clazz(
-            job_uri=self.get_job_uri(request, job.id),
-            job_id=job.id,
-            job_state=job_status_to_ipp(job.status),
-            job_printer_uri=self.get_printer_uri(request),
-            job_name=job.name,
-            job_originating_user_name=job.owner.username,
-            time_at_creation=ipp_timestamp(job.date_created),
-            time_at_processing=ipp_timestamp(job.date_processed) if job.date_processed else ValueTagsEnum.no_value,
-            time_at_completed=ipp_timestamp(job.date_finished) if job.date_finished else ValueTagsEnum.no_value,
-            job_printer_up_time=ipp_timestamp(timezone.now()),
-        )
-
     def get_job_attrs(self, request: IppRequest):
         operation = request.read_group(GetJobAttributesRequestOperationGroup)
         # logger.debug("GetJobAttrs:\n" + str(operation))
@@ -269,7 +287,7 @@ class IppService:
 
     def cancel_job(self, request: IppRequest):
         operation = request.read_group(CancelJobRequestOperationGroup)
-        logging.debug("CancelJob")
+        logger.debug("CancelJob")
         job = self._find_job(operation)
         if job.status == JobStatus.INCOMING:
             job.status = JobStatus.CANCELED
@@ -277,15 +295,27 @@ class IppService:
             return minimal_valid_response(request)
         return not_possible(request)
 
-    def get_printer_uri(self, request: IppRequest):
-        uri = request.http_request.build_absolute_uri(
-            reverse('ipp_endpoint', kwargs={'token': self.user.api_key, 'rel_path': 'print'}))
-        return uri.replace('http', 'ipp')
+    def cancel_my_jobs(self, request: IppRequest):
+        operation = request.read_group(CloseJobRequestOperationGroup)
+        logger.debug("CloseJob")
 
-    def get_job_uri(self, request: IppRequest, job_id: int):
-        uri = request.http_request.build_absolute_uri(
-            reverse('ipp_endpoint', kwargs={'token': self.user.api_key, 'rel_path': 'job/{}'.format(job_id)}))
-        return uri.replace('http', 'ipp')
+    def close_job(self, request: IppRequest):
+        operation = request.read_group(CloseJobRequestOperationGroup)
+        logger.debug("CloseJob")
+        job = self._find_job(operation)
+        return response_for(request, [
+            BaseOperationGroup(),
+            JobPrintResponseAttributes(
+                job_uri=self._get_job_uri(request, job.id),
+                job_id=job.id,
+                job_state=job_status_to_ipp(job.status),
+            )
+        ])
+
+    def identify_printer(self, request: IppRequest):
+        operation = request.read_group(IdentifyPrinterRequestOperationGroup)
+        # No-op - this is a virtual printer.
+        return minimal_valid_response(request)
 
     def _dispatch(self, version: Tuple[int, int], op_id: int) -> Callable[[IppRequest], IppResponse]:
         # we ignore ipp version for now
@@ -299,6 +329,8 @@ class IppService:
             OperationEnum.cancel_job: self.cancel_job,
             OperationEnum.create_job: self.create_job,
             OperationEnum.send_document: self.send_document,
+            OperationEnum.close_job: self.close_job,
+            OperationEnum.identify_printer: self.identify_printer,
         }
         return commands.get(op_id, not_implemented)
 
