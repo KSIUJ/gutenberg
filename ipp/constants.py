@@ -81,6 +81,8 @@ class StatusCodeEnum(IntEnum):
 class OperationEnum(IntEnum):
     print_job = 0x0002
     validate_job = 0x0004
+    create_job = 0x0005
+    send_document = 0x0006
     cancel_job = 0x0008
     get_job_attributes = 0x0009
     get_jobs = 0x000a

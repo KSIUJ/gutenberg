@@ -10,9 +10,10 @@ from django.urls import reverse_lazy
 from django.utils.text import slugify
 from django.views.generic import FormView
 
-from control.models import PrintJob, JobStatus, PrintingProperties, TwoSidedPrinting
+from control.models import PrintJob, JobStatus, PrintingProperties
+from printing.converter import detect_file_format, SUPPORTED_FILE_FORMATS
 from printing.forms import PrintForm
-from printing.printing import print_file, TWO_SIDED_DISABLED, TWO_SIDED_LONG_EDGE, TWO_SIDED_SHORT_EDGE
+from printing.printing import print_file
 
 # Time for a session to expire: 30 days
 SESSION_EXPIRY = 60 * 60 * 24 * 30
@@ -71,17 +72,14 @@ class PrintView(LoginRequiredMixin, SuccessMessageMixin, FormView):
         with open(file_path, 'wb+') as destination:
             for chunk in file_to_print.chunks():
                 destination.write(chunk)
-
-        ts = {
-            TWO_SIDED_DISABLED: TwoSidedPrinting.ONE_SIDED,
-            TWO_SIDED_LONG_EDGE: TwoSidedPrinting.TWO_SIDED_LONG_EDGE,
-            TWO_SIDED_SHORT_EDGE: TwoSidedPrinting.TWO_SIDED_SHORT_EDGE,
-        }.get(two_sided, TwoSidedPrinting.TWO_SIDED_LONG_EDGE)
+        file_type = detect_file_format(file_path)
+        if file_type not in SUPPORTED_FILE_FORMATS:
+            raise ValueError("Unsupported file type")
         job = PrintJob.objects.create(name=file_to_print.name, status=JobStatus.PENDING, owner=self.request.user)
-        PrintingProperties.objects.create(color=color_enabled, copies=copy_number, two_sides=ts,
+        PrintingProperties.objects.create(color=color_enabled, copies=copy_number, two_sides=two_sided,
                                           pages_to_print=pages_to_print, job=job)
 
-        print_file.delay(file_path, job.id)
+        print_file(file_path, file_type, job.id)
 
         logger.info('User %s printed file: "%s" (sudo printing: %s)',
                     self.request.user.username, file_path, color_enabled)

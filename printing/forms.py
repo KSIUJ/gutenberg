@@ -6,20 +6,12 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import UploadedFile
 
+from control.models import TwoSidedPrinting
 from printing.converter import SUPPORTED_EXTENSIONS
-from printing.printing import (
-    TWO_SIDED_SHORT_EDGE, TWO_SIDED_LONG_EDGE,
-    TWO_SIDED_DISABLED)
 
 PAGES_REGEX = r"^\s*\d+(?:\s*-\s*\d+)?(\s*,\s*\d+(?:\s*-\s*\d+)?)*\s*$"
 
 logger = logging.getLogger('gutenberg.printing')
-
-TWO_SIDED_CHOICES = (
-    (TWO_SIDED_DISABLED, 'Disabled'),
-    (TWO_SIDED_LONG_EDGE, 'Flip on Long Edge'),
-    (TWO_SIDED_SHORT_EDGE, 'Flip on Short Edge'),
-)
 
 
 class PrintForm(forms.Form):
@@ -38,8 +30,8 @@ class PrintForm(forms.Form):
             'pattern': PAGES_REGEX
         }))
     two_sided = forms.ChoiceField(
-        label='Two-sided', choices=TWO_SIDED_CHOICES,
-        initial=TWO_SIDED_LONG_EDGE,
+        label='Two-sided', choices=TwoSidedPrinting.choices,
+        initial=TwoSidedPrinting.TWO_SIDED_LONG_EDGE,
         help_text='Please consider the environment before disabling this '
                   'setting')
     color_enabled = forms.BooleanField(
@@ -61,14 +53,14 @@ class PrintForm(forms.Form):
         pages: str = self.cleaned_data['pages_to_print']
         # Remove all whitespace
         pages = pages.translate(str.maketrans('', '', string.whitespace))
-
-        # Check for invalid page ranges (e.g. 3-1)
-        parts = [part.split('-') for part in pages.split(',')]
-        for part in parts:
-            # In case of single page numbers, part[0] and part[-1] is the
-            # same thing, so we don't have to separately check for that
-            if int(part[0]) > int(part[-1]):
-                raise ValidationError('Invalid page range: {}-{}'
-                                      .format(part[0], part[-1]))
+        if pages:
+            # Check for invalid page ranges (e.g. 3-1)
+            parts = [part.split('-') for part in pages.split(',')]
+            for part in parts:
+                # In case of single page numbers, part[0] and part[-1] is the
+                # same thing, so we don't have to separately check for that
+                if int(part[0]) > int(part[-1]):
+                    raise ValidationError('Invalid page range: {}-{}'
+                                          .format(part[0], part[-1]))
 
         return pages

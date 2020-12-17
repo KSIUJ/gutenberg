@@ -23,3 +23,15 @@ def postprocess_pdf(input_file: str, work_dir: str, properties: PrintingProperti
     num_pages = int(re.match(r'^NumberOfPages:\s+(\d+)', meta).group(1))
 
     return out, num_pages
+
+
+def postprocess_pwg(input_file: str, work_dir: str, properties: PrintingProperties):
+    # TODO: filter and count pages.
+    return input_file, 0
+
+
+def auto_postprocess(input_file: str, input_type: str, work_dir: str, properties: PrintingProperties):
+    return {
+        'application/pdf': postprocess_pdf,
+        'image/pwg-raster': postprocess_pwg,
+    }[input_type](input_file, work_dir, properties)

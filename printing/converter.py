@@ -4,7 +4,7 @@ import subprocess
 from abc import ABC, abstractmethod
 from collections import deque, defaultdict
 from itertools import chain
-from typing import List, Type, Set, Union
+from typing import List, Type, Set, Tuple
 
 import magic
 
@@ -59,19 +59,6 @@ class ImageConverter(SandboxConverter):
         return cls.binary_exists('convert')
 
 
-class PDFNullConverter(SandboxConverter):
-    supported_types = ['application/pdf']
-    supported_extensions = ['pdf']
-    output_type = 'application/pdf'
-
-    def convert(self, input_file: str) -> str:
-        return input_file
-
-    @classmethod
-    def is_available(cls):
-        return True
-
-
 class DocConverter(SandboxConverter):
     supported_types = ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessing',
                        'application/rtf', 'application/vnd.oasis.opendocument.text']
@@ -88,17 +75,20 @@ class DocConverter(SandboxConverter):
         return cls.binary_exists('unoconv')
 
 
-CONVERTERS_ALL = [ImageConverter, DocConverter, PDFNullConverter]
+NATIVE_FILE_FORMATS = ['appliation/pdf', 'image/pwg-raster']
+NATIVE_FILE_EXTENSIONS = ['pdf', 'pwg']
+CONVERTERS_ALL = [ImageConverter, DocConverter]
 CONVERTERS = [conv for conv in CONVERTERS_ALL if conv.is_available()]
-SUPPORTED_FILE_FORMATS = list(chain.from_iterable(conv.supported_types for conv in CONVERTERS))
-SUPPORTED_EXTENSIONS = list(chain.from_iterable(conv.supported_extensions for conv in CONVERTERS))
+SUPPORTED_FILE_FORMATS = NATIVE_FILE_FORMATS + list(chain.from_iterable(conv.supported_types for conv in CONVERTERS))
+SUPPORTED_EXTENSIONS = NATIVE_FILE_EXTENSIONS + list(
+    chain.from_iterable(conv.supported_extensions for conv in CONVERTERS))
 
 
 class NoConverterAvailableError(ValueError):
     pass
 
 
-def get_converter_chain(input_type: str, output_types: Set[str]) -> List[Type[Converter]]:
+def get_converter_chain(input_type: str, output_types: Set[str]) -> Tuple[List[Type[Converter]], str]:
     converters_for_type = defaultdict(list)
     reverse = {}
     for conv in CONVERTERS:
@@ -124,23 +114,26 @@ def get_converter_chain(input_type: str, output_types: Set[str]) -> List[Type[Co
             "Unable to convert {} to {} - no converter available".format(input_type, output_types))
     pipeline = deque()
     v = next(iter(intersect))
+    final_type = v
     while v != input_type:
         v, conv = reverse[v]
         pipeline.appendleft(conv)
-    return list(pipeline)
+    return list(pipeline), final_type
 
 
-def auto_convert(input_file: str, out_types: Union[str, List[str]], work_dir: str) -> str:
-    if isinstance(out_types, str):
-        out_types = [out_types]
-    out_types = set(out_types)
+def detect_file_format(input_file: str):
     mime_detector = magic.Magic(mime=True)
     input_type = mime_detector.from_file(input_file)
+    return input_type
+
+
+def auto_convert(input_file: str, input_type: str, work_dir: str) -> Tuple[str, str]:
+    out_types = set(NATIVE_FILE_FORMATS)
     if input_type in out_types:
-        return input_file
-    pipeline = get_converter_chain(input_type, out_types)
+        return input_file, input_type
+    pipeline, out_type = get_converter_chain(input_type, out_types)
     file = input_file
     for conv_class in pipeline:
         conv = conv_class(work_dir)
         file = conv.convert(file)
-    return file
+    return file, out_type
