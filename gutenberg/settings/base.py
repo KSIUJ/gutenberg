@@ -34,7 +34,7 @@ DJANGO_INSTALLED_APPS = [
 
 THIRD_PARTY_APPS = [
     'bootstrap4',
-    'django_cas_ng',
+    'mozilla_django_oidc',
 ]
 
 PROJECT_APPS = [
