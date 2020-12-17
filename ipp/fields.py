@@ -9,7 +9,7 @@ from typing import List, Any, Type, Union, Tuple
 
 from django.templatetags.tz import utc
 
-from ipp.constants import TagEnum, SectionEnum
+from ipp.constants import TagEnum, SectionEnum, ValueTagsEnum
 from ipp.exceptions import FieldOrderError, InvalidTagError, MissingFieldError
 
 TAG_STRUCT = Struct('>B')
@@ -143,11 +143,21 @@ class StructField(ValueField, ABC):
 
 
 class NullField(ValueField):
-    struct = None
     _tag = None
 
     def write_value(self, writable, value):
         raise NotImplementedError("unsupported")
+
+    def read_value(self, readable):
+        _ = super().read_value(readable)
+        return None
+
+
+class UnknownField(ValueField):
+    _tag = ValueTagsEnum.unknown
+
+    def write_value(self, writable, value):
+        super().write_value(writable, b'')
 
     def read_value(self, readable):
         _ = super().read_value(readable)

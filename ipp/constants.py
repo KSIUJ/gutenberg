@@ -87,10 +87,10 @@ class OperationEnum(IntEnum):
     get_job_attributes = 0x0009
     get_jobs = 0x000a
     get_printer_attributes = 0x000b
+    cancel_my_jobs = 0x0039
+    close_job = 0x003B
+    identify_printer = 0x003C
 
-    # 0x4000 - 0xFFFF is for extensions
-    # CUPS extensions listed here:
-    # https://web.archive.org/web/20061024184939/http://uw714doc.sco.com/en/cups/ipp.html
     cups_get_default = 0x4001
     cups_list_all_printers = 0x4002
 

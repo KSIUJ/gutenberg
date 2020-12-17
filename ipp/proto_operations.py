@@ -4,7 +4,7 @@ from ipp import SUPPORTED_IPP_FORMATS, DEFAULT_IPP_FORMAT
 from ipp.constants import SectionEnum, OperationEnum, FinishingEnum, PageOrientationEnum, PrintQualityEnum
 from ipp.fields import MimeTypeField, UriField, CharsetField, OneSetField, BooleanField, KeywordField, NaturalLangField, \
     IntegerField, EnumField, TextWLField, DateTimeField, NameWLField, IntRangeField, IntRange, ResolutionField, \
-    Resolution, OctetStringField
+    Resolution, OctetStringField, UnknownField
 from ipp.proto import BaseOperationGroup, AttributeGroup, ipp_timestamp, MergedGroup
 
 
@@ -30,7 +30,7 @@ class PrinterDescriptionGroup(AttributeGroup):
     ipp_versions_supported = OneSetField(accepted_fields=[KeywordField()], required=True, default=['1.1', '2.0'])
     ipp_features_supported = OneSetField(accepted_fields=[KeywordField()], default=['ipp-everywhere'])
     multiple_document_jobs_supported = BooleanField(default=False)
-    multiple_operation_time_out = IntegerField(default=60)
+    multiple_operation_time_out = IntegerField(default=600)
     natural_language_configured = NaturalLangField(required=True, default='en')
     operations_supported = OneSetField(accepted_fields=[EnumField()], required=True, default=[
         OperationEnum.print_job,
@@ -41,6 +41,8 @@ class PrinterDescriptionGroup(AttributeGroup):
         OperationEnum.get_job_attributes,
         OperationEnum.get_printer_attributes,
         OperationEnum.get_jobs,
+        OperationEnum.close_job,
+        OperationEnum.identify_printer,
     ])
     pdl_override_supported = KeywordField(required=True, default='not-attempted')
     printer_info = TextWLField(default='KSI Gutenberg printer')
@@ -60,6 +62,26 @@ class PrinterDescriptionGroup(AttributeGroup):
     print_color_mode_default = KeywordField(default='monochrome')
     print_color_mode_supported = OneSetField(accepted_fields=[KeywordField()], default=['monochrome', 'color', 'auto'])
     printer_get_attributes_supported = OneSetField(accepted_fields=[KeywordField()], default=['document-format'])
+    which_jobs_supported = OneSetField(accepted_fields=[KeywordField()], default=['all', 'completed', 'not-completed'])
+    identify_actions_supported = OneSetField(accepted_fields=[KeywordField()], default=['flash'])
+    identify_actions_default = KeywordField(default='flash')
+
+    printer_geo_location = UnknownField(default=True)
+    printer_organization = OneSetField(accepted_fields=[TextWLField()], default=[''])
+    printer_organizational_unit = OneSetField(accepted_fields=[TextWLField()], default=[''])
+    printer_device_id = TextWLField(default='MFG:KSI;MDL:gutenberg')
+    job_ids_supported = BooleanField(default=True)
+    job_creation_attributes_supported = OneSetField(accepted_fields=[KeywordField()],
+                                                    default=['copies', 'sides', 'media', 'finishings',
+                                                             'orientation-requested', 'output-bin', 'print-quality',
+                                                             'printer-resolution', 'print-color-mode',
+                                                             'document-format', 'document-metadata', 'document-name',
+                                                             'document-natural-language', 'ipp-attribute-fidelity',
+                                                             'job-name', 'print-rendering-intent',
+                                                             'print-content-optimize', 'page_ranges'])
+    preferred_attributes_supported = BooleanField(default=False)
+    multiple_operation_time_out_action = KeywordField(default='process-job')
+    overrides_supported = OneSetField(accepted_fields=[KeywordField()], default=['pages', 'document-number'])
 
     # no default value
     printer_uri_supported = OneSetField(accepted_fields=[UriField()], required=True)
@@ -70,6 +92,7 @@ class PrinterDescriptionGroup(AttributeGroup):
     queued_job_count = IntegerField(required=True)
     printer_uuid = UriField(required=True)
     device_uuid = UriField(required=True)
+    printer_icons = OneSetField(accepted_fields=[UriField()], required=True)
 
 
 class JobTemplatePrinterGroup(AttributeGroup):
@@ -95,10 +118,25 @@ class JobTemplatePrinterGroup(AttributeGroup):
     print_quality_supported = OneSetField(accepted_fields=[EnumField()], default=[PrintQualityEnum.normal])
     print_quality_default = EnumField(default=PrintQualityEnum.normal)
     printer_resolution_supported = OneSetField(accepted_fields=[ResolutionField()],
-                                               default=[Resolution(300, 300, Resolution.Units.DOTS_PER_INCH)])
+                                               default=[Resolution(150, 150, Resolution.Units.DOTS_PER_INCH),
+                                                        Resolution(300, 300, Resolution.Units.DOTS_PER_INCH),
+                                                        Resolution(600, 600, Resolution.Units.DOTS_PER_INCH)])
     printer_resolution_default = ResolutionField(default=Resolution(300, 300, Resolution.Units.DOTS_PER_INCH))
     print_color_mode_supported = OneSetField(accepted_fields=[KeywordField()], default=['auto', 'color', 'monochrome'])
     print_color_mode_default = KeywordField(default='monochrome')
+    pwg_raster_document_resolution_supported = OneSetField(accepted_fields=[ResolutionField()],
+                                                           default=[
+                                                               Resolution(150, 150, Resolution.Units.DOTS_PER_INCH),
+                                                               Resolution(300, 300, Resolution.Units.DOTS_PER_INCH),
+                                                               Resolution(600, 600, Resolution.Units.DOTS_PER_INCH)])
+    pwg_raster_document_type_supported = OneSetField(accepted_fields=[KeywordField()],
+                                                     default=['black_1', 'sgray_8', 'srgb_8'])
+    pwg_raster_document_sheet_back = OneSetField(accepted_fields=[KeywordField()], default=['normal'])
+    print_rendering_intent_supported = OneSetField(accepted_fields=[KeywordField()], default=['auto'])
+    print_rendering_intent_default = KeywordField(default='auto')
+    print_content_optimize_supported = OneSetField(accepted_fields=[KeywordField()], default=['auto'])
+    print_content_optimize_default = KeywordField(default='auto')
+    page_ranges_supported = BooleanField(default=True)
 
 
 class PrinterAttributesGroup(MergedGroup):
@@ -178,8 +216,10 @@ class JobTemplateAttributeGroup(AttributeGroup):
     output_bin = KeywordField(default='face-up')
     print_quality = EnumField(default=PrintQualityEnum.normal)
     printer_resolution = ResolutionField(default=Resolution(300, 300, Resolution.Units.DOTS_PER_INCH))
-
+    print_rendering_intent = KeywordField(default='auto')
     print_color_mode = KeywordField(default='auto')
+    print_content_optimize = KeywordField(default='auto')
+    page_ranges = OneSetField(accepted_fields=[IntRangeField()])
 
 
 class JobDescriptionAttributeGroup(AttributeGroup):
@@ -231,3 +271,23 @@ class CancelJobRequestOperationGroup(BaseOperationGroup):
     job_id = IntegerField()
     job_uri = UriField()
     message = TextWLField()
+
+
+class CancelMyJobsRequestOperationGroup(BaseOperationGroup):
+    printer_uri = UriField()
+    job_ids = OneSetField(accepted_fields=[IntegerField()])
+    requesting_user_name = NameWLField()
+    message = TextWLField()
+
+
+class CloseJobRequestOperationGroup(BaseOperationGroup):
+    printer_uri = UriField()
+    job_id = IntegerField()
+    job_uri = UriField()
+    requesting_user_name = NameWLField()
+
+
+class IdentifyPrinterRequestOperationGroup(BaseOperationGroup):
+    printer_uri = UriField()
+    requesting_user_name = NameWLField()
+    identify_actions = OneSetField(accepted_fields=[KeywordField()])
