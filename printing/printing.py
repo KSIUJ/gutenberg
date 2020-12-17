@@ -1,10 +1,9 @@
 # Original script by zielmicha (https://github.com/zielmicha)
 
+import os
 import shutil
 import subprocess
 import tempfile
-
-import os
 
 from celery import shared_task
 from django.conf import settings
@@ -12,16 +11,7 @@ from django.utils import timezone
 
 from control.models import PrintJob, PrintingProperties, TwoSidedPrinting, JobStatus
 from printing.converter import auto_convert
-from printing.postprocess import postprocess_pdf
-
-DOCUMENT_FORMATS = ('doc', 'docx', 'rtf', 'odt')
-IMAGE_FORMATS = ('png', 'jpg', 'jpeg')
-PDF_FORMAT = ('pdf',)
-SUPPORTED_FILE_FORMATS = DOCUMENT_FORMATS + IMAGE_FORMATS + PDF_FORMAT
-
-TWO_SIDED_DISABLED = 'None'
-TWO_SIDED_LONG_EDGE = 'LongEdge'
-TWO_SIDED_SHORT_EDGE = 'ShortEdge'
+from printing.postprocess import auto_postprocess
 
 
 def generate_hp500_options(properties: PrintingProperties):
@@ -30,9 +20,9 @@ def generate_hp500_options(properties: PrintingProperties):
     options += ['-o', 'HPColorAsGray={}'.format(not properties.color)]
 
     two_sided_opt = {
-        TwoSidedPrinting.ONE_SIDED.name: 'None',
-        TwoSidedPrinting.TWO_SIDED_LONG_EDGE.name: 'DuplexNoTumble',
-        TwoSidedPrinting.TWO_SIDED_SHORT_EDGE.name: 'DuplexTumble',
+        TwoSidedPrinting.ONE_SIDED: 'None',
+        TwoSidedPrinting.TWO_SIDED_LONG_EDGE: 'DuplexNoTumble',
+        TwoSidedPrinting.TWO_SIDED_SHORT_EDGE: 'DuplexTumble',
     }[properties.two_sides]
     options += ['-o', 'Duplex={}'.format(two_sided_opt)]
     options += ['-o', 'fit-to-page']
@@ -43,7 +33,7 @@ generate_options = generate_hp500_options
 
 
 @shared_task
-def print_file(file_path, job_id):
+def print_file(file_path, file_format, job_id):
     job = PrintJob.objects.get(id=job_id)
     job.status = JobStatus.PROCESSING
     job.save()
@@ -53,8 +43,8 @@ def print_file(file_path, job_id):
         ext = file_path.lower().rsplit('.', 1)[-1]
         tmp_input = os.path.join(tmpdir, 'input.' + ext)
         shutil.copyfile(file_path, os.path.join(tmpdir, 'input.' + ext))
-        out = auto_convert(tmp_input, 'application/pdf', tmpdir)
-        out, num_pages = postprocess_pdf(out, tmpdir, job.properties)
+        out, out_type = auto_convert(tmp_input, file_format, tmpdir)
+        out, num_pages = auto_postprocess(out, out_type, tmpdir, job.properties)
         job.status = JobStatus.PRINTING
         job.date_processed = timezone.now()
         job.pages = num_pages * job.properties.copies

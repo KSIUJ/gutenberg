@@ -33,6 +33,11 @@ class UnsupportedIppVersionError(IppError):
         return StatusCodeEnum.server_error_version_not_supported
 
 
+class NotFoundError(IppError):
+    def error_code(self):
+        return StatusCodeEnum.client_error_not_found
+
+
 class BadRequestIDError(BadRequestError):
     pass
 

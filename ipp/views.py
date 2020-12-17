@@ -5,9 +5,8 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
+from common.models import User
 from ipp.service import IppService
-
-service = IppService()
 
 
 class IppView(View):
@@ -26,4 +25,8 @@ class IppView(View):
             return HttpResponse(b'Page does not exist', status=404, content_type='text/plain')
 
     def post(self, request: HttpRequest, token, rel_path, *args, **kwargs):
-        return service.handle_request(request, token, rel_path)
+        user = User.objects.filter(api_key=token).first()
+        if not user:
+            return HttpResponse(status=403, content_type='plain/text')
+        service = IppService(user)
+        return service.handle_request(request, rel_path)

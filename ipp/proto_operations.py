@@ -1,5 +1,6 @@
 from django.utils import timezone
 
+from ipp import SUPPORTED_IPP_FORMATS, DEFAULT_IPP_FORMAT
 from ipp.constants import SectionEnum, OperationEnum, FinishingEnum, PageOrientationEnum, PrintQualityEnum
 from ipp.fields import MimeTypeField, UriField, CharsetField, OneSetField, BooleanField, KeywordField, NaturalLangField, \
     IntegerField, EnumField, TextWLField, DateTimeField, NameWLField, IntRangeField, IntRange, ResolutionField, \
@@ -22,8 +23,8 @@ class PrinterDescriptionGroup(AttributeGroup):
     color_supported = BooleanField(default=True)
     compression_supported = OneSetField(accepted_fields=[KeywordField()], required=True, default=['none'])
     document_format_supported = OneSetField(accepted_fields=[MimeTypeField()], required=True,
-                                            default=['application/pdf'])
-    document_format_default = MimeTypeField(required=True, default='application/pdf')
+                                            default=SUPPORTED_IPP_FORMATS)
+    document_format_default = MimeTypeField(required=True, default=DEFAULT_IPP_FORMAT)
     generated_natural_language_supported = OneSetField(accepted_fields=[NaturalLangField()], required=True,
                                                        default=['en'])
     ipp_versions_supported = OneSetField(accepted_fields=[KeywordField()], required=True, default=['1.1', '2.0'])
@@ -34,6 +35,8 @@ class PrinterDescriptionGroup(AttributeGroup):
     operations_supported = OneSetField(accepted_fields=[EnumField()], required=True, default=[
         OperationEnum.print_job,
         OperationEnum.validate_job,
+        OperationEnum.create_job,
+        OperationEnum.send_document,
         OperationEnum.cancel_job,
         OperationEnum.get_job_attributes,
         OperationEnum.get_printer_attributes,
@@ -128,6 +131,29 @@ class PrintJobRequestOperationGroup(BaseOperationGroup):
     document_metadata = OneSetField(accepted_fields=[OctetStringField()])
 
 
+class CreateJobRequestOperationGroup(BaseOperationGroup):
+    printer_uri = UriField(required=True)
+    requesting_user_name = NameWLField()
+    job_name = NameWLField()
+    ipp_attribute_fidelity = BooleanField(default=False)
+    job_k_octets = IntegerField()
+    job_impressions = IntegerField()
+    job_media_sheets = IntegerField()
+
+
+class SendDocumentRequestOperationGroup(BaseOperationGroup):
+    printer_uri = UriField(required=True)
+    job_id = IntegerField()
+    job_uri = UriField()
+    requesting_user_name = NameWLField()
+    document_name = NameWLField()
+    compression = KeywordField(default='none')
+    document_format = MimeTypeField()
+    document_natural_language = NaturalLangField()
+    document_metadata = OneSetField(accepted_fields=[OctetStringField()])
+    last_document = BooleanField(required=True)
+
+
 class JobPrintResponseAttributes(AttributeGroup):
     _tag = SectionEnum.job
 
@@ -198,3 +224,10 @@ class GetJobAttributesRequestOperationGroup(BaseOperationGroup):
     job_uri = UriField()
     requesting_user_name = NameWLField()
     requested_attributes = OneSetField(accepted_fields=[KeywordField()])
+
+
+class CancelJobRequestOperationGroup(BaseOperationGroup):
+    printer_uri = UriField()
+    job_id = IntegerField()
+    job_uri = UriField()
+    message = TextWLField()
