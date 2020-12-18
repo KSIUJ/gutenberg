@@ -42,6 +42,7 @@ class PrinterDescriptionGroup(AttributeGroup):
         OperationEnum.get_printer_attributes,
         OperationEnum.get_jobs,
         OperationEnum.close_job,
+        OperationEnum.cancel_my_jobs,
         OperationEnum.identify_printer,
     ])
     pdl_override_supported = KeywordField(required=True, default='not-attempted')
