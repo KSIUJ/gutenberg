@@ -75,7 +75,7 @@ class DocConverter(SandboxConverter):
         return cls.binary_exists('unoconv')
 
 
-NATIVE_FILE_FORMATS = ['application/pdf', 'image/pwg-raster']
+NATIVE_FILE_FORMATS = ['application/pdf', 'image/pwg-raster', 'application/postscript']
 NATIVE_FILE_EXTENSIONS = ['pdf', 'pwg']
 CONVERTERS_ALL = [ImageConverter, DocConverter]
 CONVERTERS = [conv for conv in CONVERTERS_ALL if conv.is_available()]
@@ -124,6 +124,11 @@ def get_converter_chain(input_type: str, output_types: Set[str]) -> Tuple[List[T
 def detect_file_format(input_file: str):
     mime_detector = magic.Magic(mime=True)
     input_type = mime_detector.from_file(input_file)
+    if input_type == 'text/plain':
+        verbose_detector = magic.Magic()
+        verbose_type = verbose_detector.from_file(input_file)
+        if 'PostScript' in verbose_type:
+            input_type = 'application/postscript'
     return input_type
 
 

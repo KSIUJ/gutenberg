@@ -108,8 +108,9 @@ class IppMessage:
     HEADER_STRUCT = Struct('>bbhi')
     IPP2_0 = (2, 0)
     IPP1_1 = (1, 1)
+    IPP1_0 = (1, 0)
     IPP_VERSIONS = {
-        IPP1_1, IPP2_0
+        IPP1_0, IPP1_1, IPP2_0
     }
 
     def __init__(self, version: Tuple[int, int] = IPP2_0,

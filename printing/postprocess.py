@@ -6,7 +6,7 @@ from control.models import PrintingProperties
 from printing import SANDBOX_PATH
 
 
-def postprocess_pdf(input_file: str, work_dir: str, properties: PrintingProperties):
+def postprocess_postscript(input_file: str, work_dir: str, properties: PrintingProperties):
     out = os.path.join(work_dir, 'final.pdf')
     subprocess.check_call([SANDBOX_PATH, work_dir, 'gs', '-sDEVICE=pdfwrite', '-dNOPAUSE',
                            '-dBATCH', '-dSAFER', '-dCompatibilityLevel=1.4',
@@ -32,6 +32,7 @@ def postprocess_pwg(input_file: str, work_dir: str, properties: PrintingProperti
 
 def auto_postprocess(input_file: str, input_type: str, work_dir: str, properties: PrintingProperties):
     return {
-        'application/pdf': postprocess_pdf,
+        'application/pdf': postprocess_postscript,
+        'application/postscript': postprocess_postscript,
         'image/pwg-raster': postprocess_pwg,
     }[input_type](input_file, work_dir, properties)
