@@ -76,10 +76,10 @@ class IppService:
                 destination.write(chunk)
 
         file_format = operation.document_format
-        if file_format == AUTODETECT_IPP_FORMAT:
-            file_format = detect_file_format(file_path)
         if not file_format:
             file_format = DEFAULT_IPP_FORMAT
+        if file_format == AUTODETECT_IPP_FORMAT:
+            file_format = detect_file_format(file_path)
         if file_format not in SUPPORTED_IPP_FORMATS:
             os.remove(file_path)
             raise DocumentFormatError("Unsupported format: {}".format(operation.document_format))
