@@ -145,7 +145,6 @@ class IppService:
         # logger.debug("GetPrinterAttrs:\n" + str(operation))
         if operation.document_format and operation.document_format not in SUPPORTED_IPP_FORMATS:
             raise DocumentFormatError("Unsupported format: {}".format(operation.document_format))
-
         return response_for(request, [
             BaseOperationGroup(),
             PrinterAttributesGroup(
@@ -168,17 +167,10 @@ class IppService:
         else:
             job_template = JobTemplateAttributeGroup()
         logger.debug("Print template\n" + str(job_template))
-
         name = slugify(operation.job_name) if operation.job_name else 'ipp'
-
         file_path, file_format = self._handle_file_upload(request, name, operation)
-
         job = self._create_job_from_template(job_template, name, JobStatus.PENDING)
-
         print_file.delay(file_path, file_format, job.id)
-
-        logger.debug("Print OK")
-
         return response_for(request, [
             BaseOperationGroup(),
             JobPrintResponseAttributes(
@@ -297,7 +289,8 @@ class IppService:
 
     def cancel_my_jobs(self, request: IppRequest):
         operation = request.read_group(CloseJobRequestOperationGroup)
-        logger.debug("CloseJob")
+        # TODO
+        return not_possible(request)
 
     def close_job(self, request: IppRequest):
         operation = request.read_group(CloseJobRequestOperationGroup)
@@ -329,6 +322,7 @@ class IppService:
             OperationEnum.cancel_job: self.cancel_job,
             OperationEnum.create_job: self.create_job,
             OperationEnum.send_document: self.send_document,
+            OperationEnum.cancel_my_jobs: self.cancel_my_jobs,
             OperationEnum.close_job: self.close_job,
             OperationEnum.identify_printer: self.identify_printer,
         }
@@ -340,6 +334,13 @@ class IppService:
         ipp_response.write_to(http_response)
         return http_response
 
+    def _log_operation(self, idx, rel_path, method, status):
+        try:
+            status = StatusCodeEnum(status).name
+        except ValueError:
+            pass
+        logger.info("IPP {} {} /{} {} {}".format(idx, self.user.username, rel_path, method, status))
+
     def handle_request(self, http_request, rel_path: str):
         try:
             req = IppRequest.from_http_request(http_request)
@@ -347,11 +348,23 @@ class IppService:
             return self._response(unparsable_request())
         try:
             req.validate()
-            handler = self._dispatch(req.version, req.opid_or_status)
-            res = handler(req)
-            return self._response(res)
         except IppError as ex:
+            self._log_operation(req.request_id, rel_path, str(ex), ex.error_code())
             return self._response(minimal_valid_response(req, ex.error_code()))
         except Exception as ex:
-            logger.error("Internal error in IPP service.", ex)
+            logger.error(
+                "IPP {} {} /{} Internal error in IPP service.".format(req.request_id, self.user.username, rel_path), ex)
+            return self._response(internal_error(req))
+        handler = self._dispatch(req.version, req.opid_or_status)
+        try:
+            res = handler(req)
+            self._log_operation(req.request_id, rel_path, handler.__name__, res.opid_or_status)
+            return self._response(res)
+        except IppError as ex:
+            self._log_operation(req.request_id, rel_path, handler.__name__, ex.error_code())
+            return self._response(minimal_valid_response(req, ex.error_code()))
+        except Exception as ex:
+            logger.error(
+                "IPP {} {} /{} {} Internal error in IPP service.".format(req.request_id, self.user.username, rel_path,
+                                                                         handler.__name__), ex)
             return self._response(internal_error(req))
