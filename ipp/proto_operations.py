@@ -141,7 +141,7 @@ class JobTemplatePrinterGroup(AttributeGroup):
     orientation_requested_supported = OneSetField(accepted_fields=[EnumField()],
                                                   default=[PageOrientationEnum.portrait, PageOrientationEnum.landscape])
     orientation_requested_default = EnumField(default=PageOrientationEnum.portrait)
-    output_bin_supported = OneSetField(accepted_fields=[KeywordField()], default='face-up')
+    output_bin_supported = OneSetField(accepted_fields=[KeywordField()], default=['face-up'])
     output_bin_default = KeywordField(default='face-up')
     print_quality_supported = OneSetField(accepted_fields=[EnumField()], default=[PrintQualityEnum.normal])
     print_quality_default = EnumField(default=PrintQualityEnum.normal)
