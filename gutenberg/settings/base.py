@@ -135,7 +135,7 @@ LOGGING = {
             'filename': os.path.join(BASE_DIR, 'print.log'),
             'formatter': 'verbose',
             'when': 'midnight',
-            'backupCount': '365',
+            'backupCount': 365,
         },
         'django_file': {
             'level': 'WARNING',
@@ -143,7 +143,7 @@ LOGGING = {
             'filename': os.path.join(BASE_DIR, 'django.log'),
             'formatter': 'verbose',
             'when': 'midnight',
-            'backupCount': '365',
+            'backupCount': 365,
         },
         'mail_admins': {
             'level': 'ERROR',
