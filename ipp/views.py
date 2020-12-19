@@ -36,5 +36,12 @@ class IppView(View):
                 user = User.objects.filter(username=username, api_key=password).first()
         else:
             user = User.objects.filter(api_key=token).first()
+        if not user:
+            if basic_auth:
+                res = HttpResponse(b'Unauthorized', status=401, content_type='text/plain')
+                res['WWW-Authenticate'] = 'Basic realm="gutenberg", charset="UTF-8"'
+                return res
+            else:
+                return HttpResponse(b'Forbidden', status=403, content_type='text/plain')
         service = IppService(user, request.is_secure(), basic_auth)
         return service.handle_request(request, rel_path)

@@ -46,10 +46,6 @@ class InvalidGroupError(BadRequestError):
     pass
 
 
-class NotAuthenticatedError(PermissionError):
-    pass
-
-
 class DocumentFormatError(IppError):
     def error_code(self):
         return StatusCodeEnum.client_error_document_format_not_supported
