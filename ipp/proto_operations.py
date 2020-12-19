@@ -4,7 +4,7 @@ from ipp import SUPPORTED_IPP_FORMATS, DEFAULT_IPP_FORMAT
 from ipp.constants import SectionEnum, OperationEnum, FinishingEnum, PageOrientationEnum, PrintQualityEnum
 from ipp.fields import MimeTypeField, UriField, CharsetField, OneSetField, BooleanField, KeywordField, NaturalLangField, \
     IntegerField, EnumField, TextWLField, DateTimeField, NameWLField, IntRangeField, IntRange, ResolutionField, \
-    Resolution, OctetStringField, UnknownField
+    Resolution, OctetStringField, UnknownField, Collection, CollectionField, UnionField
 from ipp.proto import BaseOperationGroup, AttributeGroup, ipp_timestamp, MergedGroup
 
 
@@ -83,6 +83,13 @@ class PrinterDescriptionGroup(AttributeGroup):
     preferred_attributes_supported = BooleanField(default=False)
     multiple_operation_time_out_action = KeywordField(default='process-job')
     overrides_supported = OneSetField(accepted_fields=[KeywordField()], default=['pages', 'document-number'])
+    printer_supply = OneSetField(accepted_fields=[OctetStringField()], default=[
+        b'index=1;class=supplyThatIsConsumed;type=toner;unit=percent;maxcapacity=100;level=100;colorantname=multi-color;'])
+    printer_supply_description = OneSetField(accepted_fields=[TextWLField()], default=['Virtual Toner'])
+    printer_state_change_date_time = DateTimeField(default=timezone.now())
+    printer_state_change_time = IntegerField(default=ipp_timestamp(timezone.now()))
+    printer_config_change_date_time = DateTimeField(default=timezone.now())
+    printer_config_change_time = IntegerField(default=ipp_timestamp(timezone.now()))
 
     # no default value
     printer_uri_supported = OneSetField(accepted_fields=[UriField()], required=True)
@@ -94,6 +101,24 @@ class PrinterDescriptionGroup(AttributeGroup):
     printer_uuid = UriField(required=True)
     device_uuid = UriField(required=True)
     printer_icons = OneSetField(accepted_fields=[UriField()], required=True)
+    printer_supply_info_uri = UriField(required=True)
+
+
+class MediaSizeCollection(Collection):
+    x_dimension = IntegerField(required=True)
+    y_dimension = IntegerField(required=True)
+
+
+class MediaCollection(Collection):
+    media_key = UnionField(accepted_fields=[KeywordField(), NameWLField()])
+    media_bottom_margin = IntegerField(required=True)
+    media_top_margin = IntegerField(required=True)
+    media_left_margin = IntegerField(required=True)
+    media_right_margin = IntegerField(required=True)
+    media_size = CollectionField(collection_type=MediaSizeCollection, required=True)
+    media_size_name = UnionField(accepted_fields=[KeywordField(), NameWLField()])
+    media_source = UnionField(accepted_fields=[KeywordField(), NameWLField()])
+    media_type = UnionField(accepted_fields=[KeywordField(), NameWLField()])
 
 
 class JobTemplatePrinterGroup(AttributeGroup):
@@ -108,6 +133,8 @@ class JobTemplatePrinterGroup(AttributeGroup):
     sides_default = KeywordField(default='two-sided-long-edge')
     media_supported = OneSetField(accepted_fields=[KeywordField(), NameWLField()],
                                   default=[(KeywordField, 'iso_a4_210x297mm')])
+    media_ready = OneSetField(accepted_fields=[KeywordField(), NameWLField()],
+                              default=[(KeywordField, 'iso_a4_210x297mm')])
     media_default = KeywordField(default='iso_a4_210x297mm')
     finishings_supported = OneSetField(accepted_fields=[EnumField()], default=[FinishingEnum.none])
     finishings_default = OneSetField(accepted_fields=[EnumField()], default=[FinishingEnum.none])
@@ -125,11 +152,7 @@ class JobTemplatePrinterGroup(AttributeGroup):
     printer_resolution_default = ResolutionField(default=Resolution(300, 300, Resolution.Units.DOTS_PER_INCH))
     print_color_mode_supported = OneSetField(accepted_fields=[KeywordField()], default=['auto', 'color', 'monochrome'])
     print_color_mode_default = KeywordField(default='monochrome')
-    pwg_raster_document_resolution_supported = OneSetField(accepted_fields=[ResolutionField()],
-                                                           default=[
-                                                               Resolution(150, 150, Resolution.Units.DOTS_PER_INCH),
-                                                               Resolution(300, 300, Resolution.Units.DOTS_PER_INCH),
-                                                               Resolution(600, 600, Resolution.Units.DOTS_PER_INCH)])
+    pwg_raster_document_resolution_supported = printer_resolution_supported
     pwg_raster_document_type_supported = OneSetField(accepted_fields=[KeywordField()],
                                                      default=['black_1', 'sgray_8', 'srgb_8'])
     pwg_raster_document_sheet_back = OneSetField(accepted_fields=[KeywordField()], default=['normal'])
@@ -138,6 +161,27 @@ class JobTemplatePrinterGroup(AttributeGroup):
     print_content_optimize_supported = OneSetField(accepted_fields=[KeywordField()], default=['auto'])
     print_content_optimize_default = KeywordField(default='auto')
     page_ranges_supported = BooleanField(default=True)
+    media_type_supported = OneSetField(accepted_fields=[KeywordField()], default=['stationery'])
+    media_source_supported = OneSetField(accepted_fields=[KeywordField()], default=['main'])
+    media_size_supported = OneSetField(accepted_fields=[CollectionField(collection_type=MediaSizeCollection)],
+                                       default=[MediaSizeCollection(x_dimension=21000, y_dimension=29700)])
+    media_col_database = OneSetField(accepted_fields=[CollectionField(collection_type=MediaCollection)],
+                                     default=[MediaCollection(
+                                         media_key='iso_a4_210x297mm',
+                                         media_bottom_margin=635,
+                                         media_top_margin=635,
+                                         media_left_margin=340,
+                                         media_right_margin=340,
+                                         media_size=MediaSizeCollection(x_dimension=21000, y_dimension=29700),
+                                         media_size_name='iso_a4_210x297mm',
+                                         media_source='main',
+                                         media_type='stationery'
+                                     )])
+    media_col_ready = media_col_database
+    media_bottom_margin_supported = IntegerField(default=635)
+    media_top_margin_supported = IntegerField(default=635)
+    media_left_margin_supported = IntegerField(default=340)
+    media_right_margin_supported = IntegerField(default=340)
 
 
 class PrinterAttributesGroup(MergedGroup):
@@ -221,6 +265,14 @@ class JobTemplateAttributeGroup(AttributeGroup):
     print_color_mode = KeywordField(default='auto')
     print_content_optimize = KeywordField(default='auto')
     page_ranges = OneSetField(accepted_fields=[IntRangeField()])
+    media_type = KeywordField()
+    media_source = KeywordField()
+    media_size = CollectionField(collection_type=MediaSizeCollection)
+    media_col = CollectionField(collection_type=MediaCollection)
+    media_bottom_margin = IntegerField(default=635)
+    media_top_margin = IntegerField(default=635)
+    media_left_margin = IntegerField(default=340)
+    media_right_margin = IntegerField(default=340)
 
 
 class JobDescriptionAttributeGroup(AttributeGroup):
