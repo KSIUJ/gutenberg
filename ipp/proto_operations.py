@@ -58,7 +58,7 @@ class PrinterDescriptionGroup(AttributeGroup):
     printer_up_time = IntegerField(required=True, default=ipp_timestamp(timezone.now()))
     uri_authentication_supported = OneSetField(accepted_fields=[KeywordField()], required=True,
                                                default=['none'])
-    uri_security_supported = OneSetField(accepted_fields=[KeywordField()], required=True, default=['tls'])
+    uri_security_supported = OneSetField(accepted_fields=[KeywordField()], required=True, default=['none'])
     device_service_count = IntegerField(default=1)
     print_color_mode_default = KeywordField(default='monochrome')
     print_color_mode_supported = OneSetField(accepted_fields=[KeywordField()], default=['monochrome', 'color', 'auto'])

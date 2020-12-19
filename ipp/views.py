@@ -1,3 +1,5 @@
+import base64
+
 from django.http import HttpResponse, HttpRequest
 
 # Create your views here.
@@ -11,6 +13,7 @@ from ipp.service import IppService
 
 class IppView(View):
     http_method_names = ['get', 'post', 'options']
+    BASIC_AUTH_TOKEN = 'basic'
 
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
@@ -19,14 +22,19 @@ class IppView(View):
     def get(self, request, rel_path: str, *args, **kwargs):
         if rel_path == '':
             return HttpResponse(b'This is gutenberg ipp-server', content_type='text/plain')
-        # elif rel_path.endswith('.ppd'):
-        #     return HttpResponse(behaviour.ppd, content_type='text/plain')
         else:
             return HttpResponse(b'Page does not exist', status=404, content_type='text/plain')
 
     def post(self, request: HttpRequest, token, rel_path, *args, **kwargs):
-        user = User.objects.filter(api_key=token).first()
-        if not user:
-            return HttpResponse(status=403, content_type='plain/text')
-        service = IppService(user)
+        user = None
+        basic_auth = token == self.BASIC_AUTH_TOKEN
+        if basic_auth:
+            auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+            token_type, _, credentials = auth_header.partition(' ')
+            if token_type.lower() == 'basic':
+                username, password = base64.b64decode(credentials).decode('utf-8', errors='ignore').split(':')
+                user = User.objects.filter(username=username, api_key=password).first()
+        else:
+            user = User.objects.filter(api_key=token).first()
+        service = IppService(user, request.is_secure(), basic_auth)
         return service.handle_request(request, rel_path)
