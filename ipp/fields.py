@@ -338,6 +338,28 @@ class OneSetField(IppField):
                 return values
 
 
+class UnionField(IppField):
+    def __init__(self, accepted_fields: List[IppField], *args, **kwargs):
+        self.accepted_fields = accepted_fields
+        self.tag_ids_map = {field.get_tag(): field for field in accepted_fields}
+        super().__init__(*args, **kwargs)
+
+    def write(self, writable, name: str, value: Union[Tuple[Type[ValueField], Any, Any]]):
+        if isinstance(value, tuple):
+            field = value[0]()
+            v = value[1]
+        else:
+            field = self.accepted_fields[0]
+            v = value
+        field.write(writable, name, v)
+
+    def read(self, readable, state: ParserState):
+        if state.current_tag not in self.tag_ids_map:
+            raise InvalidTagError(state.current_tag)
+        field = self.tag_ids_map[state.current_tag]
+        return field.read(readable, state)
+
+
 class Collection(IppFieldsStruct):
     def write(self, writable):
         fields = [(name, clazz, getattr(self, name)) for name, clazz in self.proto_fields.items() if
@@ -373,9 +395,9 @@ class Collection(IppFieldsStruct):
 class CollectionField(IppField):
     _tag = TagEnum.begin_collection
 
-    def __init__(self, collection: Collection, *args, **kwargs):
+    def __init__(self, collection_type: Type[Collection], *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.collection = collection
+        self.collection_type = collection_type
 
     def write(self, writable, name, value):
         writable.write(TAG_STRUCT.pack(self.get_tag()))
@@ -383,7 +405,7 @@ class CollectionField(IppField):
         writable.write(name.replace('_', '-').encode('utf-8'))
         writable.write(LENGTH_STRUCT.pack(0))
 
-        self.collection.write(writable)
+        value.write(writable)
 
         writable.write(TAG_STRUCT.pack(TagEnum.end_collection))
         writable.write(LENGTH_STRUCT.pack(0))
@@ -393,7 +415,7 @@ class CollectionField(IppField):
         if state.current_tag != self.get_tag():
             raise InvalidTagError()
         readable.read(LENGTH_STRUCT.size)
-        val = self.collection.read(readable, state)
+        val = self.collection_type.read(readable, state)
         if state.current_tag != TagEnum.end_collection:
             raise InvalidTagError()
         readable.read(LENGTH_STRUCT.size)

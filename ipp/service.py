@@ -156,7 +156,8 @@ class IppService:
                 queued_job_count=1,
                 printer_uuid='urn:uuid:12345678-9ABC-DEF0-1234-56789ABCDEF0',
                 device_uuid='urn:uuid:12345678-9ABC-DEF0-1234-56789ABCDEF0',
-                printer_icons=[request.http_request.build_absolute_uri(static('img/logo-128.png'))])
+                printer_icons=[request.http_request.build_absolute_uri(static('img/logo-128.png'))],
+                printer_supply_info_uri=request.http_request.build_absolute_uri('/'))
         ], requested_attrs_oneset=operation.requested_attributes)
 
     def print_job(self, request: IppRequest) -> IppResponse:
