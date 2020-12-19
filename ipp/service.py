@@ -1,7 +1,8 @@
 import logging
 import os
 from datetime import datetime
-from typing import Tuple, Callable
+from functools import wraps
+from typing import Tuple, Callable, Optional
 
 from django.conf import settings
 from django.http import HttpResponse
@@ -14,7 +15,7 @@ from common.models import User
 from control.models import PrintingProperties, PrintJob, JobStatus, TwoSidedPrinting
 from ipp import SUPPORTED_IPP_FORMATS, AUTODETECT_IPP_FORMAT, DEFAULT_IPP_FORMAT
 from ipp.constants import OperationEnum, StatusCodeEnum, PrinterStateEnum, JobStateEnum, ValueTagsEnum
-from ipp.exceptions import IppError, DocumentFormatError, NotFoundError
+from ipp.exceptions import IppError, DocumentFormatError, NotFoundError, NotAuthenticatedError
 from ipp.proto import IppRequest, IppResponse, BaseOperationGroup, \
     BadRequestError, minimal_valid_response, response_for, ipp_timestamp
 from ipp.proto_operations import GetPrinterAttributesRequestOperationGroup, PrinterAttributesGroup, \
@@ -58,9 +59,22 @@ def job_status_to_ipp(status):
     }.get(status, ValueTagsEnum.unknown)
 
 
+def _require_authenticated(function):
+    @wraps(function)
+    def wrapper(inner_self, *args, **kwargs):
+        if inner_self.user:
+            return function(inner_self, *args, **kwargs)
+        else:
+            raise NotAuthenticatedError()
+
+    return wrapper
+
+
 class IppService:
-    def __init__(self, user: User) -> None:
+    def __init__(self, user: Optional[User], is_secure: bool, basic_auth: bool) -> None:
         self.user = user
+        self.is_secure = is_secure
+        self.basic_auth = basic_auth
 
     def _handle_file_upload(self, request: IppRequest, name: str, operation):
         file_name = '{}_{}_{}'.format(
@@ -131,8 +145,9 @@ class IppService:
         )
 
     def _get_printer_uri(self, request: IppRequest):
+        token = 'basic' if self.basic_auth or not self.user else self.user.api_key
         uri = request.http_request.build_absolute_uri(
-            reverse('ipp_endpoint', kwargs={'token': self.user.api_key, 'rel_path': 'print'}))
+            reverse('ipp_endpoint', kwargs={'token': token, 'rel_path': 'print'}))
         return uri.replace('http', 'ipp')
 
     def _get_job_uri(self, request: IppRequest, job_id: int):
@@ -157,9 +172,12 @@ class IppService:
                 printer_uuid='urn:uuid:12345678-9ABC-DEF0-1234-56789ABCDEF0',
                 device_uuid='urn:uuid:12345678-9ABC-DEF0-1234-56789ABCDEF0',
                 printer_icons=[request.http_request.build_absolute_uri(static('img/logo-128.png'))],
-                printer_supply_info_uri=request.http_request.build_absolute_uri('/'))
+                printer_supply_info_uri=request.http_request.build_absolute_uri('/'),
+                uri_security_supported=['tls'] if self.is_secure else ['none'],
+                uri_authentication_supported=['basic'] if self.basic_auth else ['none'])
         ], requested_attrs_oneset=operation.requested_attributes)
 
+    @_require_authenticated
     def print_job(self, request: IppRequest) -> IppResponse:
         operation = request.read_group(PrintJobRequestOperationGroup)
         logger.debug("PrintJob\n" + str(operation))
@@ -181,6 +199,7 @@ class IppService:
             )
         ])
 
+    @_require_authenticated
     def validate_job(self, request: IppRequest) -> IppResponse:
         operation = request.read_group(PrintJobRequestOperationGroup)
         logger.debug("ValidateJob:\n" + str(operation))
@@ -190,6 +209,7 @@ class IppService:
             BaseOperationGroup(),
         ])
 
+    @_require_authenticated
     def create_job(self, request: IppRequest) -> IppResponse:
         operation = request.read_group(CreateJobRequestOperationGroup)
         logger.debug("CreateJob\n" + str(operation))
@@ -209,6 +229,7 @@ class IppService:
             )
         ])
 
+    @_require_authenticated
     def send_document(self, request: IppRequest) -> IppResponse:
         operation = request.read_group(SendDocumentRequestOperationGroup)
         logger.debug("SendDocument\n" + str(operation))
@@ -244,6 +265,7 @@ class IppService:
             )
         ])
 
+    @_require_authenticated
     def get_jobs(self, request: IppRequest):
         operation = request.read_group(GetJobsRequestOperationGroup)
         # logger.debug("GetJob:\n" + str(operation))
@@ -271,6 +293,7 @@ class IppService:
         return response_for(request, [BaseOperationGroup()] + job_groups,
                             requested_attrs_oneset=operation.requested_attributes)
 
+    @_require_authenticated
     def get_job_attrs(self, request: IppRequest):
         operation = request.read_group(GetJobAttributesRequestOperationGroup)
         # logger.debug("GetJobAttrs:\n" + str(operation))
@@ -278,6 +301,7 @@ class IppService:
         return response_for(request, [BaseOperationGroup(), self._build_job_proto(job, request)],
                             requested_attrs_oneset=operation.requested_attributes)
 
+    @_require_authenticated
     def cancel_job(self, request: IppRequest):
         operation = request.read_group(CancelJobRequestOperationGroup)
         logger.debug("CancelJob")
@@ -288,11 +312,13 @@ class IppService:
             return minimal_valid_response(request)
         return not_possible(request)
 
+    @_require_authenticated
     def cancel_my_jobs(self, request: IppRequest):
         operation = request.read_group(CloseJobRequestOperationGroup)
         # TODO
         return not_possible(request)
 
+    @_require_authenticated
     def close_job(self, request: IppRequest):
         operation = request.read_group(CloseJobRequestOperationGroup)
         logger.debug("CloseJob")
@@ -340,12 +366,14 @@ class IppService:
             status = StatusCodeEnum(status).name
         except ValueError:
             pass
-        logger.info("IPP {} {} /{} {} {}".format(idx, self.user.username, rel_path, method, status))
+        logger.info(
+            "IPP {} {} /{} {} {}".format(idx, self.user.username if self.user else 'none', rel_path, method, status))
 
     def handle_request(self, http_request, rel_path: str):
         try:
             req = IppRequest.from_http_request(http_request)
-        except BadRequestError:
+        except BadRequestError as ex:
+            self._log_operation(-1, rel_path, str(ex), ex.error_code())
             return self._response(unparsable_request())
         try:
             req.validate()
@@ -354,7 +382,9 @@ class IppService:
             return self._response(minimal_valid_response(req, ex.error_code()))
         except Exception as ex:
             logger.error(
-                "IPP {} {} /{} Internal error in IPP service.".format(req.request_id, self.user.username, rel_path), ex)
+                "IPP {} {} /{} Internal error in IPP service.".format(req.request_id,
+                                                                      self.user.username if self.user else 'none',
+                                                                      rel_path), ex)
             return self._response(internal_error(req))
         handler = self._dispatch(req.version, req.opid_or_status)
         try:
@@ -364,8 +394,20 @@ class IppService:
         except IppError as ex:
             self._log_operation(req.request_id, rel_path, handler.__name__, ex.error_code())
             return self._response(minimal_valid_response(req, ex.error_code()))
+        except NotAuthenticatedError:
+            self._log_operation(req.request_id, rel_path, handler.__name__,
+                                StatusCodeEnum.client_error_not_authenticated)
+            if self.basic_auth:
+                res = self._response(minimal_valid_response(req, StatusCodeEnum.client_error_not_authenticated),
+                                     http_code=401)
+                res['WWW-Authenticate'] = 'Basic realm="gutenberg", charset="UTF-8"'
+                return res
+            else:
+                return self._response(minimal_valid_response(req, StatusCodeEnum.client_error_forbidden), http_code=403)
         except Exception as ex:
             logger.error(
-                "IPP {} {} /{} {} Internal error in IPP service.".format(req.request_id, self.user.username, rel_path,
+                "IPP {} {} /{} {} Internal error in IPP service.".format(req.request_id,
+                                                                         self.user.username if self.user else 'none',
+                                                                         rel_path,
                                                                          handler.__name__), ex)
             return self._response(internal_error(req))
