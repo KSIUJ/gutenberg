@@ -2,12 +2,14 @@
 
 {% load static %}
 
+{% block bootstrap4_title %}
+    {% block title %}{% endblock %} - Gutenberg
+{% endblock %}
+
 {% block bootstrap4_extra_head %}
     <link rel="stylesheet" href="{% static 'css/main.css' %}">
 
     <link rel="shortcut icon" href="{% static 'img/favicon.ico' %}">
     <link rel="icon" type="image/png" sizes="256x256" href="{% static 'img/favicon-256.png' %}">
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'img/favicon-180.png' %}">
-
-    <title>{% block title %}{% endblock %} - Gutenberg</title>
 {% endblock %}
