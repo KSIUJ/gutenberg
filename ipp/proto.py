@@ -4,7 +4,7 @@ from abc import ABC
 from collections import OrderedDict
 from datetime import datetime
 from struct import Struct
-from typing import Tuple, List, Type, Any, Iterable
+from typing import Tuple, List, Type, Any, Iterable, Optional
 
 from ipp.constants import SectionEnum, StatusCodeEnum
 from ipp.exceptions import InvalidCharsetError, BadRequestError, UnsupportedIppVersionError, BadRequestIDError, \
@@ -25,7 +25,7 @@ class AttributeGroup(IppFieldsStruct):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def write_to(self, writable, requested_attrs: List[str] = None):
+    def write_to(self, writable, requested_attrs: Optional[List[str]] = None):
         fields = [(name, clazz, getattr(self, name)) for name, clazz in self._filter_fields(requested_attrs).items() if
                   getattr(self, name) is not None]
         fields = sorted(fields, key=lambda x: x[1].order if x[1].order else math.inf)

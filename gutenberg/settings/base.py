@@ -186,14 +186,6 @@ PRINT_DIRECTORY = '/tmp/print/'
 PRINT_DATE_FORMAT = '%Y-%m-%dT%H-%M-%S-%f'
 PRINTER_NAME = 'PUT_PRINTER_NAME_HERE'
 
-# # CAS Settings
-# CAS_LOGIN_MSG = None
-# CAS_LOGGED_MSG = None
-# FIRST_NAME_ATTR_NAME = 'givenName'
-# LAST_NAME_ATTR_NAME = 'sn'
-# GROUPS_ATTR_NAME = 'groups'
-# ADMIN_GROUP_NAME = '/gutenbergadmins'
-
 OIDC_OP_LOGOUT_URL_METHOD = 'gutenberg.auth.oidc_op_logout'
 OIDC_RP_SIGN_ALGO = 'RS256'
 OIDC_RP_SCOPES = 'openid email'

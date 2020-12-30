@@ -6,13 +6,13 @@ bwrap --ro-bind / / \
       --tmpfs /home \
       --tmpfs /run \
       --tmpfs /tmp \
+      --tmpfs /root \
+      --dir /root/.config/libreoffice \
       --bind "$dir" "$dir" \
       --proc /proc \
       --dev /dev \
       --chdir / \
       --unshare-pid \
       --unshare-net \
+      --die-with-parent \
       "$@"
-
-#      --tmpfs /root/.config/libreoffice \
-#      --tmpfs /var/www/.cache \
