@@ -145,7 +145,7 @@ class IppService:
 
     def get_printer_attrs(self, request: IppRequest) -> IppResponse:
         operation = request.read_group(GetPrinterAttributesRequestOperationGroup)
-        # logger.debug("GetPrinterAttrs:\n" + str(operation))
+        logger.debug("GetPrinterAttrs:\n" + str(operation))
         if operation.document_format and operation.document_format not in SUPPORTED_IPP_FORMATS:
             raise DocumentFormatError("Unsupported format: {}".format(operation.document_format))
         return response_for(request, [
@@ -251,7 +251,7 @@ class IppService:
 
     def get_jobs(self, request: IppRequest):
         operation = request.read_group(GetJobsRequestOperationGroup)
-        # logger.debug("GetJob:\n" + str(operation))
+        logger.debug("GetJob:\n" + str(operation))
 
         # Workaround to pass the ipp certification suite
         # - we do not use requesting_user_name but authentication provided username instead.
@@ -278,14 +278,14 @@ class IppService:
 
     def get_job_attrs(self, request: IppRequest):
         operation = request.read_group(GetJobAttributesRequestOperationGroup)
-        # logger.debug("GetJobAttrs:\n" + str(operation))
+        logger.debug("GetJobAttrs:\n" + str(operation))
         job = self._find_job(operation)
         return response_for(request, [BaseOperationGroup(), self._build_job_proto(job, request)],
                             requested_attrs_oneset=operation.requested_attributes)
 
     def cancel_job(self, request: IppRequest):
         operation = request.read_group(CancelJobRequestOperationGroup)
-        logger.debug("CancelJob")
+        logger.debug("CancelJob:\n" + str(operation))
         job = self._find_job(operation)
         if job.status == JobStatus.INCOMING:
             job.status = JobStatus.CANCELED
@@ -300,7 +300,7 @@ class IppService:
 
     def close_job(self, request: IppRequest):
         operation = request.read_group(CloseJobRequestOperationGroup)
-        logger.debug("CloseJob")
+        logger.debug("CloseJob:\n" + str(operation))
         job = self._find_job(operation)
         return response_for(request, [
             BaseOperationGroup(),
