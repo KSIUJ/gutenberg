@@ -20,12 +20,12 @@ DATABASES = {
 }
 
 OIDC_ADMIN_ROLE = 'ksi'
-OIDC_OP_AUTHORIZATION_ENDPOINT = ''
-OIDC_OP_TOKEN_ENDPOINT = ''
-OIDC_OP_USER_ENDPOINT = 'o'
-OIDC_OP_JWKS_ENDPOINT = ''
-OIDC_OP_LOGOUT_ENDPOINT = ''
-OIDC_RP_CLIENT_ID = ''
+OIDC_OP_AUTHORIZATION_ENDPOINT = 'https://auth.ksi.ii.uj.edu.pl/auth/realms/KSI/protocol/openid-connect/auth'
+OIDC_OP_TOKEN_ENDPOINT = 'https://auth.ksi.ii.uj.edu.pl/auth/realms/KSI/protocol/openid-connect/token'
+OIDC_OP_USER_ENDPOINT = 'https://auth.ksi.ii.uj.edu.pl/auth/realms/KSI/protocol/openid-connect/userinfo'
+OIDC_OP_JWKS_ENDPOINT = 'https://auth.ksi.ii.uj.edu.pl/auth/realms/KSI/protocol/openid-connect/certs'
+OIDC_OP_LOGOUT_ENDPOINT = 'https://auth.ksi.ii.uj.edu.pl/auth/realms/KSI/protocol/openid-connect/logout'
+OIDC_RP_CLIENT_ID = 'YOUR_CLIENT_ID'
 OIDC_RP_CLIENT_SECRET = None
 
 # Celery

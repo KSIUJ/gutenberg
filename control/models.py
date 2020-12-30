@@ -31,7 +31,7 @@ class PrintJob(models.Model):
     owner = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE)
     pages = models.IntegerField(null=True, blank=True)
     status = models.CharField(max_length=10, default=JobStatus.UNKNOWN, choices=JobStatus.choices)
-    status_reason = models.TextField(max_length=2000, null=True, blank=True)
+    status_reason = models.TextField(null=True, blank=True)
     date_created = models.DateTimeField(auto_now_add=True)
     date_processed = models.DateTimeField(null=True, blank=True)
     date_finished = models.DateTimeField(null=True, blank=True)
