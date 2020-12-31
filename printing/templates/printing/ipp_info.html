@@ -1,0 +1,26 @@
+{% extends 'common/base.html' %}
+{% load bootstrap4 %}
+
+{% block title %}IPP settings{% endblock %}
+
+{% block content %}
+    <h2>You can print directly from your device using IPP</h2>
+    <h3>Printer: {{ printer.name }}</h3>
+    <p>Your personal IPP endpoint for this printer: <b>{{ ipp_tokenised_url }}</b><br/>
+        Do not share this with others - all files printed using this address will be accounted to your quota</p>
+    <p>Alternative IPP endpoint with HTTP-basic authentication for this printer: <b>{{ ipp_url }}</b><br/>
+        Username: <b>{{ request.user.username }}</b> <br/>
+        Token/Password: <b>{{ request.user.api_key }}</b></p>
+
+    <a href="{% url 'print' %}" class="btn btn-primary">
+        Back to home page
+    </a>
+    <p class="mt-5">You can re-generate your IPP token/password if accidentally shared it with others. Please remember
+        that you will have to update it in any device you have set up Gutenberg IPP with.</p>
+    <form action="" method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger" value="reset" name="reset-token">
+            Reset IPP token
+        </button>
+    </form>
+{% endblock %}

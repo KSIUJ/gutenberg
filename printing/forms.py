@@ -5,6 +5,7 @@ import string
 from django import forms
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import UploadedFile
+from django.forms.utils import ErrorList
 
 from control.models import TwoSidedPrinting
 from printing.converter import SUPPORTED_EXTENSIONS
@@ -15,6 +16,18 @@ logger = logging.getLogger('gutenberg.printing')
 
 
 class PrintForm(forms.Form):
+
+    def __init__(self, printer_queryset, data=None, files=None, auto_id='id_%s', prefix=None, initial=None,
+                 error_class=ErrorList, label_suffix=None, empty_permitted=False, field_order=None,
+                 use_required_attribute=None, renderer=None):
+        super().__init__(data, files, auto_id, prefix, initial, error_class, label_suffix, empty_permitted, field_order,
+                         use_required_attribute, renderer)
+        self.fields['printer'].queryset = printer_queryset
+
+    printer = forms.ModelChoiceField(
+        required=True, queryset=None,
+        initial=None, empty_label=None,
+    )
     file_to_print = forms.FileField(
         required=True,
         help_text='Supported formats: {}'.format(

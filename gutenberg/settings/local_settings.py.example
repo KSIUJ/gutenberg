@@ -6,10 +6,6 @@ SECRET_KEY = 'n7+3u12_59wy_kzvecb^w^jrpi(m#(gl8^qe92kvclkd9!=-h)'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-# Disable authentication for easier development
-PRINT_AUTHENTICATE = False
-PRINTER_NAME = 'PUT_PRINTER_NAME_HERE'
-
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 DATABASES = {

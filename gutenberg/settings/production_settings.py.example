@@ -30,7 +30,6 @@ LOGGING['handlers']['django_file']['filename'] = '/var/log/gutenberg/django.log'
 # Printing
 # Directory to store the printed files in
 PRINT_DIRECTORY = '/srv/printing/'
-PRINTER_NAME = 'PUT_PRINTER_NAME_HERE'
 
 OIDC_ADMIN_ROLE = 'ksi'
 OIDC_OP_AUTHORIZATION_ENDPOINT = ''
