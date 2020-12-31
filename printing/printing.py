@@ -1,35 +1,46 @@
-# Original script by zielmicha (https://github.com/zielmicha)
-
 import os
 import shutil
 import subprocess
 import tempfile
 
 from celery import shared_task
-from django.conf import settings
 from django.utils import timezone
 
-from control.models import PrintJob, PrintingProperties, TwoSidedPrinting, JobStatus
+from control.models import PrintJob, TwoSidedPrinting, JobStatus, PrinterType
 from printing.converter import auto_convert
 from printing.postprocess import auto_postprocess
 
 
-def generate_hp500_options(properties: PrintingProperties):
-    options = []
-    options += ['-n', str(properties.copies)]
-    options += ['-o', 'HPColorAsGray={}'.format(not properties.color)]
-
-    two_sided_opt = {
-        TwoSidedPrinting.ONE_SIDED: 'None',
-        TwoSidedPrinting.TWO_SIDED_LONG_EDGE: 'DuplexNoTumble',
-        TwoSidedPrinting.TWO_SIDED_SHORT_EDGE: 'DuplexTumble',
-    }[properties.two_sides]
-    options += ['-o', 'Duplex={}'.format(two_sided_opt)]
+def print_local_cups(file_path: str, job: PrintJob):
+    options = ['-d', job.printer.localprinterparams.cups_printer_name]
+    options += ['-n', str(job.properties.copies)]
+    params = job.printer.localprinterparams
+    if job.printer.color_supported:
+        color_opt = params.print_color_param if job.properties.color else params.print_grayscale_param
+        if color_opt:
+            options += ['-o', color_opt]
+    if job.printer.duplex_supported:
+        two_sided_opt = {
+            TwoSidedPrinting.ONE_SIDED: params.print_one_sided_param,
+            TwoSidedPrinting.TWO_SIDED_LONG_EDGE: params.print_two_sided_long_edge_param,
+            TwoSidedPrinting.TWO_SIDED_SHORT_EDGE: params.print_two_sided_short_edge_param,
+        }.get(job.properties.two_sides, None)
+        if two_sided_opt:
+            options += ['-o', two_sided_opt]
     options += ['-o', 'fit-to-page']
-    return options
+
+    subprocess.check_call(
+        ['lp', file_path] + options)
+    job.status = JobStatus.COMPLETED
+    job.finished = timezone.now()
+    job.save()
 
 
-generate_options = generate_hp500_options
+def print_disabled(file_path: str, job: PrintJob):
+    job.status = JobStatus.CANCELED
+    job.status_reason = "Printer is disabled"
+    job.finished = timezone.now()
+    job.save()
 
 
 @shared_task
@@ -48,12 +59,10 @@ def print_file(file_path, file_format, job_id):
             job.date_processed = timezone.now()
             job.pages = num_pages * job.properties.copies
             job.save()
-            subprocess.check_call(
-                ['lp', out] + ['-d', settings.PRINTER_NAME] +
-                generate_options(job.properties))
-            job.status = JobStatus.COMPLETED
-            job.finished = timezone.now()
-            job.save()
+            {
+                PrinterType.DISABLED: print_disabled,
+                PrinterType.LOCAL_CUPS: print_local_cups,
+            }.get(job.printer.printer_type, PrinterType.DISABLED)(out, job)
     except Exception as ex:
         job.status = JobStatus.ERROR
         job.status_reason = repr(ex)

@@ -184,7 +184,6 @@ BOOTSTRAP4 = {
 PRINT_DIRECTORY = '/tmp/print/'
 # Format of date to append to each filename
 PRINT_DATE_FORMAT = '%Y-%m-%dT%H-%M-%S-%f'
-PRINTER_NAME = 'PUT_PRINTER_NAME_HERE'
 
 OIDC_OP_LOGOUT_URL_METHOD = 'gutenberg.auth.oidc_op_logout'
 OIDC_RP_SIGN_ALGO = 'RS256'

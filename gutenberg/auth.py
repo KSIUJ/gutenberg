@@ -24,8 +24,6 @@ class OIDCAuthenticationBackend(auth.OIDCAuthenticationBackend):
         user.last_name = claims.get('family_name', '')
         user.email = claims.get('email')
         user.is_staff = user.is_superuser = settings.OIDC_ADMIN_ROLE in claims.get('roles')
-        if not user.api_key:
-            user.api_key = token_urlsafe(32)
         user.save()
         self.update_groups(user, claims)
         return user

@@ -8,6 +8,7 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
 from common.models import User
+from control.models import Printer
 from ipp.service import IppService
 
 
@@ -25,7 +26,7 @@ class IppView(View):
         else:
             return HttpResponse(b'Page does not exist', status=404, content_type='text/plain')
 
-    def post(self, request: HttpRequest, token, rel_path, *args, **kwargs):
+    def post(self, request: HttpRequest, printer_id, token, rel_path, *args, **kwargs):
         user = None
         basic_auth = token == self.BASIC_AUTH_TOKEN
         if basic_auth:
@@ -43,5 +44,8 @@ class IppView(View):
                 return res
             else:
                 return HttpResponse(b'Forbidden', status=403, content_type='text/plain')
-        service = IppService(user, request.is_secure(), basic_auth)
+        printer = Printer.objects.filter(id=printer_id).first()
+        if not printer:
+            return HttpResponse(b'Not found', status=404, content_type='text/plain')
+        service = IppService(printer, user, request.is_secure(), basic_auth)
         return service.handle_request(request, rel_path)

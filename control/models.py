@@ -1,8 +1,12 @@
 import os
+from enum import Enum
+from typing import Set
 
 from django.conf import settings
+from django.contrib.auth.models import Group
 from django.core.files.storage import FileSystemStorage
 from django.db import models
+from django.db.models import F, Max, Count
 from django.utils.translation import gettext_lazy as _
 
 from common.models import User
@@ -26,9 +30,67 @@ class TwoSidedPrinting(models.TextChoices):
     TWO_SIDED_SHORT_EDGE = 'TS', _('two sided short edge')
 
 
+class PrinterType(models.TextChoices):
+    DISABLED = 'NA', _('disabled')
+    LOCAL_CUPS = 'LP', _('local cups')
+
+
+class Printer(models.Model):
+    name = models.CharField(max_length=64)
+    printer_type = models.CharField(max_length=10, default=PrinterType.DISABLED, choices=PrinterType.choices)
+    color_supported = models.BooleanField(default=False)
+    duplex_supported = models.BooleanField(default=False)
+
+    def __str__(self):
+        return '{} ({})'.format(self.name, self.get_printer_type_display())
+
+
+class LocalPrinterParams(models.Model):
+    printer = models.OneToOneField(Printer, on_delete=models.CASCADE)
+
+    cups_printer_name = models.CharField(max_length=128)
+    print_grayscale_param = models.CharField(max_length=64, null=True, blank=True)
+    print_color_param = models.CharField(max_length=64, null=True, blank=True)
+    print_one_sided_param = models.CharField(max_length=64, null=True, blank=True)
+    print_two_sided_long_edge_param = models.CharField(max_length=64, null=True, blank=True)
+    print_two_sided_short_edge_param = models.CharField(max_length=64, null=True, blank=True)
+
+
+class PrinterPermissionsEnum(Enum):
+    PRINT = 'PRINT'
+    PRINT_COLOR = 'COLOR'
+
+
+class PrinterPermissions(models.Model):
+    printer = models.ForeignKey(Printer, on_delete=models.CASCADE)
+    group = models.ForeignKey(Group, on_delete=models.CASCADE)
+
+    print_color = models.BooleanField(default=False)
+
+    def __str__(self):
+        return '{} - {}'.format(self.printer, self.group)
+
+    class Meta:
+        unique_together = ('printer', 'group')
+
+    @staticmethod
+    def get_permissions(user: User, printer: Printer) -> Set[PrinterPermissionsEnum]:
+        if False and user.is_superuser:
+            return {PrinterPermissionsEnum.PRINT, PrinterPermissionsEnum.PRINT_COLOR}
+        perms = PrinterPermissions.objects.filter(printer=printer, group__user=user) \
+            .all().aggregate(Max('print_color'), Count('id'))
+        perms_set = set()
+        if perms['id__count'] > 0:
+            perms_set.add(PrinterPermissionsEnum.PRINT)
+        if perms['can_print_color']:
+            perms_set.add(PrinterPermissionsEnum.PRINT_COLOR)
+        return perms_set
+
+
 class PrintJob(models.Model):
     name = models.CharField(max_length=128)
-    owner = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE)
+    printer = models.ForeignKey(Printer, null=True, blank=True, on_delete=models.SET_NULL)
+    owner = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
     pages = models.IntegerField(null=True, blank=True)
     status = models.CharField(max_length=10, default=JobStatus.UNKNOWN, choices=JobStatus.choices)
     status_reason = models.TextField(null=True, blank=True)
@@ -37,7 +99,7 @@ class PrintJob(models.Model):
     date_finished = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
-        return "{} - {} - {}".format(self.date_created, self.name, self.owner)
+        return "{} - {} - {} - {}".format(self.date_created, self.printer, self.name, self.owner)
 
     COMPLETED_STATUSES = [JobStatus.COMPLETED, JobStatus.CANCELED, JobStatus.ERROR, JobStatus.UNKNOWN]
 
