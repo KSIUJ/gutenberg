@@ -3,6 +3,9 @@ const API = {
   logout: '/oidc/logout/',
   ipp: '/ipp/',
   resetToken: '/api/resettoken/',
-}
+  jobs: '/api/jobs/',
+  cancelJob: '/cancel',
+};
 
-export {API};
+// eslint-disable-next-line import/prefer-default-export
+export { API };

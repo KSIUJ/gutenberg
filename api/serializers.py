@@ -6,12 +6,11 @@ from printing.converter import SUPPORTED_EXTENSIONS
 
 
 class PrintJobSerializer(serializers.ModelSerializer):
-    owner = serializers.StringRelatedField()
-    printer = serializers.StringRelatedField()
+    printer = serializers.SlugRelatedField(slug_field='name', read_only=True)
 
     class Meta:
         model = PrintJob
-        fields = '__all__'
+        fields = ['id', 'pages', 'printer', 'status', 'status_reason']
 
 
 class PrinterSerializer(serializers.ModelSerializer):
@@ -19,7 +18,7 @@ class PrinterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Printer
-        fields = ['name', 'color_supported', 'duplex_supported', 'supported_extensions']
+        fields = ['id', 'name', 'color_supported', 'duplex_supported', 'supported_extensions']
 
 
 class PrintRequestSerializer(serializers.Serializer):
@@ -34,4 +33,4 @@ class PrintRequestSerializer(serializers.Serializer):
 class UserInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'username', 'api_key']
+        fields = ['first_name', 'last_name', 'username', 'api_key', 'is_staff']
