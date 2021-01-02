@@ -2,29 +2,15 @@
 import Vue from 'vue';
 import axios from 'axios';
 
-// Full config:  https://github.com/axios/axios#request-config
-// axios.defaults.baseURL = process.env.baseURL || process.env.apiUrl || '';
-// axios.defaults.headers.common['Authorization'] = AUTH_TOKEN;
-// axios.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded';
-
 const config = {
   // baseURL: process.env.baseURL || process.env.apiUrl || ""
-  timeout: 1500 * 1000, // Timeout
+  timeout: 10 * 1000, // Timeout
   withCredentials: true, // Check cross-site Access-Control
   xsrfCookieName: 'csrftoken',
   xsrfHeaderName: 'X-CSRFTOKEN',
 };
 
 const _axios = axios.create(config);
-
-// _axios.interceptors.request.use(
-//   (config) =>
-//     // Do something before request is sent
-//     config,
-//   (error) =>
-//     // Do something with request error
-//     Promise.reject(error),
-// );
 
 // Add a response interceptor
 _axios.interceptors.response.use(
@@ -36,7 +22,10 @@ _axios.interceptors.response.use(
       window.location.reload(false);
       return Promise.reject(error);
     }
-    alert(error + (error.response ? '\n' + JSON.stringify(error.response.data) : ''));
+    if (error.response) {
+      console.log(JSON.stringify(error.response.data));
+    }
+    alert(error);
     window.location.reload(false);
     // Do something with response error
     return Promise.reject(error);

@@ -41,6 +41,13 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(owner=user)
         return queryset.all().order_by('date_created')
 
+    @action(detail=True, methods=['post'], name='Cancel job')
+    def cancel(self, request, pk=None):
+        job = self.get_object()
+        PrintJob.objects.filter(id=job.id).exclude(status__in=PrintJob.COMPLETED_STATUSES).update(
+            status=JobStatus.CANCELING)
+        return Response(self.get_serializer(job).data)
+
     @action(detail=False, methods=['post'], name='Submit new job')
     def submit(self, request):
         serializer = PrintRequestSerializer(data=request.data)

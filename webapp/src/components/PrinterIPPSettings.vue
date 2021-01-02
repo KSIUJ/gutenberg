@@ -12,7 +12,8 @@
       <v-text-field @click="$event.target.select()" readonly
                     :value="ippTokenUrl"
                     label="Your personal IPP endpoint for this printer"
-                    hint="Do not share this with others - all files printed using this address will be accounted to your quota."
+                    hint="Do not share this with others - all files printed using this address
+                     will be accounted to your quota."
                     persistent-hint class="mb-3" prepend-icon="link"></v-text-field>
       <p class="text-h6">Authenticate with username and token/password.</p>
 
@@ -20,7 +21,8 @@
       <v-text-field @click="$event.target.select()" readonly
                     :value="ippAuthUrl"
                     label="Alternative IPP endpoint with HTTP-basic authentication for this printer"
-                    hint="You will be required to authenticate using your username and token/ipp password to print using this endpoint."
+                    hint="You will be required to authenticate using your username and token/ipp
+                    password to print using this endpoint."
                     persistent-hint class="mb-3" prepend-icon="link"></v-text-field>
       <v-text-field @click="$event.target.select()" readonly
                     :value="user.username"
@@ -30,8 +32,9 @@
                     label="Your IPP token/passwordr"
                     hint="Do not share this with others."
                     persistent-hint prepend-icon="vpn_key" class="mb-3"></v-text-field>
-      <p>You can re-generate your IPP token/password if accidentally shared it with others. Please remember that you
-        will have to update it in any device you have set up Gutenberg IPP with.</p>
+      <p>You can re-generate your IPP token/password if accidentally shared it with others.
+        Please remember that you will have to update it in any device you have set up Gutenberg
+        IPP with.</p>
     </v-card-text>
 
     <v-divider></v-divider>
@@ -56,8 +59,8 @@
             Reset IPP token
           </v-card-title>
           <v-card-text>
-            Are you sure you want to reset your IPP token/password? You will need to update all of your connected
-            devices with the new token and/or secret ipp uri.
+            Are you sure you want to reset your IPP token/password? You will need to update
+            all of your connected devices with the new token and/or secret ipp uri.
           </v-card-text>
           <v-divider></v-divider>
           <v-card-actions>
@@ -87,8 +90,8 @@
 </template>
 
 <script>
-import {API} from "../common/api";
-import {getCsrfToken} from "../common/utils";
+import { API } from '../common/api';
+import { getCsrfToken } from '../common/utils';
 
 export default {
   data() {
@@ -96,20 +99,20 @@ export default {
       requestingReset: false,
       dialog: false,
       getCsrfToken,
-    }
+    };
   },
-  name: "PrinterIPPSettings",
+  name: 'PrinterIPPSettings',
   props: ['printer'],
   methods: {
     getIppUrl(auth, printer_id) {
       const proto = window.location.protocol === 'https:' ? 'ipps://' : 'ipp://';
-      const port = window.location.port === '' ?
-        (window.location.protocol === 'https:' ? '443' : '80') : window.location.port;
-      return proto + window.location.hostname + ':' + port + API.ipp + auth + '/' + printer_id + '/print';
+      const default_port = window.location.protocol === 'https:' ? '443' : '80';
+      const port = window.location.port === '' ? default_port : window.location.port;
+      return `${proto + window.location.hostname}:${port}${API.ipp}${auth}/${printer_id}/print`;
     },
     resetApiToken() {
       this.requestingReset = true;
-      axios.post(API.resetToken).then((res) => {
+      window.axios.post(API.resetToken).then(() => {
         window.location.reload();
       });
     },
@@ -117,8 +120,8 @@ export default {
   computed: {
     user: {
       get() {
-        return this.$store.state.user
-      }
+        return this.$store.state.user;
+      },
     },
     ippAuthUrl() {
       return this.getIppUrl('basic', this.printer.id);
@@ -126,10 +129,6 @@ export default {
     ippTokenUrl() {
       return this.getIppUrl(this.user.api_key, this.printer.id);
     },
-  }
-}
+  },
+};
 </script>
-
-<style scoped>
-
-</style>

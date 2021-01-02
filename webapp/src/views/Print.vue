@@ -25,7 +25,8 @@
           <h4 class="text-h4 mb-3">Upload file</h4>
 
           <v-file-input outlined label="File to print" v-model="file" :disabled="printerNotChosen"
-                        required :rules="validateFileRequired" :hint="supportedExtensions" persistent-hint>
+                        required :rules="validateFileRequired" :hint="supportedExtensions"
+                        persistent-hint>
           </v-file-input>
         </v-col>
         <v-col>
@@ -37,8 +38,8 @@
             width="1000"
           >
             <template v-slot:activator="{ on, attrs }">
-              <v-btn color="info" large :disabled="printerNotChosen" class="mb-2" v-bind="attrs" v-on="on">
-                Show IPP settings for this printer
+              <v-btn color="info" large :disabled="printerNotChosen" class="mb-2" v-bind="attrs"
+                     v-on="on"> Show IPP settings for this printer
               </v-btn>
             </template>
             <PrinterIPPSettings @close="dialog=false" :printer="printer"></PrinterIPPSettings>
@@ -60,9 +61,10 @@
         <v-radio label="Two-sided (long edge)" value="TL"></v-radio>
         <v-radio label="Two-sided (short edge)" value="TS"></v-radio>
       </v-radio-group>
-      <v-switch label="Print in color" color="success" :disabled="!color_available"></v-switch>
+      <v-switch v-model="color" label="Print in color" color="success" :disabled="!color_available">
+      </v-switch>
 
-      <v-btn large color="primary" v-model="color" :disabled="!form_valid" type="button"
+      <v-btn large color="primary" :disabled="!form_valid" type="button"
              @click="submit" :loading="submitting_form">Print
       </v-btn>
     </v-form>
@@ -72,7 +74,7 @@
 <script>
 // @ is an alias to /src
 
-import PrinterIPPSettings from "../components/PrinterIPPSettings";
+import PrinterIPPSettings from '../components/PrinterIPPSettings.vue';
 
 export default {
   name: 'Home',
@@ -98,8 +100,15 @@ export default {
   mounted() {
     window.axios.get('/api/printers/?format=json').then((value) => {
       this.printers = value.data;
-      if (this.printers.length === 1) {
+      const last_id = parseInt(this.$store.state.printerId, 10);
+      const last = this.printers.find((el) => el.id === last_id);
+      if (last) {
+        this.printer = last;
+        this.printerSelected();
+      } else if (this.printers.length === 1) {
+        // eslint-disable-next-line prefer-destructuring
         this.printer = this.printers[0];
+        this.printerSelected();
       }
       this.loading_printers = false;
     });
@@ -115,15 +124,21 @@ export default {
       }
       return features.join('+');
     },
-    printerSelected(value) {
-      this.color_available = value.color_supported;
-      this.duplex_available = value.duplex_supported;
+    printerSelected() {
+      this.color_available = this.printer.color_supported;
+      this.duplex_available = this.printer.duplex_supported;
 
       if (!this.color_available) {
+        this.color = false;
+      } else if (this.$store.state.colorPrinting) {
+        this.color = this.$store.state.colorPrinting;
+      } else {
         this.color = false;
       }
       if (!this.duplex_available) {
         this.two_sides = 'OS';
+      } else if (this.$store.state.twoSided) {
+        this.two_sides = this.$store.state.twoSided;
       } else {
         this.two_sides = 'TL';
       }
@@ -133,6 +148,15 @@ export default {
         return;
       }
       this.submitting_form = true;
+
+      if (this.color_available) {
+        this.$store.commit('updateColorPrinting', this.color);
+      }
+      if (this.duplex_available) {
+        this.$store.commit('updateTwoSided', this.two_sides);
+      }
+      this.$store.commit('updatePrinterId', this.printer.id);
+
       const formData = new FormData();
       formData.append('printer', this.printer.id);
       formData.append('file', this.file);
@@ -142,8 +166,14 @@ export default {
       formData.append('color', this.color);
 
       window.axios.post('/api/jobs/submit/?format=json', formData,
-        {headers: {'Content-Type': 'multipart/form-data'}}).then((value) => {
-        console.log(value);
+        { headers: { 'Content-Type': 'multipart/form-data' } }).then((value) => {
+        const jobId = value.data.id;
+        this.$router.push({
+          name: 'JobStatus',
+          params: {
+            id: jobId,
+          },
+        });
       });
     },
   },
@@ -170,11 +200,11 @@ export default {
     },
     supportedExtensions() {
       if (this.printer) {
-        return "Supported formats: " + this.printer.supported_extensions;
+        return `Supported formats: ${this.printer.supported_extensions}`;
       }
       return '';
-    }
+    },
   },
-  components: {PrinterIPPSettings},
+  components: { PrinterIPPSettings },
 };
 </script>
