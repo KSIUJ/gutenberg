@@ -88,9 +88,11 @@ export default {
   },
   mounted() {
     this.$store.commit('initialiseStore');
-    window.axios.get(API.me).then((value) => {
-      this.$store.commit('loginUser', value.data);
-    });
+    if (this.$store.state.user === null) {
+      window.axios.get(API.me).then((value) => {
+        this.$store.commit('loginUser', value.data);
+      });
+    }
   },
   methods: {
     logout() {
