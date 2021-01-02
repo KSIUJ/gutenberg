@@ -25,7 +25,7 @@
           <h4 class="text-h4 mb-3">Upload file</h4>
 
           <v-file-input outlined label="File to print" v-model="file" :disabled="printerNotChosen"
-                        required :rules="validateFileRequired">
+                        required :rules="validateFileRequired" :hint="supportedExtensions" persistent-hint>
           </v-file-input>
         </v-col>
         <v-col>
@@ -73,6 +73,7 @@
 // @ is an alias to /src
 
 import PrinterIPPSettings from "../components/PrinterIPPSettings";
+
 export default {
   name: 'Home',
   data() {
@@ -167,6 +168,12 @@ export default {
     printerNotChosen() {
       return this.printer === null;
     },
+    supportedExtensions() {
+      if (this.printer) {
+        return "Supported formats: " + this.printer.supported_extensions;
+      }
+      return '';
+    }
   },
   components: {PrinterIPPSettings},
 };

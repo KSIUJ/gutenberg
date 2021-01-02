@@ -1,8 +1,7 @@
-from django.urls import path, re_path
+from django.urls import path
 
-from printing.views import ipp_info, webapp
+from printing.views import webapp
 
 urlpatterns = [
     path('', webapp, name='print'),
-    re_path(r'ippinfo/(?P<printer_id>\d+)/', ipp_info, name='ipp_info'),
 ]
