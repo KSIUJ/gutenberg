@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from common.models import User
 from control.models import PrintJob, Printer, TwoSidedPrinting
 
 
@@ -25,3 +26,9 @@ class PrintRequestSerializer(serializers.Serializer):
     pages_to_print = serializers.CharField(default=None)
     two_sides = serializers.ChoiceField(choices=TwoSidedPrinting.choices, required=True)
     color = serializers.BooleanField(default=False)
+
+
+class UserInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'username', 'api_key']

@@ -4,12 +4,13 @@
   "private": true,
   "scripts": {
     "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint",
+    "lint": "vue-cli-service lint --ext .js,.vue",
     "dev": "vue-cli-service build --mode development --watch"
   },
   "dependencies": {
     "axios": "^0.18.0",
     "core-js": "^3.6.5",
+    "js-cookie": "^2.2.1",
     "material-design-icons-iconfont": "^5.0.1",
     "roboto-fontface": "*",
     "vue": "^2.6.11",

@@ -1,16 +1,20 @@
 import logging
 import os
+from secrets import token_urlsafe
 
 from django.conf import settings
 from django.template.defaultfilters import slugify
 from django.utils.datetime_safe import datetime
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.generics import RetrieveAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from api.serializers import PrintJobSerializer, PrinterSerializer, PrintRequestSerializer
+from api.serializers import PrintJobSerializer, PrinterSerializer, PrintRequestSerializer, UserInfoSerializer
+from common.models import User
 from control.models import PrintJob, Printer, JobStatus, PrintingProperties
 from printing.converter import detect_file_format, SUPPORTED_FILE_FORMATS
 from printing.printing import print_file
@@ -85,3 +89,28 @@ class PrinterViewSet(viewsets.ReadOnlyModelViewSet):
         if not user.is_superuser:
             queryset = queryset.filter(printerpermissions__group__user=user)
         return queryset.all().order_by('name')
+
+
+def _generate_token():
+    return token_urlsafe(32)
+
+
+class MeView(RetrieveAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserInfoSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        if not self.request.user.api_key:
+            self.request.user.api_key = _generate_token()
+            self.request.user.save()
+        return self.request.user
+
+
+class ResetApiTokenView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        self.request.user.api_key = _generate_token()
+        self.request.user.save()
+        return Response()

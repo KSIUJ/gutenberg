@@ -1,13 +1,13 @@
 <template>
   <div>
-    <h1 class="text-h2 mb-4">Print</h1>
+    <h1 class="text-h2 mb-5 mt-4">Print</h1>
 
-    <v-form ref="form">
+    <v-form ref="form" v-model="form_valid">
 
       <h4 class="text-h4 mb-3">Select printer</h4>
       <v-select label="Printer" outlined :items="printers" item-text="name" :item-value="i=>i"
                 @change="printerSelected" required prepend-icon="print" :loading="loading_printers"
-                :disabled="loading_printers">
+                :disabled="loading_printers" v-model="printer">
         <template v-slot:item="data">
           <v-badge
             inline
@@ -24,7 +24,7 @@
         <v-col sm="12" md="8">
           <h4 class="text-h4 mb-3">Upload file</h4>
 
-          <v-file-input outlined label="File to print" v-model="file" :disabled="!printer_id"
+          <v-file-input outlined label="File to print" v-model="file" :disabled="printerNotChosen"
                         required :rules="validateFileRequired">
           </v-file-input>
         </v-col>
@@ -32,21 +32,29 @@
           <h4 class="text-h4 mb-3">or print using IPP</h4>
           <p>Print directly from your device through system printing using the
             Internet Printing Protocol.</p>
-          <v-btn color="info" large :disabled="!printer_id" class="mb-2">
-            Show IPP settings for this printer
-          </v-btn>
+          <v-dialog
+            v-model="dialog"
+            width="1000"
+          >
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn color="info" large :disabled="printerNotChosen" class="mb-2" v-bind="attrs" v-on="on">
+                Show IPP settings for this printer
+              </v-btn>
+            </template>
+            <PrinterIPPSettings @close="dialog=false" :printer="printer"></PrinterIPPSettings>
+          </v-dialog>
         </v-col>
       </v-row>
 
       <h4 class="text-h4 mb-3">Printing settings</h4>
       <v-text-field outlined label="Number of copies" type="number" min="1" max="100"
-                    v-model="copies" :disabled="!printer_id" required prepend-icon="content_copy"
-                    :rules="validateCopies">
+                    v-model="copies" :disabled="printerNotChosen" required
+                    prepend-icon="content_copy" :rules="validateCopies">
       </v-text-field>
       <v-text-field outlined label="Pages to print" hint="e.g. 1-4, 7, 13-21" persistent-hint
-                    placeholder="all" type="text" v-model="pages_to_print" :disabled="!printer_id"
-                    :pattern="PAGES_TO_PRINT_PATTERN" prepend-icon="filter_list"
-                    :rules="validatePageFilter"></v-text-field>
+                    placeholder="all" type="text" v-model="pages_to_print"
+                    :disabled="printerNotChosen" :pattern="PAGES_TO_PRINT_PATTERN"
+                    prepend-icon="filter_list" :rules="validatePageFilter"></v-text-field>
       <v-radio-group row v-model="two_sides" :disabled="!duplex_available">
         <v-radio label="One-sided" value="OS"></v-radio>
         <v-radio label="Two-sided (long edge)" value="TL"></v-radio>
@@ -54,8 +62,8 @@
       </v-radio-group>
       <v-switch label="Print in color" color="success" :disabled="!color_available"></v-switch>
 
-      <v-btn large color="primary" v-model="color" :disabled="!printer_id" type="button"
-             @click="submit">Print
+      <v-btn large color="primary" v-model="color" :disabled="!form_valid" type="button"
+             @click="submit" :loading="submitting_form">Print
       </v-btn>
     </v-form>
   </div>
@@ -64,13 +72,14 @@
 <script>
 // @ is an alias to /src
 
+import PrinterIPPSettings from "../components/PrinterIPPSettings";
 export default {
   name: 'Home',
   data() {
     return {
       loading_printers: true,
       printers: [],
-      printer_id: null,
+      printer: null,
       two_sides: 'TL',
       color: false,
       pages_to_print: '',
@@ -80,11 +89,17 @@ export default {
       duplex_available: false,
       PAGES_TO_PRINT_PATTERN:
         String.raw`^\s*\d+(?:\s*-\s*\d+)?(\s*,\s*\d+(?:\s*-\s*\d+)?)*\s*$`,
+      form_valid: false,
+      submitting_form: false,
+      dialog: false,
     };
   },
   mounted() {
     window.axios.get('/api/printers/?format=json').then((value) => {
       this.printers = value.data;
+      if (this.printers.length === 1) {
+        this.printer = this.printers[0];
+      }
       this.loading_printers = false;
     });
   },
@@ -100,7 +115,6 @@ export default {
       return features.join('+');
     },
     printerSelected(value) {
-      this.printer_id = value.id;
       this.color_available = value.color_supported;
       this.duplex_available = value.duplex_supported;
 
@@ -114,19 +128,22 @@ export default {
       }
     },
     submit() {
-      console.log(this.$refs.form);
       if (!this.$refs.form.validate()) {
         return;
       }
+      this.submitting_form = true;
       const formData = new FormData();
-      formData.append('printer', this.printer_id);
+      formData.append('printer', this.printer.id);
       formData.append('file', this.file);
       formData.append('copies', this.copies);
       formData.append('pages_to_print', this.pages_to_print);
       formData.append('two_sides', this.two_sides);
       formData.append('color', this.color);
-      console.log(formData);
-      window.axios.post('/api/jobs/submit/?format=json', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+
+      window.axios.post('/api/jobs/submit/?format=json', formData,
+        {headers: {'Content-Type': 'multipart/form-data'}}).then((value) => {
+        console.log(value);
+      });
     },
   },
   computed: {
@@ -147,7 +164,10 @@ export default {
         (val) => val <= 100 || 'Max 100 copies allowed',
       ];
     },
+    printerNotChosen() {
+      return this.printer === null;
+    },
   },
-  components: {},
+  components: {PrinterIPPSettings},
 };
 </script>

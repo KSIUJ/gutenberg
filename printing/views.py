@@ -111,13 +111,6 @@ class PrintView(LoginRequiredMixin, SuccessMessageMixin, FormView):
 
 @login_required
 def ipp_info(request, printer_id):
-    if request.method == 'POST':
-        if request.POST.get('reset-token') == 'reset':
-            request.user.api_key = None
-            request.user.save()
-        else:
-            return HttpResponse(status=400)
-
     if not request.user.api_key:
         request.user.api_key = token_urlsafe(32)
         request.user.save()
