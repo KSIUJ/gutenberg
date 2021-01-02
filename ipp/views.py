@@ -34,8 +34,9 @@ class IppView(View):
             token_type, _, credentials = auth_header.partition(' ')
             if token_type.lower() == 'basic':
                 username, password = base64.b64decode(credentials).decode('utf-8', errors='ignore').split(':')
-                user = User.objects.filter(username=username, api_key=password).first()
-        else:
+                if password:
+                    user = User.objects.filter(username=username, api_key=password).first()
+        elif token:
             user = User.objects.filter(api_key=token).first()
         if not user:
             if basic_auth:

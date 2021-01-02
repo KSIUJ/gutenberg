@@ -1,14 +1,15 @@
-const {CleanWebpackPlugin} = require('clean-webpack-plugin');
+/*eslint-disable */
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 
 module.exports = {
   publicPath: '/static/',
-  chainWebpack: config => {
+  chainWebpack: (config) => {
     config
       .plugin('html')
-      .tap(args => {
-        args[0].template = './webapp/public/index.html'
-        return args
-      })
+      .tap((args) => {
+        args[0].template = './webapp/public/index.html';
+        return args;
+      });
   },
   configureWebpack: {
     resolve: {
