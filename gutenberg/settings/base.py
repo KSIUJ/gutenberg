@@ -35,6 +35,7 @@ DJANGO_INSTALLED_APPS = [
 THIRD_PARTY_APPS = [
     'bootstrap4',
     'mozilla_django_oidc',
+    'rest_framework',
 ]
 
 PROJECT_APPS = [
@@ -103,6 +104,15 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
 
 STATIC_URL = '/static/'
+
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+]
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'dist'),
+]
 
 # Logging
 LOGGING = {

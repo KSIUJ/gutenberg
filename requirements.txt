@@ -4,3 +4,4 @@ celery==5.0.5
 redis==3.5.3
 python-magic==0.4.18
 mozilla-django-oidc==1.2.4
+djangorestframework==3.12.2
