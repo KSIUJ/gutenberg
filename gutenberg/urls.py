@@ -17,6 +17,7 @@ from django.conf.urls import include
 from django.contrib import admin
 from django.urls import path
 
+import api.urls
 import ipp.urls
 import printing.urls
 
@@ -25,5 +26,8 @@ urlpatterns = [
 
     path('', include(printing.urls)),
     path('ipp/', include(ipp.urls)),
+    path('api/', include(api.urls)),
+
     path('oidc/', include('mozilla_django_oidc.urls')),
+    path('api-auth/', include('rest_framework.urls')),
 ]

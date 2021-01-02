@@ -7,6 +7,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
+from django.contrib.staticfiles.views import serve
 from django.core.files.uploadedfile import UploadedFile
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404
@@ -130,3 +131,8 @@ def ipp_info(request, printer_id):
     return render(request, 'printing/ipp_info.html', {
         'ipp_tokenised_url': ipp_tokenised_url, 'ipp_url': ipp_url, 'printer': printer,
     })
+
+
+@login_required
+def webapp(request):
+    return serve(request, "index.html")
