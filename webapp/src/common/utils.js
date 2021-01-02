@@ -1,7 +1,8 @@
-import Cookies from "js-cookie";
+import Cookies from 'js-cookie';
 
 function getCsrfToken() {
   return Cookies.get('csrftoken');
 }
 
-export {getCsrfToken};
+// eslint-disable-next-line import/prefer-default-export
+export { getCsrfToken };

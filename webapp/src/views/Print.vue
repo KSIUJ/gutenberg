@@ -4,7 +4,7 @@
 
     <v-form ref="form" v-model="form_valid">
 
-      <h4 class="text-h4 mb-3">Select printer</h4>
+      <p class="text-h4 mb-5">Select printer</p>
       <v-select label="Printer" outlined :items="printers" item-text="name" :item-value="i=>i"
                 @change="printerSelected" required prepend-icon="print" :loading="loading_printers"
                 :disabled="loading_printers" v-model="printer">
@@ -22,7 +22,7 @@
 
       <v-row>
         <v-col sm="12" md="8">
-          <h4 class="text-h4 mb-3">Upload file</h4>
+          <p class="text-h4 mb-5">Upload file</p>
 
           <v-file-input outlined label="File to print" v-model="file" :disabled="printerNotChosen"
                         required :rules="validateFileRequired" :hint="supportedExtensions"
@@ -30,7 +30,7 @@
           </v-file-input>
         </v-col>
         <v-col>
-          <h4 class="text-h4 mb-3">or print using IPP</h4>
+          <p class="text-h4 mb-3">or print using IPP</p>
           <p>Print directly from your device through system printing using the
             Internet Printing Protocol.</p>
           <v-dialog
@@ -38,7 +38,7 @@
             width="1000"
           >
             <template v-slot:activator="{ on, attrs }">
-              <v-btn color="info" large :disabled="printerNotChosen" class="mb-2" v-bind="attrs"
+              <v-btn color="info" large :disabled="printerNotChosen" class="mb-5" v-bind="attrs"
                      v-on="on"> Show IPP settings for this printer
               </v-btn>
             </template>
@@ -47,7 +47,7 @@
         </v-col>
       </v-row>
 
-      <h4 class="text-h4 mb-3">Printing settings</h4>
+      <p class="text-h4 mb-5">Printing settings</p>
       <v-text-field outlined label="Number of copies" type="number" min="1" max="100"
                     v-model="copies" :disabled="printerNotChosen" required
                     prepend-icon="content_copy" :rules="validateCopies">
@@ -63,8 +63,7 @@
       </v-radio-group>
       <v-switch v-model="color" label="Print in color" color="success" :disabled="!color_available">
       </v-switch>
-
-      <v-btn large color="primary" :disabled="!form_valid" type="button"
+      <v-btn class="mt-3 mb-5" large color="primary" :disabled="!form_valid" type="button"
              @click="submit" :loading="submitting_form">Print
       </v-btn>
     </v-form>
