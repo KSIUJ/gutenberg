@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from common.models import User
 from control.models import PrintJob, Printer, TwoSidedPrinting
+from printing.converter import SUPPORTED_EXTENSIONS
 
 
 class PrintJobSerializer(serializers.ModelSerializer):
@@ -14,9 +15,11 @@ class PrintJobSerializer(serializers.ModelSerializer):
 
 
 class PrinterSerializer(serializers.ModelSerializer):
+    supported_extensions = serializers.CharField(default=', '.join(sorted(SUPPORTED_EXTENSIONS)))
+
     class Meta:
         model = Printer
-        fields = '__all__'
+        fields = ['name', 'color_supported', 'duplex_supported', 'supported_extensions']
 
 
 class PrintRequestSerializer(serializers.Serializer):
