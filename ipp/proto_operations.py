@@ -97,11 +97,13 @@ class PrinterDescriptionGroup(AttributeGroup):
     printer_more_info = UriField()
     printer_state = EnumField(required=True)
     printer_state_message = TextWLField()
-    queued_job_count = IntegerField(required=True)
-    printer_uuid = UriField(required=True)
-    device_uuid = UriField(required=True)
-    printer_icons = OneSetField(accepted_fields=[UriField()], required=True)
-    printer_supply_info_uri = UriField(required=True)
+
+    # no default and required by standard
+    printer_supply_info_uri = UriField()
+    queued_job_count = IntegerField()
+    printer_uuid = UriField()
+    device_uuid = UriField()
+    printer_icons = OneSetField(accepted_fields=[UriField()])
 
 
 class MediaSizeCollection(Collection):
@@ -111,11 +113,11 @@ class MediaSizeCollection(Collection):
 
 class MediaCollection(Collection):
     media_key = UnionField(accepted_fields=[KeywordField(), NameWLField()])
-    media_bottom_margin = IntegerField(required=True)
-    media_top_margin = IntegerField(required=True)
-    media_left_margin = IntegerField(required=True)
-    media_right_margin = IntegerField(required=True)
-    media_size = CollectionField(collection_type=MediaSizeCollection, required=True)
+    media_bottom_margin = IntegerField()
+    media_top_margin = IntegerField()
+    media_left_margin = IntegerField()
+    media_right_margin = IntegerField()
+    media_size = CollectionField(collection_type=MediaSizeCollection)
     media_size_name = UnionField(accepted_fields=[KeywordField(), NameWLField()])
     media_source = UnionField(accepted_fields=[KeywordField(), NameWLField()])
     media_type = UnionField(accepted_fields=[KeywordField(), NameWLField()])

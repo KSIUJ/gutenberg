@@ -159,7 +159,8 @@ class IppService:
             BaseOperationGroup(),
             PrinterAttributesGroup(
                 printer_uri_supported=[self._get_printer_uri(request)],
-                printer_name="Gutenberg",
+                printer_name="Gutenberg".format(self.printer.name),
+                printer_info="Gutenberg - {}".format(self.printer.name),
                 printer_more_info=request.http_request.build_absolute_uri('/'),
                 printer_state=PrinterStateEnum.idle,
                 printer_state_message="idle",
@@ -380,6 +381,7 @@ class IppService:
             return self._response(res)
         except IppError as ex:
             self._log_operation(req.request_id, rel_path, handler.__name__, ex.error_code())
+            logger.warning(repr(ex))
             return self._response(minimal_valid_response(req, ex.error_code()))
         except Exception as ex:
             logger.error(

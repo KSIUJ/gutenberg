@@ -10,7 +10,7 @@ from typing import List, Any, Type, Union, Tuple
 from django.templatetags.tz import utc
 
 from ipp.constants import TagEnum, SectionEnum, ValueTagsEnum
-from ipp.exceptions import FieldOrderError, InvalidTagError, MissingFieldError
+from ipp.exceptions import FieldOrderError, InvalidTagError, MissingFieldError, BadRequestError
 
 TAG_STRUCT = Struct('>B')
 LENGTH_STRUCT = Struct('>h')
@@ -377,7 +377,6 @@ class Collection(IppFieldsStruct):
         fields = cls._get_proto_fields()
         read_fields = OrderedDict()
         while True:
-            state.read_field_header(readable)
             if state.current_tag == TagEnum.end_collection:
                 cls._validate(read_fields)
                 return cls(**read_fields)
@@ -385,11 +384,13 @@ class Collection(IppFieldsStruct):
                 length, = LENGTH_STRUCT.unpack(readable.read(LENGTH_STRUCT.size))
                 name = readable.read(length).decode('utf-8', errors='ignore').replace('-', '_')
                 field = fields.get(name)
+                state.read_field_header(readable)
                 if not field:
+                    NullField().read(readable, state)
                     continue
                 read_fields[name] = field.read(readable, state)
             else:
-                pass
+                raise BadRequestError("Invalid collection tag")
 
 
 class CollectionField(IppField):
@@ -415,8 +416,10 @@ class CollectionField(IppField):
         if state.current_tag != self.get_tag():
             raise InvalidTagError()
         readable.read(LENGTH_STRUCT.size)
+        state.read_field_header(readable)
         val = self.collection_type.read(readable, state)
         if state.current_tag != TagEnum.end_collection:
             raise InvalidTagError()
         readable.read(LENGTH_STRUCT.size)
+        state.read_field_header(readable)
         return val
