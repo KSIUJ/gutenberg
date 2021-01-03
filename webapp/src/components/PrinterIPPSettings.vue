@@ -60,7 +60,7 @@
           </v-card-title>
           <v-card-text>
             Are you sure you want to reset your IPP token/password? You will need to update
-            all of your connected devices with the new token and/or secret ipp uri.
+            all of your connected devices with the new token or secret ipp uri.
           </v-card-text>
           <v-divider></v-divider>
           <v-card-actions>
