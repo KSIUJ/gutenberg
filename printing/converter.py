@@ -60,7 +60,7 @@ class ImageConverter(SandboxConverter):
 
 
 class DocConverter(SandboxConverter):
-    supported_types = ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessing',
+    supported_types = ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                        'application/rtf', 'application/vnd.oasis.opendocument.text']
     supported_extensions = ['.doc', '.docx', '.rtf', '.odt']
     output_type = 'application/pdf'

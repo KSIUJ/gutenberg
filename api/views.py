@@ -28,6 +28,10 @@ class LargeResultsSetPagination(PageNumberPagination):
     max_page_size = 10000
 
 
+class UnsupportedDocumentError(ValueError):
+    pass
+
+
 class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PrintJobSerializer
     permission_classes = [IsAuthenticated]
@@ -59,7 +63,10 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         if not printer_with_perms:
             return Response("Printer does not exist", status=status.HTTP_400_BAD_REQUEST)
 
-        job = self._submit_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
+        try:
+            job = self._submit_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
+        except UnsupportedDocumentError as ex:
+            return Response("Error: {}".format(ex), status=status.HTTP_400_BAD_REQUEST)
         return Response(self.get_serializer(job).data)
 
     def _submit_printing_job(self, printer_with_perms, file,
@@ -77,7 +84,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
                 destination.write(chunk)
         file_type = detect_file_format(file_path)
         if file_type not in SUPPORTED_FILE_FORMATS:
-            raise ValueError("Unsupported file type")
+            raise UnsupportedDocumentError("Unsupported file type: {}".format(file_type))
         job = PrintJob.objects.create(name=file.name, status=JobStatus.PENDING, owner=self.request.user,
                                       printer=printer_with_perms)
         color = color if printer_with_perms.color_allowed else False

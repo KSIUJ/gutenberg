@@ -74,6 +74,7 @@
 // @ is an alias to /src
 
 import PrinterIPPSettings from '../components/PrinterIPPSettings.vue';
+import { API } from '../common/api';
 
 export default {
   name: 'Home',
@@ -164,7 +165,7 @@ export default {
       formData.append('two_sides', this.two_sides);
       formData.append('color', this.color);
 
-      window.axios.post('/api/jobs/submit/?format=json', formData,
+      window.axios.post(API.submit, formData,
         { headers: { 'Content-Type': 'multipart/form-data' } }).then((value) => {
         const jobId = value.data.id;
         this.$router.push({
