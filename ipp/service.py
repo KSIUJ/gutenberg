@@ -338,7 +338,7 @@ class IppService:
             OperationEnum.cancel_job: self.cancel_job,
             OperationEnum.create_job: self.create_job,
             OperationEnum.send_document: self.send_document,
-            OperationEnum.cancel_my_jobs: self.cancel_my_jobs,
+            # OperationEnum.cancel_my_jobs: self.cancel_my_jobs,
             OperationEnum.close_job: self.close_job,
             OperationEnum.identify_printer: self.identify_printer,
         }

@@ -22,12 +22,15 @@ _axios.interceptors.response.use(
       window.location.reload(false);
       return Promise.reject(error);
     }
+    if (error.response && error.response.status === 404) {
+      alert(error);
+      return Promise.reject(error);
+    }
     if (error.response) {
       console.log(JSON.stringify(error.response.data));
     }
     alert(error);
     window.location.reload(false);
-    // Do something with response error
     return Promise.reject(error);
   },
 );
