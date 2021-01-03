@@ -1,6 +1,7 @@
 import os
 import re
 import subprocess
+import sys
 
 from control.models import PrintingProperties
 from printing import SANDBOX_PATH
@@ -14,7 +15,7 @@ def postprocess_postscript(input_file: str, work_dir: str, properties: PrintingP
 
     if properties.pages_to_print:
         new_out = os.path.join(work_dir, 'post.pdf')
-        pages = properties.pages_to_print.replace(',', ' ').split()
+        pages = properties.pages_to_print.split(',')
         subprocess.check_call([SANDBOX_PATH, work_dir, 'pdftk', out, 'cat', *pages, 'output', new_out])
         out = new_out
 
@@ -25,9 +26,43 @@ def postprocess_postscript(input_file: str, work_dir: str, properties: PrintingP
     return out, num_pages
 
 
+PWG_PAGE_HEADER = b'PwgRaster\0'
+CHUNK_SIZE = 100000
+
+
 def postprocess_pwg(input_file: str, work_dir: str, properties: PrintingProperties):
-    # TODO: filter and count pages.
-    return input_file, 0
+    out = os.path.join(work_dir, 'final.pwg')
+    if properties.pages_to_print:
+        ranges = [range(int(r[0]), int(r[0]) + 1) if len(r) == 1 else range(int(r[0]), int(r[1]) + 1)
+                  for r in [x.split('-') for x in properties.pages_to_print.split(',')]]
+    else:
+        ranges = [range(1, sys.maxsize)]
+    page_counter = 0
+    saved_pages = -1  # we save the file header first as a page, hence -1.
+    last = False
+    save_current = True
+    # Count and filter pages
+    with open(input_file, 'rb') as input_fd, open(out, 'xb') as output_fd:
+        buff = bytearray()
+        while not last:
+            rd = input_fd.read(CHUNK_SIZE)
+            last = len(rd) < CHUNK_SIZE
+            buff += rd
+            while True:
+                page_header = buff.find(PWG_PAGE_HEADER, 1)
+                if page_header < 0:
+                    break
+                if save_current:
+                    output_fd.write(buff[:page_header])
+                    saved_pages += 1
+                buff = buff[page_header:]
+                page_counter += 1
+                save_current = any(page_counter in r for r in ranges)
+        if save_current:
+            if buff:
+                saved_pages += 1
+            output_fd.write(buff)
+    return out, saved_pages
 
 
 def auto_postprocess(input_file: str, input_type: str, work_dir: str, properties: PrintingProperties):
