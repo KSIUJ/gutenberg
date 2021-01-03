@@ -1,7 +1,6 @@
 import base64
 
 from django.http import HttpResponse, HttpRequest
-
 # Create your views here.
 from django.utils.decorators import method_decorator
 from django.views import View
@@ -45,7 +44,7 @@ class IppView(View):
                 return res
             else:
                 return HttpResponse(b'Forbidden', status=403, content_type='text/plain')
-        printer = Printer.objects.filter(id=printer_id).first()
+        printer = Printer.get_printer_for_user(user, printer_id)
         if not printer:
             return HttpResponse(b'Not found', status=404, content_type='text/plain')
         service = IppService(printer, user, request.is_secure(), basic_auth)

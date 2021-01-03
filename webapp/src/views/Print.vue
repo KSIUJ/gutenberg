@@ -115,7 +115,7 @@ export default {
   methods: {
     printerBadgeText(value) {
       const features = [];
-      if (value.color_supported) {
+      if (value.color_allowed) {
         features.push('color');
       }
       if (value.duplex_supported) {
@@ -124,7 +124,7 @@ export default {
       return features.join('+');
     },
     printerSelected() {
-      this.color_available = this.printer.color_supported;
+      this.color_available = this.printer.color_allowed;
       this.duplex_available = this.printer.duplex_supported;
 
       if (!this.color_available) {
