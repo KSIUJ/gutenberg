@@ -25,8 +25,8 @@
           <p class="text-h4 mb-5">Upload file</p>
 
           <v-file-input outlined label="File to print" v-model="file" :disabled="printerNotChosen"
-                        required :rules="validateFileRequired" :hint="supportedExtensions"
-                        persistent-hint>
+                        required :rules="validateFileRequired" :hint="supportedExtensionsMessage"
+                        persistent-hint :accept="supportedExtensions">
           </v-file-input>
         </v-col>
         <v-col>
@@ -185,7 +185,9 @@ export default {
     },
     validateFileRequired() {
       return [
-        (val) => !!val || (val && !val.size < 1) || 'Add a file to print.',
+        (val) => (val && !val.size < 1) || 'Add a file to print.',
+        (val) => (val && this.supportedExtensionsSet.some((suffix) => val.name.endsWith(suffix)))
+          || 'Unsupported file extension.',
       ];
     },
     validateCopies() {
@@ -199,9 +201,21 @@ export default {
     },
     supportedExtensions() {
       if (this.printer) {
+        return this.printer.supported_extensions;
+      }
+      return '';
+    },
+    supportedExtensionsMessage() {
+      if (this.printer) {
         return `Supported formats: ${this.printer.supported_extensions}`;
       }
       return '';
+    },
+    supportedExtensionsSet() {
+      if (this.printer) {
+        return this.printer.supported_extensions.split(',');
+      }
+      return [];
     },
   },
   components: { PrinterIPPSettings },
