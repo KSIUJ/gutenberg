@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib.auth.models import Group
 from django.core.files.storage import FileSystemStorage
 from django.db import models
-from django.db.models import F, Max, Count
+from django.db.models import F, Max, Count, Q
 from django.utils.translation import gettext_lazy as _
 
 from common.models import User
@@ -40,6 +40,20 @@ class Printer(models.Model):
     printer_type = models.CharField(max_length=10, default=PrinterType.DISABLED, choices=PrinterType.choices)
     color_supported = models.BooleanField(default=False)
     duplex_supported = models.BooleanField(default=False)
+
+    @staticmethod
+    def get_queryset_for_user(user):
+        queryset = Printer.objects
+        if not user.is_superuser:
+            return queryset.filter(printerpermissions__group__user=user).annotate(
+                color_allowed=F('color_supported') * Max('printerpermissions__print_color',
+                                                         filter=Q(printerpermissions__group__user=user)))
+        else:
+            return queryset.annotate(color_allowed=F('color_supported'))
+
+    @staticmethod
+    def get_printer_for_user(user, printer_id):
+        return Printer.get_queryset_for_user(user).filter(id=printer_id).first()
 
     def __str__(self):
         return '{} ({})'.format(self.name, self.get_printer_type_display())

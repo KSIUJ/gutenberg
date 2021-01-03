@@ -15,7 +15,7 @@ from rest_framework.views import APIView
 
 from api.serializers import PrintJobSerializer, PrinterSerializer, PrintRequestSerializer, UserInfoSerializer
 from common.models import User
-from control.models import PrintJob, Printer, JobStatus, PrintingProperties
+from control.models import PrintJob, Printer, JobStatus, PrintingProperties, TwoSidedPrinting
 from printing.converter import detect_file_format, SUPPORTED_FILE_FORMATS
 from printing.printing import print_file
 
@@ -54,10 +54,15 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         if not serializer.is_valid():
             return Response(serializer.errors,
                             status=status.HTTP_400_BAD_REQUEST)
-        job = self._submit_printing_job(**serializer.validated_data)
+        printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
+                                                          printer_id=serializer.validated_data['printer'])
+        if not printer_with_perms:
+            return Response("Printer does not exist", status=status.HTTP_400_BAD_REQUEST)
+
+        job = self._submit_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
         return Response(self.get_serializer(job).data)
 
-    def _submit_printing_job(self, printer, file,
+    def _submit_printing_job(self, printer_with_perms, file,
                              copies: int, pages_to_print: str,
                              color: bool, two_sides: str, **_):
         name, ext = os.path.splitext(file.name)
@@ -74,7 +79,9 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         if file_type not in SUPPORTED_FILE_FORMATS:
             raise ValueError("Unsupported file type")
         job = PrintJob.objects.create(name=file.name, status=JobStatus.PENDING, owner=self.request.user,
-                                      printer=printer)
+                                      printer=printer_with_perms)
+        color = color if printer_with_perms.color_allowed else False
+        two_sides = two_sides if printer_with_perms.duplex_supported else TwoSidedPrinting.ONE_SIDED
         PrintingProperties.objects.create(color=color, copies=copies, two_sides=two_sides,
                                           pages_to_print=pages_to_print, job=job)
 
@@ -92,10 +99,7 @@ class PrinterViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Printer.objects.all()
-        if not user.is_superuser:
-            queryset = queryset.filter(printerpermissions__group__user=user)
-        return queryset.all().order_by('name')
+        return Printer.get_queryset_for_user(user).all().order_by('name')
 
 
 def _generate_token():

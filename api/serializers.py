@@ -15,14 +15,15 @@ class PrintJobSerializer(serializers.ModelSerializer):
 
 class PrinterSerializer(serializers.ModelSerializer):
     supported_extensions = serializers.CharField(default=', '.join(sorted(SUPPORTED_EXTENSIONS)))
+    color_allowed = serializers.BooleanField()
 
     class Meta:
         model = Printer
-        fields = ['id', 'name', 'color_supported', 'duplex_supported', 'supported_extensions']
+        fields = ['id', 'name', 'color_allowed', 'duplex_supported', 'supported_extensions']
 
 
 class PrintRequestSerializer(serializers.Serializer):
-    printer = serializers.PrimaryKeyRelatedField(queryset=Printer.objects.all(), required=True)
+    printer = serializers.IntegerField(required=True)
     file = serializers.FileField(allow_empty_file=False, required=True)
     copies = serializers.IntegerField(required=True)
     pages_to_print = serializers.CharField(default=None)

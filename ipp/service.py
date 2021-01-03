@@ -59,7 +59,7 @@ def job_status_to_ipp(status):
 
 
 class IppService:
-    def __init__(self, printer: Printer, user: Optional[User], is_secure: bool, basic_auth: bool) -> None:
+    def __init__(self, printer, user: Optional[User], is_secure: bool, basic_auth: bool) -> None:
         self.user = user
         self.is_secure = is_secure
         self.basic_auth = basic_auth
@@ -94,13 +94,15 @@ class IppService:
         if job_template.page_ranges:
             pages_to_print = ','.join(['{}-{}'.format(x.lower, x.upper) for x in job_template.page_ranges])
         PrintingProperties.objects.create(
-            color=job_template.print_color_mode != 'monochrome',
+            color=job_template.print_color_mode != 'monochrome' and self.printer.color_allowed,
             copies=job_template.copies,
             two_sides={
                 'one-sided': TwoSidedPrinting.ONE_SIDED,
                 'two-sided-long-edge': TwoSidedPrinting.TWO_SIDED_LONG_EDGE,
                 'two-sided-short-edge': TwoSidedPrinting.TWO_SIDED_SHORT_EDGE,
-            }.get(job_template.sides, TwoSidedPrinting.TWO_SIDED_LONG_EDGE),
+            }.get(job_template.sides,
+                  TwoSidedPrinting.TWO_SIDED_LONG_EDGE) if self.printer.duplex_supported
+            else TwoSidedPrinting.ONE_SIDED,
             pages_to_print=pages_to_print, job=job)
         return job
 
@@ -169,7 +171,7 @@ class IppService:
                 uri_security_supported=['tls'] if self.is_secure else ['none'],
                 uri_authentication_supported=['basic'] if self.basic_auth else ['none'],
                 print_color_mode_supported=
-                ['auto', 'color', 'monochrome'] if self.printer.color_supported else ['auto', 'monochrome'],
+                ['auto', 'color', 'monochrome'] if self.printer.color_allowed else ['auto', 'monochrome'],
                 sides_supported=['one-sided', 'two-sided-long-edge',
                                  'two-sided-short-edge'] if self.printer.duplex_supported else ['one-sided']
             )
