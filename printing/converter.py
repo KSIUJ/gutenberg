@@ -31,8 +31,8 @@ class Converter(ABC):
 
 class SandboxConverter(Converter, ABC):
     def run_in_sandbox(self, command: List[str]):
-        subprocess.check_call(
-            [SANDBOX_PATH, self.work_dir] + command)
+        subprocess.check_output(
+            [SANDBOX_PATH, self.work_dir] + command, stderr=subprocess.STDOUT)
 
     @staticmethod
     def binary_exists(name: str):
