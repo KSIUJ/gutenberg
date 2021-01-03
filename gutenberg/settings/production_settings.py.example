@@ -31,14 +31,21 @@ LOGGING['handlers']['django_file']['filename'] = '/var/log/gutenberg/django.log'
 # Directory to store the printed files in
 PRINT_DIRECTORY = '/srv/printing/'
 
-OIDC_ADMIN_ROLE = 'ksi'
-OIDC_OP_AUTHORIZATION_ENDPOINT = ''
-OIDC_OP_TOKEN_ENDPOINT = ''
-OIDC_OP_USER_ENDPOINT = 'o'
-OIDC_OP_JWKS_ENDPOINT = ''
-OIDC_OP_LOGOUT_ENDPOINT = ''
-OIDC_RP_CLIENT_ID = ''
-OIDC_RP_CLIENT_SECRET = None
+# Uncomment lines below to enable Open ID Connect auth
+# LOGIN_URL = 'oidc_authentication_init'
+# OIDC_ADMIN_ROLE = 'ksi'
+# OIDC_OP_AUTHORIZATION_ENDPOINT = ''
+# OIDC_OP_TOKEN_ENDPOINT = ''
+# OIDC_OP_USER_ENDPOINT = 'o'
+# OIDC_OP_JWKS_ENDPOINT = ''
+# OIDC_OP_LOGOUT_ENDPOINT = ''
+# OIDC_RP_CLIENT_ID = ''
+# OIDC_RP_CLIENT_SECRET = None
+# OIDC_OP_LOGOUT_URL_METHOD = 'gutenberg.auth.oidc_op_logout'
+# AUTHENTICATION_BACKENDS = (
+#     'django.contrib.auth.backends.ModelBackend',
+#     'gutenberg.auth.OIDCAuthenticationBackend',
+# )
 
 # Celery
 CELERY_BROKER_URL = 'redis://localhost:6379'

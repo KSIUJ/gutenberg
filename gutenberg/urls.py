@@ -29,4 +29,5 @@ urlpatterns = [
     path('api/', include(api.urls)),
 
     path('oidc/', include('mozilla_django_oidc.urls')),
+    path('api-auth/', include('rest_framework.urls'))
 ]
