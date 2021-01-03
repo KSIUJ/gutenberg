@@ -38,14 +38,17 @@ THIRD_PARTY_APPS = [
     'rest_framework',
 ]
 
-PROJECT_APPS = [
+OVERRIDE_APPS = [
     'common',
+]
+
+PROJECT_APPS = [
     'printing',
     'control',
     'ipp',
 ]
 
-INSTALLED_APPS = DJANGO_INSTALLED_APPS + THIRD_PARTY_APPS + PROJECT_APPS
+INSTALLED_APPS = DJANGO_INSTALLED_APPS + OVERRIDE_APPS + THIRD_PARTY_APPS + PROJECT_APPS
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -60,7 +63,6 @@ MIDDLEWARE = [
 
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
-    'gutenberg.auth.OIDCAuthenticationBackend',
 )
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
@@ -178,26 +180,14 @@ LOGGING = {
     }
 }
 
-# django-bootstrap4 settings
-BOOTSTRAP4 = {
-    'horizontal_label_class': 'col-md-3 col-lg-2',
-    'horizontal_field_class': 'col-md-9 col-lg-10',
-    'include_jquery': True,
-
-    'field_renderers': {
-        'default': 'common.renderers.FieldRenderer',
-    },
-}
-
 # Print settings
 # Directory to store the printed files in
 PRINT_DIRECTORY = '/tmp/print/'
 # Format of date to append to each filename
 PRINT_DATE_FORMAT = '%Y-%m-%dT%H-%M-%S-%f'
 
-OIDC_OP_LOGOUT_URL_METHOD = 'gutenberg.auth.oidc_op_logout'
 OIDC_RP_SIGN_ALGO = 'RS256'
 OIDC_RP_SCOPES = 'openid email'
-LOGIN_URL = 'oidc_authentication_init'
+LOGIN_URL = '/api-auth/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
