@@ -41,7 +41,7 @@ class SandboxConverter(Converter, ABC):
 
 class ImageConverter(SandboxConverter):
     supported_types = ['image/png', 'image/jpeg']
-    supported_extensions = ['png', 'jpg', 'jpeg']
+    supported_extensions = ['.png', '.jpg', '.jpeg']
     output_type = 'application/pdf'
 
     CONVERT_OPTIONS = [
@@ -62,7 +62,7 @@ class ImageConverter(SandboxConverter):
 class DocConverter(SandboxConverter):
     supported_types = ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessing',
                        'application/rtf', 'application/vnd.oasis.opendocument.text']
-    supported_extensions = ['doc', 'docx', 'rtf', 'odt']
+    supported_extensions = ['.doc', '.docx', '.rtf', '.odt']
     output_type = 'application/pdf'
 
     def convert(self, input_file: str) -> str:
@@ -76,7 +76,7 @@ class DocConverter(SandboxConverter):
 
 
 NATIVE_FILE_FORMATS = ['application/pdf', 'image/pwg-raster', 'application/postscript']
-NATIVE_FILE_EXTENSIONS = ['pdf', 'pwg']
+NATIVE_FILE_EXTENSIONS = ['.pdf', '.pwg']
 CONVERTERS_ALL = [ImageConverter, DocConverter]
 CONVERTERS = [conv for conv in CONVERTERS_ALL if conv.is_available()]
 SUPPORTED_FILE_FORMATS = NATIVE_FILE_FORMATS + list(chain.from_iterable(conv.supported_types for conv in CONVERTERS))

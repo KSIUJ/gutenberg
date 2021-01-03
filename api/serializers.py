@@ -14,7 +14,7 @@ class PrintJobSerializer(serializers.ModelSerializer):
 
 
 class PrinterSerializer(serializers.ModelSerializer):
-    supported_extensions = serializers.CharField(default=', '.join(sorted(SUPPORTED_EXTENSIONS)))
+    supported_extensions = serializers.CharField(default=','.join(sorted(SUPPORTED_EXTENSIONS)))
     color_allowed = serializers.BooleanField()
 
     class Meta:
