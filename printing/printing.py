@@ -12,14 +12,11 @@ from celery import shared_task
 from django.utils import timezone
 
 from control.models import PrintJob, TwoSidedPrinting, JobStatus, PrinterType
+from printing import JobCancelledException
 from printing.converter import auto_convert
 from printing.postprocess import auto_postprocess
 
 logger = logging.getLogger('gutenberg.worker')
-
-
-class JobCancelledException(ValueError):
-    pass
 
 
 def handle_cancellation(job: PrintJob, handler: Optional[Callable[[], None]] = None):
@@ -76,7 +73,7 @@ class LocalCupsPrinter(PrinterBackend):
 
     def check_status(self, job: PrintJob, backend_job_id: Any) -> bool:
         output = subprocess.check_output(
-            ['lpstat', '-l']
+            ['lpstat', '-l'], stderr=subprocess.STDOUT
         )
         output_lines = output.decode('utf-8', errors='ignore').splitlines()
         for idx, val in enumerate(output_lines):
@@ -115,12 +112,12 @@ class LocalCupsPrinter(PrinterBackend):
 
     def submit_job(self, job: PrintJob, file_path: str) -> Any:
         output = subprocess.check_output(
-            ['lp', file_path] + self._cups_params(job))
+            ['lp', file_path] + self._cups_params(job), stderr=subprocess.STDOUT)
         cups_job_id = re.match(self.CUPS_JOB_REQUEST_REGEX, output.decode('utf-8', errors='ignore')).group(1)
         return cups_job_id
 
     def cancel_job(self, job: PrintJob, backend_job_id: Any):
-        subprocess.check_call(['cancel', backend_job_id])
+        subprocess.check_output(['cancel', backend_job_id], stderr=subprocess.STDOUT)
 
 
 class DisabledPrinter(PrinterBackend):
@@ -157,7 +154,7 @@ def print_file(file_path, file_format, job_id):
             shutil.copyfile(file_path, os.path.join(tmpdir, 'input.' + ext))
             out, out_type = auto_convert(tmp_input, file_format, tmpdir)
             handle_cancellation(job)
-            out, num_pages = auto_postprocess(out, out_type, tmpdir, job.properties)
+            out, num_pages = auto_postprocess(out, out_type, tmpdir, job)
             handle_cancellation(job)
             job.status = JobStatus.PRINTING
             job.status_reason = ''
@@ -175,5 +172,7 @@ def print_file(file_path, file_format, job_id):
     except Exception as ex:
         job.status = JobStatus.ERROR
         job.status_reason = repr(ex)
+        if hasattr(ex, 'output') and isinstance(ex.output, bytes):
+            job.status_reason += '\nOutput:\n' + ex.output.decode('utf-8', errors='ignore')
         job.save()
         raise ex

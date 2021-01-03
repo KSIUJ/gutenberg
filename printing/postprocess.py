@@ -3,20 +3,34 @@ import re
 import subprocess
 import sys
 
-from control.models import PrintingProperties
-from printing import SANDBOX_PATH
+from control.models import PrintJob, JobStatus
+from printing import SANDBOX_PATH, JobCancelledException
 
 
-def postprocess_postscript(input_file: str, work_dir: str, properties: PrintingProperties):
+def _no_pages_cancel(job):
+    job.status = JobStatus.CANCELED
+    job.status_reason = 'No pages to print. Check your pages filter expression.'
+    job.save()
+    raise JobCancelledException()
+
+
+def postprocess_postscript(input_file: str, work_dir: str, job: PrintJob):
     out = os.path.join(work_dir, 'final.pdf')
-    subprocess.check_call([SANDBOX_PATH, work_dir, 'gs', '-sDEVICE=pdfwrite', '-dNOPAUSE',
-                           '-dBATCH', '-dSAFER', '-dCompatibilityLevel=1.4',
-                           '-sOutputFile=' + out, input_file])
+    subprocess.check_output([SANDBOX_PATH, work_dir, 'gs', '-sDEVICE=pdfwrite', '-dNOPAUSE',
+                             '-dBATCH', '-dSAFER', '-dCompatibilityLevel=1.4',
+                             '-sOutputFile=' + out, input_file], stderr=subprocess.STDOUT)
 
+    properties = job.properties
     if properties.pages_to_print:
         new_out = os.path.join(work_dir, 'post.pdf')
         pages = properties.pages_to_print.split(',')
-        subprocess.check_call([SANDBOX_PATH, work_dir, 'pdftk', out, 'cat', *pages, 'output', new_out])
+        try:
+            subprocess.check_output([SANDBOX_PATH, work_dir, 'pdftk', out, 'cat', *pages, 'output', new_out],
+                                    stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as ex:
+            if b'Error: Range start page number exceeds size of PDF' in ex.output:
+                _no_pages_cancel(job)
+            raise ex
         out = new_out
 
     meta = subprocess.check_output([SANDBOX_PATH, work_dir, 'pdftk', out, 'dump_data_annots']).decode('utf-8',
@@ -30,8 +44,9 @@ PWG_PAGE_HEADER = b'PwgRaster\0'
 CHUNK_SIZE = 100000
 
 
-def postprocess_pwg(input_file: str, work_dir: str, properties: PrintingProperties):
+def postprocess_pwg(input_file: str, work_dir: str, job: PrintJob):
     out = os.path.join(work_dir, 'final.pwg')
+    properties = job.properties
     if properties.pages_to_print:
         ranges = [range(int(r[0]), int(r[0]) + 1) if len(r) == 1 else range(int(r[0]), int(r[1]) + 1)
                   for r in [x.split('-') for x in properties.pages_to_print.split(',')]]
@@ -62,12 +77,14 @@ def postprocess_pwg(input_file: str, work_dir: str, properties: PrintingProperti
             if buff:
                 saved_pages += 1
             output_fd.write(buff)
+    if saved_pages == 0:
+        _no_pages_cancel(job)
     return out, saved_pages
 
 
-def auto_postprocess(input_file: str, input_type: str, work_dir: str, properties: PrintingProperties):
+def auto_postprocess(input_file: str, input_type: str, work_dir: str, job: PrintJob):
     return {
         'application/pdf': postprocess_postscript,
         'application/postscript': postprocess_postscript,
         'image/pwg-raster': postprocess_pwg,
-    }[input_type](input_file, work_dir, properties)
+    }[input_type](input_file, work_dir, job)
