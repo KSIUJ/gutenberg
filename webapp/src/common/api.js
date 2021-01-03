@@ -5,6 +5,7 @@ const API = {
   resetToken: '/api/resettoken/',
   jobs: '/api/jobs/',
   cancelJob: '/cancel',
+  submit: '/api/jobs/submit/?format=json',
 };
 
 // eslint-disable-next-line import/prefer-default-export
