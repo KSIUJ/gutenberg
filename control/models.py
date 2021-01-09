@@ -70,11 +70,6 @@ class LocalPrinterParams(models.Model):
     print_two_sided_short_edge_param = models.CharField(max_length=64, null=True, blank=True)
 
 
-class PrinterPermissionsEnum(Enum):
-    PRINT = 'PRINT'
-    PRINT_COLOR = 'COLOR'
-
-
 class PrinterPermissions(models.Model):
     printer = models.ForeignKey(Printer, on_delete=models.CASCADE)
     group = models.ForeignKey(Group, on_delete=models.CASCADE)
@@ -86,19 +81,6 @@ class PrinterPermissions(models.Model):
 
     class Meta:
         unique_together = ('printer', 'group')
-
-    @staticmethod
-    def get_permissions(user: User, printer: Printer) -> Set[PrinterPermissionsEnum]:
-        if False and user.is_superuser:
-            return {PrinterPermissionsEnum.PRINT, PrinterPermissionsEnum.PRINT_COLOR}
-        perms = PrinterPermissions.objects.filter(printer=printer, group__user=user) \
-            .all().aggregate(Max('print_color'), Count('id'))
-        perms_set = set()
-        if perms['id__count'] > 0:
-            perms_set.add(PrinterPermissionsEnum.PRINT)
-        if perms['can_print_color']:
-            perms_set.add(PrinterPermissionsEnum.PRINT_COLOR)
-        return perms_set
 
 
 class PrintJob(models.Model):

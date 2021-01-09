@@ -12,25 +12,27 @@ from celery import shared_task
 from django.utils import timezone
 
 from control.models import PrintJob, TwoSidedPrinting, JobStatus, PrinterType
-from printing import JobCancelledException
+from printing import JobCanceledException
 from printing.converter import auto_convert
 from printing.postprocess import auto_postprocess
 
 logger = logging.getLogger('gutenberg.worker')
 
+PRINTING_TIMEOUT_S = 120
 
-def handle_cancellation(job: PrintJob, handler: Optional[Callable[[], None]] = None):
+
+def handle_cancelation(job: PrintJob, handler: Optional[Callable[[], None]] = None):
     # We allow a low possibility of a race condition here as the impact would be negligible
     # (ie. ignored request) and the probability is low.
     job.refresh_from_db()
     if job.status == JobStatus.CANCELING:
-        logger.info("Cancelling job {}".format(job))
+        logger.info("Canceling job {}".format(job))
         if handler:
             handler()
         job.status = JobStatus.CANCELED
-        job.status_reason = 'Cancelled by user'
+        job.status_reason = 'Canceled by user'
         job.save()
-        raise JobCancelledException()
+        raise JobCanceledException()
 
 
 class PrinterBackend(ABC):
@@ -40,14 +42,17 @@ class PrinterBackend(ABC):
 
     @abstractmethod
     def check_status(self, job: PrintJob, backend_job_id: Any) -> bool:
+        """Checks if the backend has finished processing the job. Returns `true` on finish."""
         pass
 
     @abstractmethod
     def submit_job(self, job: PrintJob, file_path: str) -> Any:
+        """Submit the job to the backend. Returns an object used by backend to identify the job (e.g. job id string)"""
         pass
 
     @abstractmethod
     def cancel_job(self, job: PrintJob, backend_job_id: Any) -> None:
+        """Attempt canceling processing the job on backend."""
         pass
 
     def print(self, job: PrintJob, file_path: str):
@@ -56,10 +61,10 @@ class PrinterBackend(ABC):
         cnt = 0
         while self.check_status(job, backend_job_id):
             logger.info("Job {} is still printing via {}".format(job, self.backend_name))
-            handle_cancellation(job, lambda: self.cancel_job(job, backend_job_id))
+            handle_cancelation(job, lambda: self.cancel_job(job, backend_job_id))
             time.sleep(1)
             cnt += 1
-            if cnt > 120:
+            if cnt > PRINTING_TIMEOUT_S:
                 self.cancel_job(job, backend_job_id)
                 raise TimeoutError("Job {} took too long to complete".format(job))
         job.status = JobStatus.COMPLETED
@@ -130,7 +135,7 @@ class DisabledPrinter(PrinterBackend):
         job.status_reason = "Printer is disabled"
         job.finished = timezone.now()
         job.save()
-        raise JobCancelledException()
+        raise JobCanceledException()
 
     def cancel_job(self, job: PrintJob, backend_job_id: Any):
         pass
@@ -143,7 +148,7 @@ def print_file(file_path, file_format, job_id):
         logger.warning("Job id {} missing.".format(job_id))
         return
     logger.info("Processing job {}".format(job))
-    handle_cancellation(job)
+    handle_cancelation(job)
     job.status = JobStatus.PROCESSING
     job.status_reason = ''
     job.save()
@@ -153,9 +158,9 @@ def print_file(file_path, file_format, job_id):
             tmp_input = os.path.join(tmpdir, 'input.' + ext)
             shutil.copyfile(file_path, os.path.join(tmpdir, 'input.' + ext))
             out, out_type = auto_convert(tmp_input, file_format, tmpdir)
-            handle_cancellation(job)
+            handle_cancelation(job)
             out, num_pages = auto_postprocess(out, out_type, tmpdir, job)
-            handle_cancellation(job)
+            handle_cancelation(job)
             job.status = JobStatus.PRINTING
             job.status_reason = ''
             job.date_processed = timezone.now()
@@ -164,10 +169,10 @@ def print_file(file_path, file_format, job_id):
             backend = {
                 PrinterType.DISABLED: DisabledPrinter,
                 PrinterType.LOCAL_CUPS: LocalCupsPrinter,
-            }.get(job.printer.printer_type, PrinterType.DISABLED)()
+            }.get(job.printer.printer_type, DisabledPrinter)()
             backend.print(job, out)
-    except JobCancelledException:
-        # Cancelling job
+    except JobCanceledException:
+        # Canceling job
         pass
     except Exception as ex:
         job.status = JobStatus.ERROR

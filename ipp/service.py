@@ -11,7 +11,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from common.models import User
-from control.models import PrintingProperties, PrintJob, JobStatus, TwoSidedPrinting, Printer
+from control.models import PrintingProperties, PrintJob, JobStatus, TwoSidedPrinting
 from ipp import SUPPORTED_IPP_FORMATS, AUTODETECT_IPP_FORMAT, DEFAULT_IPP_FORMAT
 from ipp.constants import OperationEnum, StatusCodeEnum, PrinterStateEnum, JobStateEnum, ValueTagsEnum
 from ipp.exceptions import IppError, DocumentFormatError, NotFoundError
@@ -159,7 +159,7 @@ class IppService:
             BaseOperationGroup(),
             PrinterAttributesGroup(
                 printer_uri_supported=[self._get_printer_uri(request)],
-                printer_name="Gutenberg".format(self.printer.name),
+                printer_name="Gutenberg-{}".format(self.printer.name).replace(' ', '-'),
                 printer_info="Gutenberg - {}".format(self.printer.name),
                 printer_more_info=request.http_request.build_absolute_uri('/'),
                 printer_state=PrinterStateEnum.idle,
@@ -339,6 +339,7 @@ class IppService:
             OperationEnum.cancel_job: self.cancel_job,
             OperationEnum.create_job: self.create_job,
             OperationEnum.send_document: self.send_document,
+            # TODO: add support for cancel_my_jobs operation (recommended by standard).
             # OperationEnum.cancel_my_jobs: self.cancel_my_jobs,
             OperationEnum.close_job: self.close_job,
             OperationEnum.identify_printer: self.identify_printer,
