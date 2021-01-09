@@ -38,6 +38,7 @@ THIRD_PARTY_APPS = [
     'rest_framework',
 ]
 
+# Apps overriding templates in defined by THIRD_PARTY_APPS.
 OVERRIDE_APPS = [
     'common',
 ]

@@ -91,14 +91,14 @@ class PrinterDescriptionGroup(AttributeGroup):
     printer_config_change_date_time = DateTimeField(default=timezone.now())
     printer_config_change_time = IntegerField(default=ipp_timestamp(timezone.now()))
 
-    # no default value
+    # no default value provided.
     printer_uri_supported = OneSetField(accepted_fields=[UriField()], required=True)
     printer_name = NameWLField(required=True)
     printer_more_info = UriField()
     printer_state = EnumField(required=True)
     printer_state_message = TextWLField()
 
-    # no default and required by standard
+    # no default value provided, required by never revisions of IPP.
     printer_supply_info_uri = UriField()
     queued_job_count = IntegerField()
     printer_uuid = UriField()

@@ -4,14 +4,14 @@ import subprocess
 import sys
 
 from control.models import PrintJob, JobStatus
-from printing import SANDBOX_PATH, JobCancelledException
+from printing import SANDBOX_PATH, JobCanceledException
 
 
 def _no_pages_cancel(job):
     job.status = JobStatus.CANCELED
     job.status_reason = 'No pages to print. Check your pages filter expression.'
     job.save()
-    raise JobCancelledException()
+    raise JobCanceledException()
 
 
 def postprocess_postscript(input_file: str, work_dir: str, job: PrintJob):
