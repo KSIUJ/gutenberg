@@ -161,7 +161,7 @@ export default {
       formData.append('printer', this.printer.id);
       formData.append('file', this.file);
       formData.append('copies', this.copies);
-      formData.append('pages_to_print', this.pages_to_print);
+      formData.append('pages_to_print', this.pages_to_print.replaceAll(' ', ''));
       formData.append('two_sides', this.two_sides);
       formData.append('color', this.color);
 
@@ -180,7 +180,7 @@ export default {
   computed: {
     validatePageFilter() {
       return [
-        (val) => val === '' || val.match(this.PAGES_TO_PRINT_PATTERN)
+        (val) => val === '' || val.match(this.PAGES_TO_PRINT_PATTERN) !== null
           || 'Invalid page filter expression.',
       ];
     },

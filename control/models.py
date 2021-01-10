@@ -1,12 +1,12 @@
 import os
-from enum import Enum
-from typing import Set
+import re
 
 from django.conf import settings
 from django.contrib.auth.models import Group
+from django.core.exceptions import ValidationError
 from django.core.files.storage import FileSystemStorage
 from django.db import models
-from django.db.models import F, Max, Count, Q
+from django.db.models import F, Max, Q
 from django.utils.translation import gettext_lazy as _
 
 from common.models import User
@@ -112,9 +112,22 @@ class PrintJob(models.Model):
         return FileSystemStorage(location=path)
 
 
+def validate_pages_to_print(value):
+    code = 'invalid'
+    if not re.search(r'^\d+(?:-\d+)?(,\d+(?:-\d+)?)*$', str(value)):
+        raise ValidationError('Invalid page selection string: {}'.format(value), code=code)
+    # Check for invalid page ranges (e.g. 3-1)
+    parts = [part.split('-') for part in value.split(',')]
+    for part in parts:
+        # In case of single page numbers, part[0] and part[-1] is the
+        # same thing, so we don't have to separately check for that
+        if int(part[0]) > int(part[-1]):
+            raise ValidationError('Invalid page range: {}-{}'.format(part[0], part[-1]), code)
+
+
 class PrintingProperties(models.Model):
     color = models.BooleanField(default=False)
     copies = models.IntegerField(default=1)
     two_sides = models.CharField(max_length=2, default=TwoSidedPrinting.ONE_SIDED, choices=TwoSidedPrinting.choices)
-    pages_to_print = models.CharField(max_length=100, null=True, blank=True)
+    pages_to_print = models.CharField(max_length=100, null=True, blank=True, validators=[validate_pages_to_print])
     job = models.OneToOneField(PrintJob, on_delete=models.CASCADE, related_name='properties')
