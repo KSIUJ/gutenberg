@@ -68,6 +68,7 @@
 
 import { API } from './common/api';
 import { getCsrfToken } from './common/utils';
+import './styles/main.scss';
 
 export default {
   name: 'App',
