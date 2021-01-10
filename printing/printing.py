@@ -21,7 +21,7 @@ logger = logging.getLogger('gutenberg.worker')
 PRINTING_TIMEOUT_S = 120
 
 
-def handle_cancelation(job: PrintJob, handler: Optional[Callable[[], None]] = None):
+def handle_cancellation(job: PrintJob, handler: Optional[Callable[[], None]] = None):
     # We allow a low possibility of a race condition here as the impact would be negligible
     # (ie. ignored request) and the probability is low.
     job.refresh_from_db()
@@ -61,7 +61,7 @@ class PrinterBackend(ABC):
         cnt = 0
         while self.check_status(job, backend_job_id):
             logger.info("Job {} is still printing via {}".format(job, self.backend_name))
-            handle_cancelation(job, lambda: self.cancel_job(job, backend_job_id))
+            handle_cancellation(job, lambda: self.cancel_job(job, backend_job_id))
             time.sleep(1)
             cnt += 1
             if cnt > PRINTING_TIMEOUT_S:
@@ -74,8 +74,6 @@ class PrinterBackend(ABC):
 
 
 class LocalCupsPrinter(PrinterBackend):
-    CUPS_JOB_REQUEST_REGEX = r'^request id is ([^ ]+) '
-
     def check_status(self, job: PrintJob, backend_job_id: Any) -> bool:
         output = subprocess.check_output(
             ['lpstat', '-l'], stderr=subprocess.STDOUT
@@ -116,10 +114,13 @@ class LocalCupsPrinter(PrinterBackend):
         return options
 
     def submit_job(self, job: PrintJob, file_path: str) -> Any:
+        cups_name = job.printer.localprinterparams.cups_printer_name
         output = subprocess.check_output(
-            ['lp', file_path] + self._cups_params(job), stderr=subprocess.STDOUT)
-        cups_job_id = re.match(self.CUPS_JOB_REQUEST_REGEX, output.decode('utf-8', errors='ignore')).group(1)
-        return cups_job_id
+            ['lp', file_path] + self._cups_params(job), stderr=subprocess.STDOUT).decode('utf-8', errors='ignore')
+        mt = re.search(re.escape(cups_name) + r'-([^ ]+)', output)
+        if mt:
+            return '{0}-{1}'.format(cups_name, mt.group(1))
+        raise ValueError('Invalid lp output: {}'.format(output))
 
     def cancel_job(self, job: PrintJob, backend_job_id: Any):
         subprocess.check_output(['cancel', backend_job_id], stderr=subprocess.STDOUT)
@@ -148,7 +149,7 @@ def print_file(file_path, file_format, job_id):
         logger.warning("Job id {} missing.".format(job_id))
         return
     logger.info("Processing job {}".format(job))
-    handle_cancelation(job)
+    handle_cancellation(job)
     job.status = JobStatus.PROCESSING
     job.status_reason = ''
     job.save()
@@ -158,9 +159,9 @@ def print_file(file_path, file_format, job_id):
             tmp_input = os.path.join(tmpdir, 'input.' + ext)
             shutil.copyfile(file_path, os.path.join(tmpdir, 'input.' + ext))
             out, out_type = auto_convert(tmp_input, file_format, tmpdir)
-            handle_cancelation(job)
+            handle_cancellation(job)
             out, num_pages = auto_postprocess(out, out_type, tmpdir, job)
-            handle_cancelation(job)
+            handle_cancellation(job)
             job.status = JobStatus.PRINTING
             job.status_reason = ''
             job.date_processed = timezone.now()

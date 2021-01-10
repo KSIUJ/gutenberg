@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from common.models import User
-from control.models import PrintJob, Printer, TwoSidedPrinting
+from control.models import PrintJob, Printer, TwoSidedPrinting, validate_pages_to_print
 from printing.converter import SUPPORTED_EXTENSIONS
 
 
@@ -26,7 +26,7 @@ class PrintRequestSerializer(serializers.Serializer):
     printer = serializers.IntegerField(required=True)
     file = serializers.FileField(allow_empty_file=False, required=True)
     copies = serializers.IntegerField(required=True)
-    pages_to_print = serializers.CharField(default=None)
+    pages_to_print = serializers.CharField(default=None, validators=[validate_pages_to_print])
     two_sides = serializers.ChoiceField(choices=TwoSidedPrinting.choices, required=True)
     color = serializers.BooleanField(default=False)
 
