@@ -4,8 +4,10 @@ from django.contrib.staticfiles.views import serve
 
 @login_required
 def webapp(request):
-    return serve(request, "index.html")
+    # Serve webpack-built SPA.
+    return serve(request, "index.html", insecure=True)
 
 
 def service_worker(request):
-    return serve(request, "service-worker.js")
+    # Serve webpack-built SPA.
+    return serve(request, "service-worker.js", insecure=True)
