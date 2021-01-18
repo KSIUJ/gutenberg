@@ -63,7 +63,7 @@ python manage.py runserver 0.0.0.0:11111
 You will also need to start at least one worker. In the main directory after activating the virtual environment:
 
 ```sh
-celery -A gutenberg worker -l INFO
+celery -A gutenberg worker -B -l INFO
 ```
 
 For proper deployment (instead of `manage.py runserver`), see the

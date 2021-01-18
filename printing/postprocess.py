@@ -4,7 +4,7 @@ import subprocess
 import sys
 
 from control.models import PrintJob, JobStatus
-from printing import SANDBOX_PATH, JobCanceledException
+from printing import SANDBOX_PATH, JobCanceledException, TASK_TIMEOUT_S
 
 
 def _no_pages_cancel(job):
@@ -18,7 +18,7 @@ def postprocess_postscript(input_file: str, work_dir: str, job: PrintJob):
     out = os.path.join(work_dir, 'final.pdf')
     subprocess.check_output([SANDBOX_PATH, work_dir, 'gs', '-sDEVICE=pdfwrite', '-dNOPAUSE',
                              '-dBATCH', '-dSAFER', '-dCompatibilityLevel=1.4',
-                             '-sOutputFile=' + out, input_file], stderr=subprocess.STDOUT)
+                             '-sOutputFile=' + out, input_file], stderr=subprocess.STDOUT, timeout=TASK_TIMEOUT_S)
 
     properties = job.properties
     if properties.pages_to_print:
@@ -26,15 +26,15 @@ def postprocess_postscript(input_file: str, work_dir: str, job: PrintJob):
         pages = properties.pages_to_print.split(',')
         try:
             subprocess.check_output([SANDBOX_PATH, work_dir, 'pdftk', out, 'cat', *pages, 'output', new_out],
-                                    stderr=subprocess.STDOUT)
+                                    stderr=subprocess.STDOUT, timeout=TASK_TIMEOUT_S)
         except subprocess.CalledProcessError as ex:
             if b'Error: Range start page number exceeds size of PDF' in ex.output:
                 _no_pages_cancel(job)
             raise ex
         out = new_out
 
-    meta = subprocess.check_output([SANDBOX_PATH, work_dir, 'pdftk', out, 'dump_data_annots']).decode('utf-8',
-                                                                                                      errors='ignore')
+    meta = subprocess.check_output([SANDBOX_PATH, work_dir, 'pdftk', out, 'dump_data_annots'],
+                                   stderr=subprocess.STDOUT, timeout=TASK_TIMEOUT_S).decode('utf-8', errors='ignore')
     num_pages = int(re.match(r'^NumberOfPages:\s+(\d+)', meta).group(1))
 
     return out, num_pages

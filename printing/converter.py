@@ -8,7 +8,7 @@ from typing import List, Type, Set, Tuple
 
 import magic
 
-from printing import SANDBOX_PATH
+from printing import SANDBOX_PATH, TASK_TIMEOUT_S
 
 
 class Converter(ABC):
@@ -32,7 +32,7 @@ class Converter(ABC):
 class SandboxConverter(Converter, ABC):
     def run_in_sandbox(self, command: List[str]):
         subprocess.check_output(
-            [SANDBOX_PATH, self.work_dir] + command, stderr=subprocess.STDOUT)
+            [SANDBOX_PATH, self.work_dir] + command, stderr=subprocess.STDOUT, timeout=TASK_TIMEOUT_S)
 
     @staticmethod
     def binary_exists(name: str):
@@ -124,11 +124,13 @@ def get_converter_chain(input_type: str, output_types: Set[str]) -> Tuple[List[T
 def detect_file_format(input_file: str):
     mime_detector = magic.Magic(mime=True)
     input_type = mime_detector.from_file(input_file)
-    if input_type == 'text/plain':
+    if input_type == 'text/plain' or input_type == 'application/octet-stream':
         verbose_detector = magic.Magic()
         verbose_type = verbose_detector.from_file(input_file)
         if 'PostScript' in verbose_type:
             input_type = 'application/postscript'
+        elif 'Cups Raster version 2' in verbose_type:
+            input_type = 'image/pwg-raster'
     return input_type
 
 

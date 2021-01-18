@@ -17,6 +17,17 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
 
+@app.on_after_finalize.connect
+def setup_periodic_tasks(sender: Celery, **kwargs):
+    sender.conf.beat_schedule = {
+        'cleanup_print_jobs': {
+            'task': 'printing.printing.cleanup_print_jobs',
+            'schedule': 60. * 60 * 24,
+        }
+    }
+    sender.conf.timezone = 'UTC'
+
+
 @app.task(bind=True)
 def debug_task(self):
     print(f'Request: {self.request!r}')

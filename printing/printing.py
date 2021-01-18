@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 import re
@@ -9,16 +10,15 @@ from abc import ABC, abstractmethod
 from typing import Optional, Callable, Any
 
 from celery import shared_task
+from django.db.models.functions import Greatest, Coalesce
 from django.utils import timezone
 
 from control.models import PrintJob, TwoSidedPrinting, JobStatus, PrinterType
-from printing import JobCanceledException
+from printing import JobCanceledException, TASK_TIMEOUT_S, PRINTING_TIMEOUT_S
 from printing.converter import auto_convert
 from printing.postprocess import auto_postprocess
 
 logger = logging.getLogger('gutenberg.worker')
-
-PRINTING_TIMEOUT_S = 120
 
 
 def handle_cancellation(job: PrintJob, handler: Optional[Callable[[], None]] = None):
@@ -76,7 +76,7 @@ class PrinterBackend(ABC):
 class LocalCupsPrinter(PrinterBackend):
     def check_status(self, job: PrintJob, backend_job_id: Any) -> bool:
         output = subprocess.check_output(
-            ['lpstat', '-l'], stderr=subprocess.STDOUT
+            ['lpstat', '-l'], stderr=subprocess.STDOUT, timeout=TASK_TIMEOUT_S
         )
         output_lines = output.decode('utf-8', errors='ignore').splitlines()
         for idx, val in enumerate(output_lines):
@@ -116,14 +116,15 @@ class LocalCupsPrinter(PrinterBackend):
     def submit_job(self, job: PrintJob, file_path: str) -> Any:
         cups_name = job.printer.localprinterparams.cups_printer_name
         output = subprocess.check_output(
-            ['lp', file_path] + self._cups_params(job), stderr=subprocess.STDOUT).decode('utf-8', errors='ignore')
+            ['lp', file_path] + self._cups_params(job), stderr=subprocess.STDOUT, timeout=TASK_TIMEOUT_S).decode(
+            'utf-8', errors='ignore')
         mt = re.search(re.escape(cups_name) + r'-([^ ]+)', output)
         if mt:
             return '{0}-{1}'.format(cups_name, mt.group(1))
         raise ValueError('Invalid lp output: {}'.format(output))
 
     def cancel_job(self, job: PrintJob, backend_job_id: Any):
-        subprocess.check_output(['cancel', backend_job_id], stderr=subprocess.STDOUT)
+        subprocess.check_output(['cancel', backend_job_id], stderr=subprocess.STDOUT, timeout=TASK_TIMEOUT_S)
 
 
 class DisabledPrinter(PrinterBackend):
@@ -155,9 +156,11 @@ def print_file(file_path, file_format, job_id):
     job.save()
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
-            ext = file_path.lower().rsplit('.', 1)[-1]
-            tmp_input = os.path.join(tmpdir, 'input.' + ext)
-            shutil.copyfile(file_path, os.path.join(tmpdir, 'input.' + ext))
+            ext = os.path.splitext(file_path)[1].lower()
+            if not ext:
+                ext = '.bin'
+            tmp_input = os.path.join(tmpdir, 'input' + ext)
+            shutil.copyfile(file_path, tmp_input)
             out, out_type = auto_convert(tmp_input, file_format, tmpdir)
             handle_cancellation(job)
             out, num_pages = auto_postprocess(out, out_type, tmpdir, job)
@@ -182,3 +185,13 @@ def print_file(file_path, file_format, job_id):
             job.status_reason += '\nOutput:\n' + ex.output.decode('utf-8', errors='ignore')
         job.save()
         raise ex
+
+
+@shared_task
+def cleanup_print_jobs():
+    stale_jobs = PrintJob.objects.exclude(status__in=PrintJob.COMPLETED_STATUSES).annotate(
+        last_activity=Greatest('date_created', Coalesce('date_processed', 0), Coalesce(0, 'date_finished'))).filter(
+        last_activity__lt=timezone.now() - datetime.timedelta(seconds=2 * TASK_TIMEOUT_S))
+    stale_jobs.update(status=JobStatus.ERROR,
+                      status_reason='This task has expired. There is most likely an issue with Gutenberg background '
+                                    'workers. Please notify administrators about this.')
