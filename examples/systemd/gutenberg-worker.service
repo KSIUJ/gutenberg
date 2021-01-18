@@ -1,0 +1,14 @@
+[Unit]
+Description=Gutenberg UWSGI service
+
+[Service]
+User=gutenberg
+Group=gutenberg
+WorkingDirectory=/home/gutenberg/gutenberg
+ExecStart=/home/gutenberg/gutenberg/venv/bin/celery -A gutenberg worker -l INFO
+KillSignal=SIGTERM
+StandardError=syslog
+Environment=DJANGO_SETTINGS_MODULE=gutenberg.settings.production_settings
+
+[Install]
+WantedBy=multi-user.target

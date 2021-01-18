@@ -68,11 +68,15 @@ celery -A gutenberg worker -B -l INFO
 
 For proper deployment (instead of `manage.py runserver`), see the
 [uWSGI documentation](http://uwsgi-docs.readthedocs.io/en/latest/tutorials/Django_and_nginx.html).  
-IPP features might not work with `runserver`, proper webserver is required (tested with `nginx` + `uwsgi`)
 
-Please remember to add both `uwsgi` (or your server of choice) AND `celery` worker to `systemd`
+**IPP features might not work with `runserver`- proper front webserver is required** (works with eg. `nginx` + `uwsgi`).
+This is due to an error in Django (or one of its dependencies) - the `Expect: 100-continue` HTTP header is not handled
+properly by the development server (IPP standard requires it). 
+
+Please remember to add both `uwsgi` (or your server of choice) AND `celery` worker (including celery beat) to `systemd`
 (or the init server you use).
 
+Exemplary production configs for `systemd`, `uwsgi` and `nginx` setup are available in the `/examples/` directory.
 ## Configuration
 
 Go to `<YOUR SERVER URL>/admin/`.

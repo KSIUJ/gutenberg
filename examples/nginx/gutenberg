@@ -1,0 +1,23 @@
+server {
+	listen 443 ssl;
+	listen [::]:443 ssl;
+
+	server_name gutenberg.ksi.ii.uj.edu.pl;
+
+	ssl_certificate /etc/letsencrypt/live/gutenberg.ksi.ii.uj.edu.pl/fullchain.pem;
+	ssl_certificate_key /etc/letsencrypt/live/gutenberg.ksi.ii.uj.edu.pl/privkey.pem;
+
+	root /srv/http/gutenberg.ksi.ii.uj.edu.pl;
+
+	index index.html index.htm;
+
+	location / {
+        uwsgi_pass  127.0.0.1:8081;
+        include     uwsgi_params;
+	}
+    location /static/ {
+        root /srv/http/gutenberg/;
+        gzip_static on;
+		try_files $uri $uri/ =404;
+	}
+}

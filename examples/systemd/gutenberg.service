@@ -1,0 +1,15 @@
+[Unit]
+Description=Gutenberg UWSGI service
+
+[Service]
+User=gutenberg
+Group=gutenberg
+WorkingDirectory=/home/gutenberg/gutenberg
+ExecStart=/home/gutenberg/gutenberg/venv/bin/uwsgi --ini /home/gutenberg/gutenberg.ini
+KillSignal=SIGQUIT
+Type=notify
+StandardError=syslog
+NotifyAccess=all
+
+[Install]
+WantedBy=multi-user.target
