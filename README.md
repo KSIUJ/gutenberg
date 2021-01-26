@@ -56,6 +56,7 @@ cd ../..
 pip install -r requirements.txt
 yarn install
 yarn build
+python manage.py migrate
 python manage.py runserver 0.0.0.0:11111
 # visit localhost:11111 and check if everything works
 ```
