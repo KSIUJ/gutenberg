@@ -33,7 +33,6 @@ DJANGO_INSTALLED_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
-    'bootstrap4',
     'mozilla_django_oidc',
     'rest_framework',
 ]
