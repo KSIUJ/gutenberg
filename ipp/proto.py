@@ -13,7 +13,7 @@ from ipp.fields import CharsetField, NaturalLangField, TAG_STRUCT, IppFieldsStru
     ParserState, OneSetField, KeywordField, NameWLField, NullField
 
 
-def ipp_timestamp(date: datetime):
+def ipp_timestamp(date: datetime) -> int:
     return ((date.weekday() * 7 + date.hour) * 60 + date.minute) * 60 + date.second
 
 
@@ -79,7 +79,7 @@ class MergedGroup(AttributeGroup, ABC):
         return fields
 
     @classmethod
-    def _filter_fields(cls, requested_attrs: List[str]):
+    def _filter_fields(cls, requested_attrs: Optional[List[str]]):
         fields = {}
         if requested_attrs is None:
             requested_attrs = cls._default_filter

@@ -1,6 +1,6 @@
 from django.utils import timezone
 
-from ipp import SUPPORTED_IPP_FORMATS, DEFAULT_IPP_FORMAT
+from printing.utils import SUPPORTED_IPP_FORMATS, DEFAULT_IPP_FORMAT
 from ipp.constants import SectionEnum, OperationEnum, FinishingEnum, PageOrientationEnum, PrintQualityEnum
 from ipp.fields import MimeTypeField, UriField, CharsetField, OneSetField, BooleanField, KeywordField, NaturalLangField, \
     IntegerField, EnumField, TextWLField, DateTimeField, NameWLField, IntRangeField, IntRange, ResolutionField, \

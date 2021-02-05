@@ -4,7 +4,7 @@ import subprocess
 import sys
 
 from control.models import PrintJob, JobStatus
-from printing import SANDBOX_PATH, JobCanceledException, TASK_TIMEOUT_S
+from printing.utils import SANDBOX_PATH, JobCanceledException, TASK_TIMEOUT_S
 
 
 def _no_pages_cancel(job):

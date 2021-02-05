@@ -8,7 +8,7 @@ from typing import List, Type, Set, Tuple
 
 import magic
 
-from printing import SANDBOX_PATH, TASK_TIMEOUT_S
+from printing.utils import SANDBOX_PATH, TASK_TIMEOUT_S
 
 
 class Converter(ABC):
