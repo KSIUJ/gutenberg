@@ -7,8 +7,6 @@ from enum import IntEnum
 from struct import Struct
 from typing import List, Any, Type, Union, Tuple
 
-from django.templatetags.tz import utc
-
 from ipp.constants import TagEnum, SectionEnum, ValueTagsEnum
 from ipp.exceptions import FieldOrderError, InvalidTagError, MissingFieldError, BadRequestError
 
@@ -99,6 +97,9 @@ class IppFieldsStruct:
                     raise FieldOrderError("field {} before {}".format(previous, name))
             previous = name
 
+    def get_field_dict(self):
+        return {k: getattr(self, k) for k in self._get_proto_fields().keys()}
+
     @classmethod
     def _get_proto_fields(cls):
         all_fields = dir(cls)
@@ -106,6 +107,9 @@ class IppFieldsStruct:
 
     def __str__(self):
         return '\n'.join('   {}: {}'.format(field, getattr(self, field)) for field in self._get_proto_fields())
+
+    def __eq__(self, other):
+        return type(self) == type(other) and self.get_field_dict() == other.get_field_dict()
 
 
 class ValueField(IppField, ABC):
@@ -254,7 +258,7 @@ class DateTimeField(StructField):
 
     def write_value(self, writable, value):
         assert isinstance(value, datetime)
-        utc_value = utc(value)
+        utc_value = value.astimezone(timezone.utc)
         super().write_value(writable,
                             (utc_value.year, utc_value.month, utc_value.day, utc_value.hour,
                              utc_value.minute, utc_value.second, utc_value.microsecond // 100000, 0x2b, 0, 0))
