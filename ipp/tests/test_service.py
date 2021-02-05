@@ -227,14 +227,14 @@ class BaseIppEverywhereServiceTests(TestCase):
         self.assertEqual(response.request_id, 100)
         self.assertEqual(response._attribute_groups[1].job_id, 4321)
         self.assertEqual(argument_captor.call_count, 3)
-        call_create_job = argument_captor.call_args_list[0].args
+        call_create_job = argument_captor.call_args_list[0][0]
         self.assertEqual(call_create_job[0], operation)
         self.assertEqual(call_create_job[1], JobTemplateAttributeGroup())
-        call_submit_job = argument_captor.call_args_list[1].args
+        call_submit_job = argument_captor.call_args_list[1][0]
         self.assertEqual(call_submit_job[0].http_request, buffer)
         self.assertEqual(call_submit_job[1], operation)
         self.assertEqual(call_submit_job[2], 1234)
-        self.assertEqual(argument_captor.call_args_list[2].args[0], 4321)
+        self.assertEqual(argument_captor.call_args_list[2][0][0], 4321)
 
     def test_print_job_with_template(self):
         buffer = io.BytesIO()
@@ -256,14 +256,14 @@ class BaseIppEverywhereServiceTests(TestCase):
         self.assertEqual(response.request_id, 100)
         self.assertEqual(response._attribute_groups[1].job_id, 4321)
         self.assertEqual(argument_captor.call_count, 3)
-        call_create_job = argument_captor.call_args_list[0].args
+        call_create_job = argument_captor.call_args_list[0][0]
         self.assertEqual(call_create_job[0], operation)
         self.assertEqual(call_create_job[1], template)
-        call_submit_job = argument_captor.call_args_list[1].args
+        call_submit_job = argument_captor.call_args_list[1][0]
         self.assertEqual(call_submit_job[0].http_request, buffer)
         self.assertEqual(call_submit_job[1], operation)
         self.assertEqual(call_submit_job[2], 1234)
-        self.assertEqual(argument_captor.call_args_list[2].args[0], 4321)
+        self.assertEqual(argument_captor.call_args_list[2][0][0], 4321)
 
     def test_validate_job(self):
         buffer = io.BytesIO()
@@ -311,10 +311,10 @@ class BaseIppEverywhereServiceTests(TestCase):
         self.assertEqual(response.request_id, 100)
         self.assertEqual(response._attribute_groups[1].job_id, 1234)
         self.assertEqual(argument_captor.call_count, 2)
-        call_create_job = argument_captor.call_args_list[0].args
+        call_create_job = argument_captor.call_args_list[0][0]
         self.assertEqual(call_create_job[0], operation)
         self.assertEqual(call_create_job[1], JobTemplateAttributeGroup())
-        self.assertEqual(argument_captor.call_args_list[1].args[0], 1234)
+        self.assertEqual(argument_captor.call_args_list[1][0][0], 1234)
 
     def test_create_job_with_template(self):
         buffer = io.BytesIO()
@@ -336,10 +336,10 @@ class BaseIppEverywhereServiceTests(TestCase):
         self.assertEqual(response.request_id, 100)
         self.assertEqual(response._attribute_groups[1].job_id, 1234)
         self.assertEqual(argument_captor.call_count, 2)
-        call_create_job = argument_captor.call_args_list[0].args
+        call_create_job = argument_captor.call_args_list[0][0]
         self.assertEqual(call_create_job[0], operation)
         self.assertEqual(call_create_job[1], template)
-        self.assertEqual(argument_captor.call_args_list[1].args[0], 1234)
+        self.assertEqual(argument_captor.call_args_list[1][0][0], 1234)
 
     def test_send_document(self):
         buffer = io.BytesIO()
@@ -359,13 +359,13 @@ class BaseIppEverywhereServiceTests(TestCase):
         self.assertEqual(response.request_id, 100)
         self.assertEqual(response._attribute_groups[1].job_id, 1)
         self.assertEqual(argument_captor.call_count, 3)
-        call_get_job = argument_captor.call_args_list[0].args
+        call_get_job = argument_captor.call_args_list[0][0]
         self.assertEqual(call_get_job[0], 1)
-        call_submit_job = argument_captor.call_args_list[1].args
+        call_submit_job = argument_captor.call_args_list[1][0]
         self.assertEqual(call_submit_job[0].http_request, buffer)
         self.assertEqual(call_submit_job[1], operation)
         self.assertEqual(call_submit_job[2], 1)
-        self.assertEqual(argument_captor.call_args_list[2].args[0], 1)
+        self.assertEqual(argument_captor.call_args_list[2][0][0], 1)
 
     def test_send_document_again_last_empty(self):
         buffer = io.BytesIO()
@@ -385,9 +385,9 @@ class BaseIppEverywhereServiceTests(TestCase):
         self.assertEqual(response.request_id, 100)
         self.assertEqual(response._attribute_groups[1].job_id, 1)
         self.assertEqual(argument_captor.call_count, 2)
-        call_get_job = argument_captor.call_args_list[0].args
+        call_get_job = argument_captor.call_args_list[0][0]
         self.assertEqual(call_get_job[0], 1)
-        self.assertEqual(argument_captor.call_args_list[1].args[0], 1)
+        self.assertEqual(argument_captor.call_args_list[1][0][0], 1)
 
     def test_send_document_again_not_last(self):
         buffer = io.BytesIO(b'12345678901234567890')
@@ -406,7 +406,7 @@ class BaseIppEverywhereServiceTests(TestCase):
         self.assertEqual(response.opid_or_status, StatusCodeEnum.server_error_multiple_document_jobs_not_supported)
         self.assertEqual(response.request_id, 100)
         self.assertEqual(argument_captor.call_count, 1)
-        call_get_job = argument_captor.call_args_list[0].args
+        call_get_job = argument_captor.call_args_list[0][0]
         self.assertEqual(call_get_job[0], 1)
 
     def test_send_document_again_last_nonempty(self):
@@ -426,7 +426,7 @@ class BaseIppEverywhereServiceTests(TestCase):
         self.assertEqual(response.opid_or_status, StatusCodeEnum.server_error_multiple_document_jobs_not_supported)
         self.assertEqual(response.request_id, 100)
         self.assertEqual(argument_captor.call_count, 1)
-        call_get_job = argument_captor.call_args_list[0].args
+        call_get_job = argument_captor.call_args_list[0][0]
         self.assertEqual(call_get_job[0], 1)
 
     def test_get_jobs_all(self):
@@ -446,10 +446,10 @@ class BaseIppEverywhereServiceTests(TestCase):
         self.assertEqual(response.request_id, 100)
         self.assertEqual(response._attribute_groups[1].job_id, 1)
         self.assertEqual(argument_captor.call_count, 2)
-        call_get_jobs = argument_captor.call_args_list[0].kwargs
+        call_get_jobs = argument_captor.call_args_list[0][1]
         self.assertDictEqual(call_get_jobs,
                              {'first_index': 0, 'limit': 10000, 'all_jobs': True, 'exclude_completed': True})
-        self.assertListEqual(list(argument_captor.call_args_list[1].args), [False, None])
+        self.assertListEqual(list(argument_captor.call_args_list[1][0]), [False, None])
 
     def test_get_jobs_completed(self):
         buffer = io.BytesIO(b'\0' * 200)
@@ -468,10 +468,10 @@ class BaseIppEverywhereServiceTests(TestCase):
         self.assertEqual(response.request_id, 100)
         self.assertEqual(response._attribute_groups[1].job_id, 1)
         self.assertEqual(argument_captor.call_count, 2)
-        call_get_jobs = argument_captor.call_args_list[0].kwargs
+        call_get_jobs = argument_captor.call_args_list[0][1]
         self.assertDictEqual(call_get_jobs,
                              {'first_index': 0, 'limit': 10000, 'all_jobs': False, 'exclude_completed': False})
-        self.assertListEqual(list(argument_captor.call_args_list[1].args), [False, None])
+        self.assertListEqual(list(argument_captor.call_args_list[1][0]), [False, None])
 
     def test_get_job_attrs(self):
         buffer = io.BytesIO(b'\0' * 200)
@@ -490,8 +490,8 @@ class BaseIppEverywhereServiceTests(TestCase):
         self.assertEqual(response.request_id, 100)
         self.assertEqual(response._attribute_groups[1].job_id, 1)
         self.assertEqual(argument_captor.call_count, 2)
-        self.assertEqual(argument_captor.call_args_list[0].args[0], 1)
-        self.assertListEqual(list(argument_captor.call_args_list[1].args), [True, None])
+        self.assertEqual(argument_captor.call_args_list[0][0][0], 1)
+        self.assertListEqual(list(argument_captor.call_args_list[1][0]), [True, None])
 
     def test_cancel_job(self):
         buffer = io.BytesIO(b'\0' * 200)
@@ -509,8 +509,8 @@ class BaseIppEverywhereServiceTests(TestCase):
         self.assertEqual(response.opid_or_status, StatusCodeEnum.ok)
         self.assertEqual(response.request_id, 100)
         self.assertEqual(argument_captor.call_count, 2)
-        self.assertEqual(argument_captor.call_args_list[0].args[0], 1)
-        self.assertListEqual(list(argument_captor.call_args_list[1].args), [None])
+        self.assertEqual(argument_captor.call_args_list[0][0][0], 1)
+        self.assertListEqual(list(argument_captor.call_args_list[1][0]), [None])
 
     def test_close_job(self):
         buffer = io.BytesIO(b'\0' * 200)
@@ -529,8 +529,8 @@ class BaseIppEverywhereServiceTests(TestCase):
         self.assertEqual(response.request_id, 100)
         self.assertEqual(response._attribute_groups[1].job_id, 1)
         self.assertEqual(argument_captor.call_count, 2)
-        self.assertEqual(argument_captor.call_args_list[0].args[0], 1)
-        self.assertListEqual(list(argument_captor.call_args_list[1].args), [1])
+        self.assertEqual(argument_captor.call_args_list[0][0][0], 1)
+        self.assertListEqual(list(argument_captor.call_args_list[1][0]), [1])
 
     def test_identify_printer(self):
         buffer = io.BytesIO(b'\0' * 200)
