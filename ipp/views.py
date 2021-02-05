@@ -1,27 +1,30 @@
 import base64
+from datetime import datetime, timezone
 from typing import Optional, Tuple, Any, List
 
 from django.http import HttpResponse, HttpRequest
 from django.template.defaultfilters import slugify
+from django.templatetags.static import static
 from django.urls import reverse
-from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
+import printing
 from common.models import User
 from control.models import Printer, TwoSidedPrinting, PrintJob, JobStatus
 from ipp.constants import JobStateEnum, ValueTagsEnum
-from ipp.exceptions import NotPossibleError
-from ipp.proto import IppRequest, ipp_timestamp, AttributeGroup
+from ipp.exceptions import NotPossibleError, DocumentFormatError
+from ipp.proto import IppRequest, ipp_timestamp, AttributeGroup, IppResponse
 from ipp.proto_operations import JobObjectAttributeGroupFull, JobObjectAttributeGroup
 from ipp.service import BaseIppEverywhereService
 from printing.printing import create_print_job, submit_print_job
-from printing.utils import SUPPORTED_IPP_FORMATS
+from printing.utils import SUPPORTED_IPP_FORMATS, DEFAULT_IPP_FORMAT
 
 
 class GutenbergIppService(BaseIppEverywhereService):
-    def __init__(self, printer, user: User, is_secure: bool, basic_auth: bool, base_uri: str) -> None:
+    def __init__(self, printer, user: User, is_secure: bool, basic_auth: bool, base_uri: str,
+                 printer_icon: str, webpage_uri: str) -> None:
         self.user = user
         self.printer = printer
         self.base_uri = base_uri
@@ -37,7 +40,10 @@ class GutenbergIppService(BaseIppEverywhereService):
                          printer_basic_auth=basic_auth,
                          printer_color=color_allowed,
                          printer_duplex=duplex,
-                         supported_ipp_formats=SUPPORTED_IPP_FORMATS)
+                         printer_icon=printer_icon,
+                         supported_ipp_formats=SUPPORTED_IPP_FORMATS,
+                         default_ipp_format=DEFAULT_IPP_FORMAT,
+                         webpage_uri=webpage_uri)
 
     @staticmethod
     def _job_status_to_ipp(status):
@@ -76,12 +82,15 @@ class GutenbergIppService(BaseIppEverywhereService):
         )
 
     def _submit_job(self, request: IppRequest, operation, job_id) -> int:
-        return submit_print_job(
-            document_buffer=request.http_request,
-            user=self.user,
-            document_type=operation.document_format,
-            job_id=job_id
-        )
+        try:
+            return submit_print_job(
+                document_buffer=request.http_request,
+                user=self.user,
+                document_type=operation.document_format,
+                job_id=job_id
+            )
+        except printing.utils.DocumentFormatError as ex:
+            raise DocumentFormatError(ex)
 
     def _get_job_uri(self, job_id) -> str:
         return f'{self.base_uri}job/{job_id}'
@@ -115,10 +124,12 @@ class GutenbergIppService(BaseIppEverywhereService):
             job_printer_uri=self.printer_uri,
             job_name=job.name,
             job_originating_user_name=job.owner.username,
-            time_at_creation=ipp_timestamp(job.date_created),
-            time_at_processing=ipp_timestamp(job.date_processed) if job.date_processed else ValueTagsEnum.no_value,
-            time_at_completed=ipp_timestamp(job.date_finished) if job.date_finished else ValueTagsEnum.no_value,
-            job_printer_up_time=ipp_timestamp(timezone.now()),
+            time_at_creation=ipp_timestamp(job.date_created.astimezone(timezone.utc)),
+            time_at_processing=ipp_timestamp(
+                job.date_processed.astimezone(timezone.utc)) if job.date_processed else ValueTagsEnum.no_value,
+            time_at_completed=ipp_timestamp(
+                job.date_finished.astimezone(timezone.utc)) if job.date_finished else ValueTagsEnum.no_value,
+            job_printer_up_time=ipp_timestamp(datetime.now(tz=timezone.utc)),
         )
 
     def _cancel_job(self, job: Any) -> None:
@@ -126,6 +137,11 @@ class GutenbergIppService(BaseIppEverywhereService):
             status=JobStatus.CANCELING)
         if rows == 0:
             raise NotPossibleError('no jobs cancelled')
+
+    def _http_response(self, ipp_response: IppResponse, http_code=200):
+        http_response = HttpResponse(status=http_code, content_type='application/ipp')
+        ipp_response.write_to(http_response)
+        return http_response
 
 
 class IppView(View):
@@ -167,5 +183,8 @@ class IppView(View):
         base_endpoint_url = request.build_absolute_uri(
             reverse('ipp_endpoint', kwargs={'printer_id': printer.id, 'token': token, 'rel_path': ''})
         ).replace('http', 'ipp')
-        service = GutenbergIppService(printer, user, request.is_secure(), basic_auth, base_endpoint_url)
+        printer_icon = request.build_absolute_uri(static('img/logo-128.png'))
+        webpage_uri = request.build_absolute_uri('/')
+        service = GutenbergIppService(printer, user, request.is_secure(), basic_auth, base_endpoint_url, printer_icon,
+                                      webpage_uri)
         return service.handle_request(request, rel_path)

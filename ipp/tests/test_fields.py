@@ -516,3 +516,31 @@ class IppFieldsStructTests(TestCase):
         fields['field_d'] = 40
         with self.assertRaises(FieldOrderError):
             self.TestStruct._validate(fields)
+
+    def test_get_field_dict(self):
+        val = self.TestStruct(
+            field_a=10,
+            field_c=30,
+        ).get_field_dict()
+        self.assertDictEqual(val, {
+            'field_a': 10, 'field_b': 1, 'field_c': 30, 'field_d': None
+        })
+
+    def test_eq(self):
+        val2 = self.TestStruct(
+            field_a=10,
+            field_c=30,
+        )
+        val1 = self.TestStruct(
+            field_a=10,
+            field_c=30,
+        )
+        self.assertEqual(val1, val2)
+
+    def test_neq(self):
+        val2 = self.TestStruct(
+            field_a=10,
+            field_c=30,
+        )
+        val1 = self.TestStruct(field_c=30)
+        self.assertNotEqual(val1, val2)

@@ -2,9 +2,6 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Tuple, Callable, Optional, Dict, Any, List
 
-from django.http import HttpResponse
-from django.templatetags.static import static
-
 from ipp.constants import OperationEnum, StatusCodeEnum, PrinterStateEnum, JobStateEnum
 from ipp.exceptions import IppError, DocumentFormatError, NotFoundError
 from ipp.proto import IppRequest, IppResponse, BaseOperationGroup, \
@@ -18,10 +15,6 @@ from ipp.proto_operations import GetPrinterAttributesRequestOperationGroup, Prin
 logger = logging.getLogger('gutenberg.ipp')
 
 
-def not_implemented(request: IppRequest) -> IppResponse:
-    return minimal_valid_response(request, StatusCodeEnum.server_error_operation_not_supported)
-
-
 def internal_error(request: IppRequest) -> IppResponse:
     return minimal_valid_response(request, StatusCodeEnum.server_error_internal_error)
 
@@ -33,14 +26,14 @@ def unparsable_request() -> IppResponse:
 class BaseIppService(ABC):
     SUPPORTED_OPERATIONS: Dict[int, Callable[[IppRequest], IppResponse]] = dict()
 
-    def __init__(self, actor_name: str) -> None:
+    def __init__(self, actor_name: str, request_factory=IppRequest) -> None:
         self.actor_name = actor_name
+        self.request_factory = request_factory
 
-    @staticmethod
-    def _response(ipp_response: IppResponse, http_code=200):
-        http_response = HttpResponse(status=http_code, content_type='application/ipp')
-        ipp_response.write_to(http_response)
-        return http_response
+    @abstractmethod
+    def _http_response(self, ipp_response: IppResponse, http_code=200):
+        """Returns an http response object from ipp_response with http_code"""
+        raise NotImplementedError()
 
     def _log_operation(self, idx, rel_path, method, status):
         try:
@@ -50,56 +43,64 @@ class BaseIppService(ABC):
         logger.info(
             "IPP {} {} /{} {} {}".format(idx, self.actor_name, rel_path, method, status))
 
+    @staticmethod
+    def not_implemented(_, request: IppRequest) -> IppResponse:
+        return minimal_valid_response(request, StatusCodeEnum.server_error_operation_not_supported)
+
     def _dispatch(self, version: Tuple[int, int], op_id: int) -> Callable[['BaseIppService', IppRequest], IppResponse]:
         # we ignore ipp version for now
         _ = version
-        return self.SUPPORTED_OPERATIONS.get(op_id, not_implemented)
+        return self.SUPPORTED_OPERATIONS.get(op_id, self.not_implemented)
 
     def handle_request(self, http_request, rel_path: str):
         try:
-            req = IppRequest.from_http_request(http_request)
+            req = self.request_factory.from_http_request(http_request)
         except BadRequestError as ex:
             self._log_operation(-1, rel_path, str(ex), ex.error_code())
-            return self._response(unparsable_request())
+            return self._http_response(unparsable_request())
         try:
             req.validate()
         except IppError as ex:
             self._log_operation(req.request_id, rel_path, str(ex), ex.error_code())
-            return self._response(minimal_valid_response(req, ex.error_code()))
+            return self._http_response(minimal_valid_response(req, ex.error_code()))
         except Exception as ex:
             logger.error(
                 "IPP {} {} /{} Internal error in IPP service.".format(req.request_id, self.actor_name, rel_path),
                 ex)
-            return self._response(internal_error(req))
+            return self._http_response(internal_error(req))
         handler = self._dispatch(req.version, req.opid_or_status)
         try:
             res = handler(self, req)
             self._log_operation(req.request_id, rel_path, handler.__name__, res.opid_or_status)
-            return self._response(res)
+            return self._http_response(res)
         except IppError as ex:
             self._log_operation(req.request_id, rel_path, handler.__name__, ex.error_code())
             logger.warning(repr(ex))
-            return self._response(minimal_valid_response(req, ex.error_code()))
+            return self._http_response(minimal_valid_response(req, ex.error_code()))
         except Exception as ex:
             logger.error(
                 "IPP {} {} /{} {} Internal error in IPP service.".format(req.request_id, self.actor_name,
                                                                          rel_path,
                                                                          handler.__name__), ex)
-            return self._response(internal_error(req))
+            return self._http_response(internal_error(req))
 
 
 class BaseIppEverywhereService(BaseIppService, ABC):
     def __init__(self, actor_name: str, printer_name: str, printer_uri: str, printer_tls: bool,
-                 printer_basic_auth: bool, printer_color: bool, printer_duplex: bool,
-                 supported_ipp_formats: List[str]) -> None:
-        super().__init__(actor_name)
+                 printer_basic_auth: bool, printer_color: bool, printer_duplex: bool, printer_icon: str,
+                 supported_ipp_formats: List[str], default_ipp_format: str, webpage_uri: str,
+                 request_factory=IppRequest) -> None:
+        super().__init__(actor_name, request_factory=request_factory)
         self.printer_name = printer_name
         self.printer_uri = printer_uri
         self.printer_tls = printer_tls
         self.printer_basic_auth = printer_basic_auth
         self.printer_color = printer_color
         self.printer_duplex = printer_duplex
+        self.printer_icon = printer_icon
         self.supported_ipp_formats = supported_ipp_formats
+        self.default_ipp_format = default_ipp_format
+        self.webpage_uri = webpage_uri
 
     @abstractmethod
     def _create_job(self, operation, job_template) -> int:
@@ -119,8 +120,8 @@ class BaseIppEverywhereService(BaseIppService, ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _get_jobs(self, first_index: int, limit: int, all_jobs: bool = False, exclude_completed: bool = True) -> List[
-        Any]:
+    def _get_jobs(self, first_index: int, limit: int, all_jobs: bool = False,
+                  exclude_completed: bool = True) -> List[Any]:
         """Returns a list of implementation dependent job objects"""
         raise NotImplementedError
 
@@ -139,7 +140,7 @@ class BaseIppEverywhereService(BaseIppService, ABC):
         if operation.job_id:
             job_info = self._get_job(operation.job_id)
         else:
-            idx = int(operation.job_uri.slice('/')[-1])
+            idx = int(operation.job_uri.split('/')[-1])
             job_info = self._get_job(idx)
         if not job_info:
             raise NotFoundError('job not found')
@@ -156,21 +157,23 @@ class BaseIppEverywhereService(BaseIppService, ABC):
                 printer_uri_supported=[self.printer_uri],
                 printer_name="Gutenberg-{}".format(self.printer_name).replace(' ', '-'),
                 printer_info="Gutenberg - {}".format(self.printer_name),
-                printer_more_info=request.http_request.build_absolute_uri('/'),
+                printer_more_info=self.webpage_uri,
                 printer_state=PrinterStateEnum.idle,
                 printer_state_message="idle",
                 queued_job_count=1,
                 printer_uuid='urn:uuid:12345678-9ABC-DEF0-1234-56789ABCDEF0',
                 device_uuid='urn:uuid:12345678-9ABC-DEF0-1234-56789ABCDEF0',
-                printer_icons=[request.http_request.build_absolute_uri(static('img/logo-128.png'))],
-                printer_supply_info_uri=request.http_request.build_absolute_uri('/'),
+                printer_icons=[self.printer_icon],
+                printer_supply_info_uri=self.webpage_uri,
                 uri_security_supported=['tls'] if self.printer_tls else ['none'],
                 uri_authentication_supported=['basic'] if self.printer_basic_auth else ['none'],
-                print_color_mode_supported=
-                ['auto', 'color', 'monochrome'] if self.printer_color else ['auto', 'monochrome'],
+                print_color_mode_supported=['auto', 'color', 'monochrome'] if self.printer_color else ['auto',
+                                                                                                       'monochrome'],
                 sides_supported=['one-sided', 'two-sided-long-edge',
                                  'two-sided-short-edge'] if self.printer_duplex else ['one-sided'],
-                operations_supported=self.SUPPORTED_OPERATIONS.keys()
+                operations_supported=self.SUPPORTED_OPERATIONS.keys(),
+                document_format_supported=self.supported_ipp_formats,
+                document_format_default=self.default_ipp_format,
             )
         ], requested_attrs_oneset=operation.requested_attributes)
 

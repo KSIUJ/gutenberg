@@ -186,6 +186,9 @@ def submit_print_job(document_buffer,
         file_format = detect_file_format(file_path)
     if file_format not in SUPPORTED_IPP_FORMATS:
         os.remove(file_path)
+        job.status = JobStatus.ERROR
+        job.status_reason = 'Unsupported file format: {}'.format(file_format)
+        job.save()
         raise DocumentFormatError("Unsupported format: {}".format(file_format))
 
     job.status = JobStatus.PENDING

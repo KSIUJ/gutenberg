@@ -1,10 +1,9 @@
-from django.utils import timezone
+from datetime import timezone, datetime
 
-from printing.utils import SUPPORTED_IPP_FORMATS, DEFAULT_IPP_FORMAT
 from ipp.constants import SectionEnum, OperationEnum, FinishingEnum, PageOrientationEnum, PrintQualityEnum
-from ipp.fields import MimeTypeField, UriField, CharsetField, OneSetField, BooleanField, KeywordField, NaturalLangField, \
-    IntegerField, EnumField, TextWLField, DateTimeField, NameWLField, IntRangeField, IntRange, ResolutionField, \
-    Resolution, OctetStringField, UnknownField, Collection, CollectionField, UnionField
+from ipp.fields import MimeTypeField, UriField, CharsetField, OneSetField, BooleanField, KeywordField, \
+    NaturalLangField, IntegerField, EnumField, TextWLField, DateTimeField, NameWLField, IntRangeField, IntRange, \
+    ResolutionField, Resolution, OctetStringField, UnknownField, Collection, CollectionField, UnionField
 from ipp.proto import BaseOperationGroup, AttributeGroup, ipp_timestamp, MergedGroup
 
 
@@ -22,9 +21,6 @@ class PrinterDescriptionGroup(AttributeGroup):
     charset_supported = OneSetField(accepted_fields=[CharsetField()], required=True, default=['utf-8'])
     color_supported = BooleanField(default=True)
     compression_supported = OneSetField(accepted_fields=[KeywordField()], required=True, default=['none'])
-    document_format_supported = OneSetField(accepted_fields=[MimeTypeField()], required=True,
-                                            default=SUPPORTED_IPP_FORMATS)
-    document_format_default = MimeTypeField(required=True, default=DEFAULT_IPP_FORMAT)
     generated_natural_language_supported = OneSetField(accepted_fields=[NaturalLangField()], required=True,
                                                        default=['en'])
     ipp_versions_supported = OneSetField(accepted_fields=[KeywordField()], required=True, default=['1.1', '2.0'])
@@ -52,10 +48,10 @@ class PrinterDescriptionGroup(AttributeGroup):
     printer_more_info_manufacturer = UriField(default='https://github.com/KSIUJ/gutenberg')
     pages_per_minute_color = IntegerField(default=60)
     pages_per_minute = IntegerField(default=60)
-    printer_current_time = DateTimeField(default=timezone.now())
+    printer_current_time = DateTimeField(default=datetime.now(tz=timezone.utc))
     printer_is_accepting_jobs = BooleanField(required=True, default=True)
     printer_state_reasons = OneSetField(accepted_fields=[KeywordField()], required=True, default=['none'])
-    printer_up_time = IntegerField(required=True, default=ipp_timestamp(timezone.now()))
+    printer_up_time = IntegerField(required=True, default=ipp_timestamp(datetime.now(tz=timezone.utc)))
     uri_authentication_supported = OneSetField(accepted_fields=[KeywordField()], required=True,
                                                default=['none'])
     uri_security_supported = OneSetField(accepted_fields=[KeywordField()], required=True, default=['none'])
@@ -84,12 +80,13 @@ class PrinterDescriptionGroup(AttributeGroup):
     multiple_operation_time_out_action = KeywordField(default='process-job')
     overrides_supported = OneSetField(accepted_fields=[KeywordField()], default=['pages', 'document-number'])
     printer_supply = OneSetField(accepted_fields=[OctetStringField()], default=[
-        b'index=1;class=supplyThatIsConsumed;type=toner;unit=percent;maxcapacity=100;level=100;colorantname=multi-color;'])
+        b'index=1;class=supplyThatIsConsumed;type=toner;unit=percent;maxcapacity=100;'
+        b'level=100;colorantname=multi-color;'])
     printer_supply_description = OneSetField(accepted_fields=[TextWLField()], default=['Virtual Toner'])
-    printer_state_change_date_time = DateTimeField(default=timezone.now())
-    printer_state_change_time = IntegerField(default=ipp_timestamp(timezone.now()))
-    printer_config_change_date_time = DateTimeField(default=timezone.now())
-    printer_config_change_time = IntegerField(default=ipp_timestamp(timezone.now()))
+    printer_state_change_date_time = DateTimeField(default=datetime.now(tz=timezone.utc))
+    printer_state_change_time = IntegerField(default=ipp_timestamp(datetime.now(tz=timezone.utc)))
+    printer_config_change_date_time = DateTimeField(default=datetime.now(tz=timezone.utc))
+    printer_config_change_time = IntegerField(default=ipp_timestamp(datetime.now(tz=timezone.utc)))
 
     # no default value provided.
     printer_uri_supported = OneSetField(accepted_fields=[UriField()], required=True)
@@ -97,6 +94,8 @@ class PrinterDescriptionGroup(AttributeGroup):
     printer_more_info = UriField()
     printer_state = EnumField(required=True)
     printer_state_message = TextWLField()
+    document_format_supported = OneSetField(accepted_fields=[MimeTypeField()], required=True)
+    document_format_default = MimeTypeField(required=True)
 
     # no default value provided, required by never revisions of IPP.
     printer_supply_info_uri = UriField()
