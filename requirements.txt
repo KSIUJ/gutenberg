@@ -1,5 +1,4 @@
 Django==3.1.4
-django-bootstrap4==2.3.1
 celery==5.0.5
 redis==3.5.3
 python-magic==0.4.18

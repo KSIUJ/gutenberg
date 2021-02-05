@@ -10,13 +10,15 @@ from abc import ABC, abstractmethod
 from typing import Optional, Callable, Any
 
 from celery import shared_task
+from django.conf import settings
 from django.db.models.functions import Greatest, Coalesce
 from django.utils import timezone
 
-from control.models import PrintJob, TwoSidedPrinting, JobStatus, PrinterType
-from printing import JobCanceledException, TASK_TIMEOUT_S, PRINTING_TIMEOUT_S
-from printing.converter import auto_convert
+from control.models import PrintJob, TwoSidedPrinting, JobStatus, PrinterType, Printer, PrintingProperties
+from printing.converter import auto_convert, detect_file_format
 from printing.postprocess import auto_postprocess
+from printing.utils import JobCanceledException, TASK_TIMEOUT_S, PRINTING_TIMEOUT_S, DEFAULT_IPP_FORMAT, \
+    AUTODETECT_IPP_FORMAT, SUPPORTED_IPP_FORMATS, DocumentFormatError
 
 logger = logging.getLogger('gutenberg.worker')
 
@@ -141,6 +143,55 @@ class DisabledPrinter(PrinterBackend):
 
     def cancel_job(self, job: PrintJob, backend_job_id: Any):
         pass
+
+
+def create_print_job(user: settings.AUTH_USER_MODEL,
+                     printer: Printer,
+                     job_name: Optional[str] = None,
+                     pages_to_print: Optional[str] = None,
+                     color: bool = False,
+                     copies: int = 1,
+                     two_sided: TwoSidedPrinting = TwoSidedPrinting.ONE_SIDED):
+    job = PrintJob.objects.create(name=job_name, status=JobStatus.INCOMING, owner=user, printer=printer)
+    PrintingProperties.objects.create(
+        color=color,
+        copies=copies,
+        two_sides=two_sided,
+        pages_to_print=pages_to_print,
+        job=job)
+    return job.id
+
+
+def submit_print_job(document_buffer,
+                     job_id,
+                     user: settings.AUTH_USER_MODEL,
+                     document_type: Optional[str] = None):
+    job = PrintJob.objects.filter(id=job_id).first()
+    file_name = '{}_{}_{}'.format(
+        job.name, user.username,
+        timezone.now().strftime(settings.PRINT_DATE_FORMAT))
+    file_path = os.path.join(settings.PRINT_DIRECTORY, file_name)
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    with open(file_path, 'wb+') as destination:
+        while True:
+            chunk = document_buffer.read(100000)
+            if not chunk:
+                break
+            destination.write(chunk)
+
+    file_format = document_type
+    if not file_format:
+        file_format = DEFAULT_IPP_FORMAT
+    if file_format == AUTODETECT_IPP_FORMAT:
+        file_format = detect_file_format(file_path)
+    if file_format not in SUPPORTED_IPP_FORMATS:
+        os.remove(file_path)
+        raise DocumentFormatError("Unsupported format: {}".format(file_format))
+
+    job.status = JobStatus.PENDING
+    job.save()
+    print_file.delay(file_path, file_format, job_id)
+    return job_id
 
 
 @shared_task

@@ -49,3 +49,8 @@ class InvalidGroupError(BadRequestError):
 class DocumentFormatError(IppError):
     def error_code(self):
         return StatusCodeEnum.client_error_document_format_not_supported
+
+
+class NotPossibleError(IppError):
+    def error_code(self):
+        return StatusCodeEnum.client_error_not_possible

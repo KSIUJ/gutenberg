@@ -21,7 +21,7 @@ class ParserState:
         self.current_name = None
         self.current_tag = SectionEnum.END
 
-    def read_field_header(self, readable):
+    def read_field_header(self, readable) -> None:
         data = readable.read(TAG_STRUCT.size)
         if len(data) < TAG_STRUCT.size:
             self.current_tag = SectionEnum.END
@@ -32,7 +32,7 @@ class ParserState:
         length, = LENGTH_STRUCT.unpack(readable.read(LENGTH_STRUCT.size))
         self.current_name = readable.read(length).decode('utf-8', errors='ignore').replace('-', '_')
 
-    def is_next_set_attr(self):
+    def is_next_set_attr(self) -> bool:
         return \
             (not self.current_name) and \
             (self.current_tag not in [TagEnum.member_attr_name, TagEnum.end_collection]) and \
@@ -59,6 +59,10 @@ class IppField(ABC):
             return cls._tag
         return 9999999
 
+    def __eq__(self, other):
+        return type(self) == type(
+            other) and self.required == other.required and self.default == other.default and self.order == self.order
+
 
 class IppFieldsStruct:
     def __init__(self, use_defaults=True, **kwargs):
@@ -70,7 +74,7 @@ class IppFieldsStruct:
             setattr(self, name, val)
         for name, val in self.proto_fields.items():
             if name not in self.__dict__:
-                if not val.default and val.required:
+                if not (val.default and use_defaults) and val.required:
                     raise TypeError("missing required keyword argument '{}'".format(name))
                 if use_defaults:
                     setattr(self, name, val.default)
@@ -201,7 +205,7 @@ class TextField(ValueField, ABC):
         assert isinstance(value, str)
         super().write_value(writable, value.encode('utf-8'))
 
-    def read_value(self, readable):
+    def read_value(self, readable) -> str:
         return super().read_value(readable).decode('utf-8', errors='ignore')
 
 
@@ -212,7 +216,7 @@ class OctetStringField(ValueField):
         assert isinstance(value, bytes)
         super().write_value(writable, value)
 
-    def read_value(self, readable):
+    def read_value(self, readable) -> bytes:
         return super().read_value(readable)
 
 
@@ -255,7 +259,7 @@ class DateTimeField(StructField):
                             (utc_value.year, utc_value.month, utc_value.day, utc_value.hour,
                              utc_value.minute, utc_value.second, utc_value.microsecond // 100000, 0x2b, 0, 0))
 
-    def read_value(self, readable):
+    def read_value(self, readable) -> datetime:
         year, month, day, hour, minute, second, deci_second, tz_direction, tz_diff_h, tz_diff_m = super().read_value(
             readable)
         tz_direction = 1 if tz_direction == 0x2b else -1
@@ -337,6 +341,9 @@ class OneSetField(IppField):
             if not state.is_next_set_attr():
                 return values
 
+    def __eq__(self, other):
+        return super(OneSetField, self).__eq__(other) and self.accepted_fields == other.accepted_fields
+
 
 class UnionField(IppField):
     def __init__(self, accepted_fields: List[IppField], *args, **kwargs):
@@ -344,7 +351,7 @@ class UnionField(IppField):
         self.tag_ids_map = {field.get_tag(): field for field in accepted_fields}
         super().__init__(*args, **kwargs)
 
-    def write(self, writable, name: str, value: Union[Tuple[Type[ValueField], Any, Any]]):
+    def write(self, writable, name: str, value: Union[Tuple[Type[ValueField], Any], Any]):
         if isinstance(value, tuple):
             field = value[0]()
             v = value[1]
@@ -357,7 +364,10 @@ class UnionField(IppField):
         if state.current_tag not in self.tag_ids_map:
             raise InvalidTagError(state.current_tag)
         field = self.tag_ids_map[state.current_tag]
-        return field.read(readable, state)
+        return field.__class__, field.read(readable, state)
+
+    def __eq__(self, other):
+        return super(UnionField, self).__eq__(other) and self.accepted_fields == other.accepted_fields
 
 
 class Collection(IppFieldsStruct):
@@ -423,3 +433,6 @@ class CollectionField(IppField):
         readable.read(LENGTH_STRUCT.size)
         state.read_field_header(readable)
         return val
+
+    def __eq__(self, other):
+        return super(CollectionField, self).__eq__(other) and self.collection_type == other.collection_type
