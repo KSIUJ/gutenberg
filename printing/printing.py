@@ -71,7 +71,7 @@ class PrinterBackend(ABC):
                 raise TimeoutError("Job {} took too long to complete".format(job))
         job.status = JobStatus.COMPLETED
         job.status_reason = ''
-        job.finished = timezone.now()
+        job.date_finished = timezone.now()
         job.save()
 
 
@@ -137,7 +137,7 @@ class DisabledPrinter(PrinterBackend):
     def submit_job(self, job: PrintJob, file_path: str):
         job.status = JobStatus.CANCELED
         job.status_reason = "Printer is disabled"
-        job.finished = timezone.now()
+        job.date_finished = timezone.now()
         job.save()
         raise JobCanceledException()
 

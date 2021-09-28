@@ -158,7 +158,7 @@ class IppView(View):
         else:
             return HttpResponse(b'Page does not exist', status=404, content_type='text/plain')
 
-    def post(self, request: HttpRequest, printer_id, token, rel_path, *args, **kwargs):
+    def _authenticate(self, request: HttpRequest, token):
         user = None
         basic_auth = token == self.BASIC_AUTH_TOKEN
         if basic_auth:
@@ -177,6 +177,10 @@ class IppView(View):
                 return res
             else:
                 return HttpResponse(b'Forbidden', status=403, content_type='text/plain')
+        return user, basic_auth
+
+    def post(self, request: HttpRequest, printer_id, token, rel_path, *args, **kwargs):
+        user, basic_auth = self._authenticate(request, token)
         printer = Printer.get_printer_for_user(user, printer_id)
         if not printer:
             return HttpResponse(b'Not found', status=404, content_type='text/plain')
