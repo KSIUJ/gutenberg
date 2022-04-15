@@ -1,15 +1,15 @@
 from rest_framework import serializers
 
 from common.models import User
-from control.models import PrintJob, Printer, TwoSidedPrinting, validate_pages_to_print
+from control.models import GutenbergJob, Printer, TwoSidedPrinting, validate_pages_to_print
 from printing.converter import SUPPORTED_EXTENSIONS
 
 
-class PrintJobSerializer(serializers.ModelSerializer):
+class GutenbergJobSerializer(serializers.ModelSerializer):
     printer = serializers.SlugRelatedField(slug_field='name', read_only=True)
 
     class Meta:
-        model = PrintJob
+        model = GutenbergJob
         fields = ['id', 'pages', 'printer', 'status', 'status_reason']
 
 

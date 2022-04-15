@@ -12,7 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 import printing
 from common.models import User
-from control.models import Printer, TwoSidedPrinting, PrintJob, JobStatus
+from control.models import Printer, TwoSidedPrinting, GutenbergJob, JobStatus
 from ipp.constants import JobStateEnum, ValueTagsEnum
 from ipp.exceptions import NotPossibleError, DocumentFormatError
 from ipp.proto import IppRequest, ipp_timestamp, AttributeGroup, IppResponse
@@ -96,7 +96,7 @@ class GutenbergIppService(BaseIppEverywhereService):
         return f'{self.base_uri}job/{job_id}'
 
     def _get_job(self, job_id) -> Optional[Tuple[int, JobStateEnum, bool, Any]]:
-        jobs = PrintJob.objects
+        jobs = GutenbergJob.objects
         jobs = jobs.filter(owner=self.user, printer=self.printer)
         job = jobs.filter(id=job_id).first()
         if not job:
@@ -105,13 +105,13 @@ class GutenbergIppService(BaseIppEverywhereService):
 
     def _get_jobs(self, first_index: int, limit: int, all_jobs: bool = False,
                   exclude_completed: bool = True) -> List[Any]:
-        jobs = PrintJob.objects.filter(owner=self.user, printer=self.printer)
+        jobs = GutenbergJob.objects.filter(owner=self.user, printer=self.printer)
         if all_jobs:
             pass
         elif exclude_completed:
-            jobs = jobs.exclude(status__in=PrintJob.COMPLETED_STATUSES)
+            jobs = jobs.exclude(status__in=GutenbergJob.COMPLETED_STATUSES)
         else:
-            jobs = jobs.filter(status__in=PrintJob.COMPLETED_STATUSES)
+            jobs = jobs.filter(status__in=GutenbergJob.COMPLETED_STATUSES)
         jobs = jobs.order_by('date_created')[first_index:limit].all()
         return jobs
 
@@ -133,7 +133,7 @@ class GutenbergIppService(BaseIppEverywhereService):
         )
 
     def _cancel_job(self, job: Any) -> None:
-        rows = PrintJob.objects.filter(id=job.id).exclude(status__in=PrintJob.COMPLETED_STATUSES).update(
+        rows = GutenbergJob.objects.filter(id=job.id).exclude(status__in=GutenbergJob.COMPLETED_STATUSES).update(
             status=JobStatus.CANCELING)
         if rows == 0:
             raise NotPossibleError('no jobs cancelled')

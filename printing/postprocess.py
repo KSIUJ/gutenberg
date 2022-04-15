@@ -3,7 +3,7 @@ import re
 import subprocess
 import sys
 
-from control.models import PrintJob, JobStatus
+from control.models import GutenbergJob, JobStatus
 from printing.utils import SANDBOX_PATH, JobCanceledException, TASK_TIMEOUT_S
 
 
@@ -14,7 +14,7 @@ def _no_pages_cancel(job):
     raise JobCanceledException()
 
 
-def postprocess_postscript(input_file: str, work_dir: str, job: PrintJob):
+def postprocess_postscript(input_file: str, work_dir: str, job: GutenbergJob):
     out = os.path.join(work_dir, 'final.pdf')
     subprocess.check_output([SANDBOX_PATH, work_dir, 'gs', '-sDEVICE=pdfwrite', '-dNOPAUSE',
                              '-dBATCH', '-dSAFER', '-dCompatibilityLevel=1.4',
@@ -44,7 +44,7 @@ PWG_PAGE_HEADER = b'PwgRaster\0'
 CHUNK_SIZE = 100000
 
 
-def postprocess_pwg(input_file: str, work_dir: str, job: PrintJob):
+def postprocess_pwg(input_file: str, work_dir: str, job: GutenbergJob):
     out = os.path.join(work_dir, 'final.pwg')
     properties = job.properties
     if properties.pages_to_print:
@@ -82,7 +82,7 @@ def postprocess_pwg(input_file: str, work_dir: str, job: PrintJob):
     return out, saved_pages
 
 
-def auto_postprocess(input_file: str, input_type: str, work_dir: str, job: PrintJob):
+def auto_postprocess(input_file: str, input_type: str, work_dir: str, job: GutenbergJob):
     return {
         'application/pdf': postprocess_postscript,
         'application/postscript': postprocess_postscript,

@@ -1,6 +1,6 @@
-Django==3.1.14
-celery==5.2.2
-redis==3.5.3
-python-magic==0.4.18
-mozilla-django-oidc==1.2.4
-djangorestframework==3.12.2
+Django==4.0.4
+celery==5.2.6
+redis==4.2.2
+python-magic==0.4.25
+mozilla-django-oidc==2.0.0
+djangorestframework==3.13.1

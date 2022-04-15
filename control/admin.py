@@ -1,14 +1,14 @@
 from django.contrib import admin
 
 # Register your models here.
-from control.models import PrintJob, PrintingProperties, PrinterPermissions, LocalPrinterParams, Printer
+from control.models import GutenbergJob, PrintingProperties, PrinterPermissions, LocalPrinterParams, Printer
 
 
 class PrintingPropertiesInline(admin.TabularInline):
     model = PrintingProperties
 
 
-class PrintJobAdmin(admin.ModelAdmin):
+class GutenbergJobAdmin(admin.ModelAdmin):
     inlines = [PrintingPropertiesInline, ]
 
 
@@ -25,4 +25,4 @@ class PrinterAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Printer, PrinterAdmin)
-admin.site.register(PrintJob, PrintJobAdmin)
+admin.site.register(GutenbergJob, GutenbergJobAdmin)

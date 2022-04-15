@@ -13,9 +13,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from api.serializers import PrintJobSerializer, PrinterSerializer, PrintRequestSerializer, UserInfoSerializer
+from api.serializers import GutenbergJobSerializer, PrinterSerializer, PrintRequestSerializer, UserInfoSerializer
 from common.models import User
-from control.models import PrintJob, Printer, JobStatus, PrintingProperties, TwoSidedPrinting
+from control.models import GutenbergJob, Printer, JobStatus, PrintingProperties, TwoSidedPrinting
 from printing.converter import detect_file_format, SUPPORTED_FILE_FORMATS
 from printing.printing import print_file
 
@@ -33,14 +33,14 @@ class UnsupportedDocumentError(ValueError):
 
 
 class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = PrintJobSerializer
+    serializer_class = GutenbergJobSerializer
     permission_classes = [IsAuthenticated]
-    queryset = PrintJob.objects.all()
+    queryset = GutenbergJob.objects.all()
     pagination_class = LargeResultsSetPagination
 
     def get_queryset(self):
         user = self.request.user
-        queryset = PrintJob.objects
+        queryset = GutenbergJob.objects
         if not user.is_superuser:
             queryset = queryset.filter(owner=user)
         return queryset.all().order_by('date_created')
@@ -48,7 +48,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=['post'], name='Cancel job')
     def cancel(self, request, pk=None):
         job = self.get_object()
-        PrintJob.objects.filter(id=job.id).exclude(status__in=PrintJob.COMPLETED_STATUSES).update(
+        GutenbergJob.objects.filter(id=job.id).exclude(status__in=GutenbergJob.COMPLETED_STATUSES).update(
             status=JobStatus.CANCELING)
         return Response(self.get_serializer(job).data)
 
@@ -85,7 +85,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         file_type = detect_file_format(file_path)
         if file_type not in SUPPORTED_FILE_FORMATS:
             raise UnsupportedDocumentError("Unsupported file type: {}".format(file_type))
-        job = PrintJob.objects.create(name=file.name, status=JobStatus.PENDING, owner=self.request.user,
+        job = GutenbergJob.objects.create(name=file.name, status=JobStatus.PENDING, owner=self.request.user,
                                       printer=printer_with_perms)
         color = color if printer_with_perms.color_allowed else False
         two_sides = two_sides if printer_with_perms.duplex_supported else TwoSidedPrinting.ONE_SIDED

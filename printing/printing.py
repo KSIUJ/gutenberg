@@ -14,7 +14,7 @@ from django.conf import settings
 from django.db.models.functions import Greatest, Coalesce
 from django.utils import timezone
 
-from control.models import PrintJob, TwoSidedPrinting, JobStatus, PrinterType, Printer, PrintingProperties
+from control.models import GutenbergJob, TwoSidedPrinting, JobStatus, PrinterType, Printer, PrintingProperties
 from printing.converter import auto_convert, detect_file_format
 from printing.postprocess import auto_postprocess
 from printing.utils import JobCanceledException, TASK_TIMEOUT_S, PRINTING_TIMEOUT_S, DEFAULT_IPP_FORMAT, \
@@ -23,7 +23,7 @@ from printing.utils import JobCanceledException, TASK_TIMEOUT_S, PRINTING_TIMEOU
 logger = logging.getLogger('gutenberg.worker')
 
 
-def handle_cancellation(job: PrintJob, handler: Optional[Callable[[], None]] = None):
+def handle_cancellation(job: GutenbergJob, handler: Optional[Callable[[], None]] = None):
     # We allow a low possibility of a race condition here as the impact would be negligible
     # (ie. ignored request) and the probability is low.
     job.refresh_from_db()
@@ -43,21 +43,21 @@ class PrinterBackend(ABC):
         self.backend_name = self.__class__.__name__
 
     @abstractmethod
-    def check_status(self, job: PrintJob, backend_job_id: Any) -> bool:
+    def check_status(self, job: GutenbergJob, backend_job_id: Any) -> bool:
         """Checks if the backend has finished processing the job. Returns `true` on finish."""
         pass
 
     @abstractmethod
-    def submit_job(self, job: PrintJob, file_path: str) -> Any:
+    def submit_job(self, job: GutenbergJob, file_path: str) -> Any:
         """Submit the job to the backend. Returns an object used by backend to identify the job (e.g. job id string)"""
         pass
 
     @abstractmethod
-    def cancel_job(self, job: PrintJob, backend_job_id: Any) -> None:
+    def cancel_job(self, job: GutenbergJob, backend_job_id: Any) -> None:
         """Attempt canceling processing the job on backend."""
         pass
 
-    def print(self, job: PrintJob, file_path: str):
+    def print(self, job: GutenbergJob, file_path: str):
         logger.info("Printing job {} via {}".format(job, self.backend_name))
         backend_job_id = self.submit_job(job, file_path)
         cnt = 0
@@ -76,7 +76,7 @@ class PrinterBackend(ABC):
 
 
 class LocalCupsPrinter(PrinterBackend):
-    def check_status(self, job: PrintJob, backend_job_id: Any) -> bool:
+    def check_status(self, job: GutenbergJob, backend_job_id: Any) -> bool:
         output = subprocess.check_output(
             ['lpstat', '-l'], stderr=subprocess.STDOUT, timeout=TASK_TIMEOUT_S
         )
@@ -91,12 +91,12 @@ class LocalCupsPrinter(PrinterBackend):
                 else:
                     break
             status = '\n'.join(x.strip() for x in output_lines[idx + 1: max_idx + 1])
-            PrintJob.objects.filter(id=job.id).update(status_reason=status)
+            GutenbergJob.objects.filter(id=job.id).update(status_reason=status)
             return True
         return False
 
     @staticmethod
-    def _cups_params(job: PrintJob):
+    def _cups_params(job: GutenbergJob):
         options = ['-d', job.printer.localprinterparams.cups_printer_name]
         options += ['-n', str(job.properties.copies)]
         params = job.printer.localprinterparams
@@ -115,7 +115,7 @@ class LocalCupsPrinter(PrinterBackend):
         options += ['-o', 'fit-to-page']
         return options
 
-    def submit_job(self, job: PrintJob, file_path: str) -> Any:
+    def submit_job(self, job: GutenbergJob, file_path: str) -> Any:
         cups_name = job.printer.localprinterparams.cups_printer_name
         output = subprocess.check_output(
             ['lp', file_path] + self._cups_params(job), stderr=subprocess.STDOUT, timeout=TASK_TIMEOUT_S).decode(
@@ -125,23 +125,23 @@ class LocalCupsPrinter(PrinterBackend):
             return '{0}-{1}'.format(cups_name, mt.group(1))
         raise ValueError('Invalid lp output: {}'.format(output))
 
-    def cancel_job(self, job: PrintJob, backend_job_id: Any):
+    def cancel_job(self, job: GutenbergJob, backend_job_id: Any):
         subprocess.check_output(['cancel', backend_job_id], stderr=subprocess.STDOUT, timeout=TASK_TIMEOUT_S)
 
 
 class DisabledPrinter(PrinterBackend):
 
-    def check_status(self, job: PrintJob, backend_job_id: Any) -> bool:
+    def check_status(self, job: GutenbergJob, backend_job_id: Any) -> bool:
         return False
 
-    def submit_job(self, job: PrintJob, file_path: str):
+    def submit_job(self, job: GutenbergJob, file_path: str):
         job.status = JobStatus.CANCELED
         job.status_reason = "Printer is disabled"
         job.date_finished = timezone.now()
         job.save()
         raise JobCanceledException()
 
-    def cancel_job(self, job: PrintJob, backend_job_id: Any):
+    def cancel_job(self, job: GutenbergJob, backend_job_id: Any):
         pass
 
 
@@ -152,7 +152,7 @@ def create_print_job(user: settings.AUTH_USER_MODEL,
                      color: bool = False,
                      copies: int = 1,
                      two_sided: TwoSidedPrinting = TwoSidedPrinting.ONE_SIDED):
-    job = PrintJob.objects.create(name=job_name, status=JobStatus.INCOMING, owner=user, printer=printer)
+    job = GutenbergJob.objects.create(name=job_name, status=JobStatus.INCOMING, owner=user, printer=printer)
     PrintingProperties.objects.create(
         color=color,
         copies=copies,
@@ -166,7 +166,7 @@ def submit_print_job(document_buffer,
                      job_id,
                      user: settings.AUTH_USER_MODEL,
                      document_type: Optional[str] = None):
-    job = PrintJob.objects.filter(id=job_id).first()
+    job = GutenbergJob.objects.filter(id=job_id).first()
     file_name = '{}_{}_{}'.format(
         job.name, user.username,
         timezone.now().strftime(settings.PRINT_DATE_FORMAT))
@@ -199,7 +199,7 @@ def submit_print_job(document_buffer,
 
 @shared_task
 def print_file(file_path, file_format, job_id):
-    job = PrintJob.objects.filter(id=job_id).first()
+    job = GutenbergJob.objects.filter(id=job_id).first()
     if not job:
         logger.warning("Job id {} missing.".format(job_id))
         return
@@ -243,7 +243,7 @@ def print_file(file_path, file_format, job_id):
 
 @shared_task
 def cleanup_print_jobs():
-    stale_jobs = PrintJob.objects.exclude(status__in=PrintJob.COMPLETED_STATUSES).annotate(
+    stale_jobs = GutenbergJob.objects.exclude(status__in=GutenbergJob.COMPLETED_STATUSES).annotate(
         last_activity=Greatest('date_created', Coalesce('date_processed', 0), Coalesce(0, 'date_finished'))).filter(
         last_activity__lt=timezone.now() - datetime.timedelta(seconds=2 * TASK_TIMEOUT_S))
     stale_jobs.update(status=JobStatus.ERROR,
