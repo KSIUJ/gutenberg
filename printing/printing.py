@@ -112,7 +112,7 @@ def print_file(job_id):
                 PrinterType.LOCAL_CUPS: LocalCupsPrinter,
             }.get(job.printer.printer_type, DisabledPrinter)()
             for out in os.listdir(job_tmpdir):
-                backend.print(job, out)
+                backend.print(job, os.path.join(job_tmpdir, out))
     except JobCanceledException:
         # Canceling job
         pass

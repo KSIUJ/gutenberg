@@ -29,7 +29,7 @@ LOGGING['handlers']['django_file']['filename'] = '/var/log/gutenberg/django.log'
 
 # Printing
 # Directory to store the printed files in
-MEDIA_DIRECTORY = '/srv/printing/'
+MEDIA_ROOT = '/srv/printing/'
 
 # Uncomment lines below to enable Open ID Connect auth
 # LOGIN_URL = 'oidc_authentication_init'

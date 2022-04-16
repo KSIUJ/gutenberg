@@ -184,7 +184,7 @@ LOGGING = {
 
 # Print settings
 # Directory to store the printed files in
-MEDIA_DIRECTORY = '/tmp/print/'
+MEDIA_ROOT = '/tmp/print/'
 MEDIA_URL = '/media/'
 # Format of date to append to each filename
 PRINT_DATE_FORMAT = '%Y-%m-%dT%H-%M-%S-%f'
