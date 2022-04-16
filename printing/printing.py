@@ -11,10 +11,12 @@ from typing import Optional, Callable, Any
 
 from celery import shared_task
 from django.conf import settings
+from django.core.files import File
 from django.db.models.functions import Greatest, Coalesce
 from django.utils import timezone
 
-from control.models import GutenbergJob, TwoSidedPrinting, JobStatus, PrinterType, Printer, PrintingProperties
+from control.models import GutenbergJob, TwoSidedPrinting, JobStatus, PrinterType, Printer, PrintingProperties, \
+    JobArtefact, JobArtefactType
 from printing.converter import auto_convert, detect_file_format
 from printing.postprocess import auto_postprocess
 from printing.utils import JobCanceledException, TASK_TIMEOUT_S, PRINTING_TIMEOUT_S, DEFAULT_IPP_FORMAT, \
@@ -167,38 +169,37 @@ def submit_print_job(document_buffer,
                      user: settings.AUTH_USER_MODEL,
                      document_type: Optional[str] = None):
     job = GutenbergJob.objects.filter(id=job_id).first()
-    file_name = '{}_{}_{}'.format(
-        job.name, user.username,
-        timezone.now().strftime(settings.PRINT_DATE_FORMAT))
-    file_path = os.path.join(settings.PRINT_DIRECTORY, file_name)
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    with open(file_path, 'wb+') as destination:
+
+    with tempfile.TemporaryFile() as tmp:
         while True:
             chunk = document_buffer.read(100000)
             if not chunk:
                 break
-            destination.write(chunk)
+            tmp.write(chunk)
+        artefact = JobArtefact.objects.create(job=job, artefact_type=JobArtefactType.SOURCE, file=File(tmp))
 
     file_format = document_type
     if not file_format:
         file_format = DEFAULT_IPP_FORMAT
     if file_format == AUTODETECT_IPP_FORMAT:
-        file_format = detect_file_format(file_path)
+        file_format = detect_file_format(artefact.file.path)
     if file_format not in SUPPORTED_IPP_FORMATS:
-        os.remove(file_path)
+        artefact.delete()
         job.status = JobStatus.ERROR
         job.status_reason = 'Unsupported file format: {}'.format(file_format)
         job.save()
         raise DocumentFormatError("Unsupported format: {}".format(file_format))
+    artefact.mime_type = file_format
+    artefact.save()
 
     job.status = JobStatus.PENDING
     job.save()
-    print_file.delay(file_path, file_format, job_id)
+    print_file.delay(job_id)
     return job_id
 
 
 @shared_task
-def print_file(file_path, file_format, job_id):
+def print_file(job_id):
     job = GutenbergJob.objects.filter(id=job_id).first()
     if not job:
         logger.warning("Job id {} missing.".format(job_id))
@@ -209,26 +210,34 @@ def print_file(file_path, file_format, job_id):
     job.status_reason = ''
     job.save()
     try:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            ext = os.path.splitext(file_path)[1].lower()
-            if not ext:
-                ext = '.bin'
-            tmp_input = os.path.join(tmpdir, 'input' + ext)
-            shutil.copyfile(file_path, tmp_input)
-            out, out_type = auto_convert(tmp_input, file_format, tmpdir)
-            handle_cancellation(job)
-            out, num_pages = auto_postprocess(out, out_type, tmpdir, job)
-            handle_cancellation(job)
+        with tempfile.TemporaryDirectory() as job_tmpdir:
+            sum_num_pages = 0
+            for idx, artefact in enumerate(job.artefacts.filter(artefact_type=JobArtefactType.SOURCE)):
+                with tempfile.TemporaryDirectory() as artefact_tmpdir:
+                    file_path = artefact.file.path
+                    file_format = artefact.mime_type
+                    ext = os.path.splitext(file_path)[1].lower()
+                    if not ext:
+                        ext = '.bin'
+                    tmp_input = os.path.join(artefact_tmpdir, 'input' + ext)
+                    shutil.copyfile(file_path, tmp_input)
+                    out, out_type = auto_convert(tmp_input, file_format, artefact_tmpdir)
+                    handle_cancellation(job)
+                    out, num_pages = auto_postprocess(out, out_type, artefact_tmpdir, job)
+                    shutil.copyfile(out, os.path.join(job_tmpdir, f'{idx:03}_{os.path.basename(out)}'))
+                    sum_num_pages += num_pages
+                    handle_cancellation(job)
             job.status = JobStatus.PRINTING
             job.status_reason = ''
             job.date_processed = timezone.now()
-            job.pages = num_pages * job.properties.copies
+            job.pages = sum_num_pages * job.properties.copies
             job.save()
             backend = {
                 PrinterType.DISABLED: DisabledPrinter,
                 PrinterType.LOCAL_CUPS: LocalCupsPrinter,
             }.get(job.printer.printer_type, DisabledPrinter)()
-            backend.print(job, out)
+            for out in os.listdir(job_tmpdir):
+                backend.print(job, out)
     except JobCanceledException:
         # Canceling job
         pass

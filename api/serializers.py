@@ -31,6 +31,19 @@ class PrintRequestSerializer(serializers.Serializer):
     color = serializers.BooleanField(default=False)
 
 
+class CreatePrintJobRequestSerializer(serializers.Serializer):
+    printer = serializers.IntegerField(required=True)
+    copies = serializers.IntegerField(required=True)
+    pages_to_print = serializers.CharField(default=None, validators=[validate_pages_to_print])
+    two_sides = serializers.ChoiceField(choices=TwoSidedPrinting.choices, required=True)
+    color = serializers.BooleanField(default=False)
+
+
+class UploadJobArtefactRequestSerializer(serializers.Serializer):
+    file = serializers.FileField(allow_empty_file=False, required=True)
+    last = serializers.BooleanField(default=False)
+
+
 class UserInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = User

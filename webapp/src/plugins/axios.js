@@ -4,7 +4,7 @@ import axios from 'axios';
 
 const config = {
   // baseURL: process.env.baseURL || process.env.apiUrl || ""
-  timeout: 10 * 1000, // Timeout
+  timeout: 5 * 60 * 1000, // Timeout
   withCredentials: true, // Check cross-site Access-Control
   xsrfCookieName: 'csrftoken',
   xsrfHeaderName: 'X-CSRFTOKEN',

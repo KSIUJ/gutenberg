@@ -20,32 +20,11 @@
         </template>
       </v-select>
 
-      <v-row>
-        <v-col sm="12" md="8">
-          <p class="text-h4 mb-5">Upload file</p>
-
-          <v-file-input outlined label="File to print" v-model="file" :disabled="printerNotChosen"
-                        required :rules="validateFileRequired" :hint="supportedExtensionsMessage"
-                        persistent-hint :accept="supportedExtensions">
-          </v-file-input>
-        </v-col>
-        <v-col>
-          <p class="text-h4 mb-3">or print using IPP</p>
-          <p>Print directly from your device through system printing using the
-            Internet Printing Protocol.</p>
-          <v-dialog
-            v-model="dialog"
-            width="1000"
-          >
-            <template v-slot:activator="{ on, attrs }">
-              <v-btn color="info" large :disabled="printerNotChosen" class="mb-5" v-bind="attrs"
-                     v-on="on"> Show IPP settings for this printer
-              </v-btn>
-            </template>
-            <PrinterIPPSettings @close="dialog=false" :printer="printer"></PrinterIPPSettings>
-          </v-dialog>
-        </v-col>
-      </v-row>
+      <p class="text-h4 mb-5">Upload files</p>
+      <v-file-input outlined label="Files to print" v-model="files" :disabled="printerNotChosen"
+                    required :rules="validateFileRequired" :hint="supportedExtensionsMessage"
+                    persistent-hint :accept="supportedExtensions" multiple show-size counter>
+      </v-file-input>
 
       <p class="text-h4 mb-5">Printing settings</p>
       <v-text-field outlined label="Number of copies" type="number" min="1" max="100"
@@ -56,6 +35,10 @@
                     placeholder="all" type="text" v-model="pages_to_print"
                     :disabled="printerNotChosen" :pattern="PAGES_TO_PRINT_PATTERN"
                     prepend-icon="filter_list" :rules="validatePageFilter"></v-text-field>
+      <v-text-field outlined label="Scale (leave empty for default)" type="number" min="1" max="500"
+                    v-model="scale" :disabled="printerNotChosen"
+                    prepend-icon="search" :rules="validateScale">
+      </v-text-field>
       <v-radio-group row v-model="two_sides" :disabled="!duplex_available">
         <v-radio label="One-sided" value="OS"></v-radio>
         <v-radio label="Two-sided (long edge)" value="TL"></v-radio>
@@ -67,6 +50,21 @@
              @click="submit" :loading="submitting_form">Print
       </v-btn>
     </v-form>
+
+    <p class="text-h4 mb-3 mt-11">or print using IPP</p>
+    <p>Print directly from your device through system printing using the
+      Internet Printing Protocol.</p>
+    <v-dialog
+      v-model="dialog"
+      width="1000"
+    >
+      <template v-slot:activator="{ on, attrs }">
+        <v-btn color="info" large :disabled="printerNotChosen" class="mb-5" v-bind="attrs"
+               v-on="on"> Show IPP settings for this printer
+        </v-btn>
+      </template>
+      <PrinterIPPSettings @close="dialog=false" :printer="printer"></PrinterIPPSettings>
+    </v-dialog>
   </div>
 </template>
 
@@ -87,7 +85,8 @@ export default {
       color: false,
       pages_to_print: '',
       copies: 1,
-      file: null,
+      scale: null,
+      files: [],
       color_available: false,
       duplex_available: false,
       PAGES_TO_PRINT_PATTERN:
@@ -98,7 +97,7 @@ export default {
     };
   },
   mounted() {
-    window.axios.get('/api/printers/?format=json').then((value) => {
+    window.axios.get(API.printers).then((value) => {
       this.printers = value.data;
       const last_id = parseInt(this.$store.state.printerId, 10);
       const last = this.printers.find((el) => el.id === last_id);
@@ -157,15 +156,17 @@ export default {
       }
       this.$store.commit('updatePrinterId', this.printer.id);
 
+      this.$store.commit('setFiles', this.files);
+
       const formData = new FormData();
       formData.append('printer', this.printer.id);
-      formData.append('file', this.file);
       formData.append('copies', this.copies);
       formData.append('pages_to_print', this.pages_to_print.replaceAll(' ', ''));
       formData.append('two_sides', this.two_sides);
       formData.append('color', this.color);
+      formData.append('scale', this.scale);
 
-      window.axios.post(API.submit, formData,
+      window.axios.post(API.create, formData,
         { headers: { 'Content-Type': 'multipart/form-data' } }).then((value) => {
         const jobId = value.data.id;
         this.$router.push({
@@ -186,8 +187,9 @@ export default {
     },
     validateFileRequired() {
       return [
-        (val) => (val && !val.size < 1) || 'Add a file to print.',
-        (val) => (val && this.supportedExtensionsSet.some((suffix) => val.name.endsWith(suffix)))
+        (val) => (val.length > 0) || 'Add a file to print.',
+        (val) => (val.length > 0 && val.every((v) => this.supportedExtensionsSet
+          .some((suffix) => v.name.endsWith(suffix))))
           || 'Unsupported file extension.',
       ];
     },
@@ -195,6 +197,12 @@ export default {
       return [
         (val) => val > 0 || 'Minimum 1 copy required',
         (val) => val <= 100 || 'Max 100 copies allowed',
+      ];
+    },
+    validateScale() {
+      return [
+        (val) => !val || val === '' || val > 0 || 'Scale must be larger than 0%',
+        (val) => !val || val === '' || val <= 501 || 'Maximum scaling 500%',
       ];
     },
     printerNotChosen() {

@@ -8,12 +8,13 @@
         <v-card-title>Job status</v-card-title>
         <v-stepper v-if="stage > 0" vertical :value="stage" class="elevation-0 pb-2">
           <v-stepper-step step="1" :complete="stage > 1">
-            Job created
+            Creating job
           </v-stepper-step>
           <v-stepper-content step="1">
-            <p class="">Gutenberg has registered the printing request
-              and is now waiting for a document to print.</p>
+            <p class="">Your print request has been registered, Gutenberg is waiting for files to
+              be uploaded.</p>
             <v-progress-linear :indeterminate="update"></v-progress-linear>
+            <ArtefactUploader :job-id="jobId"></ArtefactUploader>
           </v-stepper-content>
           <v-stepper-step step="2" :complete="stage > 2">
             Pending
@@ -98,10 +99,12 @@
 </template>
 
 <script>
+import ArtefactUploader from '@/components/ArtefactUploader.vue';
 import { API } from '../common/api';
 
 export default {
   name: 'JobStatus',
+  components: { ArtefactUploader },
   data() {
     return {
       update: true,

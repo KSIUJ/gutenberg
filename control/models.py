@@ -6,7 +6,8 @@ from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 from django.core.files.storage import FileSystemStorage
 from django.db import models
-from django.db.models import F, Max, Q
+from django.db.models import F, Max, Q, IntegerField
+from django.db.models.functions import Cast
 from django.utils.translation import gettext_lazy as _
 
 from common.models import User
@@ -51,12 +52,10 @@ class Printer(models.Model):
     @staticmethod
     def get_queryset_for_user(user):
         queryset = Printer.objects
-        if not user.is_superuser:
-            return queryset.filter(printerpermissions__group__user=user).annotate(
-                color_allowed=F('color_supported') * Max('printerpermissions__print_color',
-                                                         filter=Q(printerpermissions__group__user=user)))
-        else:
-            return queryset.annotate(color_allowed=F('color_supported'))
+        return queryset.filter(printerpermissions__group__user=user).annotate(
+            color_allowed=Cast(F('color_supported'), output_field=IntegerField()) * Max(
+                Cast('printerpermissions__print_color', output_field=IntegerField()),
+                filter=Q(printerpermissions__group__user=user)))
 
     @staticmethod
     def get_printer_for_user(user, printer_id):
@@ -150,9 +149,21 @@ class GutenbergJob(models.Model):
     def not_completed(self):
         return not self.completed
 
-    def get_artifact_storage(self):
-        path = os.path.join(settings.PRINT_DIRECTORY, str(self.id))
-        return FileSystemStorage(location=path)
+
+class JobArtefactType(models.TextChoices):
+    SOURCE = 'SC', _('source')
+    INTERMEDIATE = 'IN', _('intermediate')
+    FINAL = 'OU', _('output')
+
+
+class JobArtefact(models.Model):
+    job = models.ForeignKey(GutenbergJob, on_delete=models.CASCADE, related_name='artefacts')
+    file = models.FileField(upload_to='artefacts/%Y/%m/%d/')
+    artefact_type = models.CharField(max_length=4, default=JobArtefactType.SOURCE, choices=JobArtefactType.choices)
+    mime_type = models.CharField(max_length=100, default='application/octet-stream')
+
+    def __str__(self):
+        return self.file.name
 
 
 def validate_pages_to_print(value):

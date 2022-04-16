@@ -22,6 +22,7 @@ export default new Vuex.Store({
     colorPrinting: null,
     printerId: null,
     twoSided: null,
+    files: [],
   },
   mutations: {
     loginUser(state, user) {
@@ -39,6 +40,9 @@ export default new Vuex.Store({
     },
     updateTwoSided(state, value) {
       saveToStore(state, 'twoSided', value);
+    },
+    setFiles(state, files) {
+      state.files = files;
     },
   },
   actions: {},

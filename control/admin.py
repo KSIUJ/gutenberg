@@ -1,15 +1,20 @@
 from django.contrib import admin
 
 # Register your models here.
-from control.models import GutenbergJob, PrintingProperties, PrinterPermissions, LocalPrinterParams, Printer
+from control.models import GutenbergJob, PrintingProperties, PrinterPermissions, LocalPrinterParams, Printer, \
+    JobArtefact
 
 
 class PrintingPropertiesInline(admin.TabularInline):
     model = PrintingProperties
 
 
+class JobArtefactAdmin(admin.TabularInline):
+    model = JobArtefact
+
+
 class GutenbergJobAdmin(admin.ModelAdmin):
-    inlines = [PrintingPropertiesInline, ]
+    inlines = [PrintingPropertiesInline, JobArtefactAdmin]
 
 
 class LocalPrinterParamsInline(admin.StackedInline):
