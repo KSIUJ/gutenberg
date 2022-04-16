@@ -184,7 +184,6 @@ LOGGING = {
 
 # Print settings
 # Directory to store the printed files in
-PRINT_DIRECTORY = '/tmp/print/'
 MEDIA_DIRECTORY = '/tmp/print/'
 MEDIA_URL = '/media/'
 # Format of date to append to each filename

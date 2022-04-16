@@ -1,5 +1,6 @@
 import logging
 from secrets import token_urlsafe
+from typing import Optional
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -109,13 +110,13 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
 
     def _create_printing_job(self, printer_with_perms,
                              copies: int, pages_to_print: str,
-                             color: bool, two_sides: str, **_):
+                             color: bool, two_sides: str, fit_to_page: bool, **_):
         job = GutenbergJob.objects.create(name='webrequest', job_type=JobType.PRINT, status=JobStatus.INCOMING,
                                           owner=self.request.user, printer=printer_with_perms)
         color = color if printer_with_perms.color_allowed else False
         two_sides = two_sides if printer_with_perms.duplex_supported else TwoSidedPrinting.ONE_SIDED
         PrintingProperties.objects.create(color=color, copies=copies, two_sides=two_sides,
-                                          pages_to_print=pages_to_print, job=job)
+                                          pages_to_print=pages_to_print, job=job, fit_to_page=fit_to_page)
         return job
 
     def _upload_artefact(self, job, file, **_):

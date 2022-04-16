@@ -35,16 +35,16 @@
                     placeholder="all" type="text" v-model="pages_to_print"
                     :disabled="printerNotChosen" :pattern="PAGES_TO_PRINT_PATTERN"
                     prepend-icon="filter_list" :rules="validatePageFilter"></v-text-field>
-      <v-text-field outlined label="Scale (leave empty for default)" type="number" min="1" max="500"
-                    v-model="scale" :disabled="printerNotChosen"
-                    prepend-icon="search" :rules="validateScale">
-      </v-text-field>
       <v-radio-group row v-model="two_sides" :disabled="!duplex_available">
         <v-radio label="One-sided" value="OS"></v-radio>
         <v-radio label="Two-sided (long edge)" value="TL"></v-radio>
         <v-radio label="Two-sided (short edge)" value="TS"></v-radio>
       </v-radio-group>
-      <v-switch v-model="color" label="Print in color" color="success" :disabled="!color_available">
+      <v-switch v-model="fit_to_page" label="Fit to page (disable for 1:1 printing)" color="primary"
+                :disabled="printerNotChosen" prepend-icon="search">
+      </v-switch>
+      <v-switch v-model="color" label="Print in color" color="success" :disabled="!color_available"
+                prepend-icon="palette">
       </v-switch>
       <v-btn class="mt-3 mb-5" large color="primary" :disabled="!form_valid" type="button"
              @click="submit" :loading="submitting_form">Print
@@ -85,7 +85,7 @@ export default {
       color: false,
       pages_to_print: '',
       copies: 1,
-      scale: null,
+      fit_to_page: true,
       files: [],
       color_available: false,
       duplex_available: false,
@@ -99,7 +99,7 @@ export default {
   mounted() {
     window.axios.get(API.printers).then((value) => {
       this.printers = value.data;
-      const last_id = parseInt(this.$store.state.printerId, 10);
+      const last_id = this.$store.state.printerId;
       const last = this.printers.find((el) => el.id === last_id);
       if (last) {
         this.printer = last;
@@ -141,6 +141,9 @@ export default {
       } else {
         this.two_sides = 'TL';
       }
+      if (this.$store.state.fitToPage !== null) {
+        this.fit_to_page = this.$store.state.fitToPage;
+      }
     },
     submit() {
       if (!this.$refs.form.validate()) {
@@ -155,6 +158,7 @@ export default {
         this.$store.commit('updateTwoSided', this.two_sides);
       }
       this.$store.commit('updatePrinterId', this.printer.id);
+      this.$store.commit('updateFitToPage', this.fit_to_page);
 
       this.$store.commit('setFiles', this.files);
 
@@ -164,7 +168,7 @@ export default {
       formData.append('pages_to_print', this.pages_to_print.replaceAll(' ', ''));
       formData.append('two_sides', this.two_sides);
       formData.append('color', this.color);
-      formData.append('scale', this.scale);
+      formData.append('fit_to_page', this.fit_to_page);
 
       window.axios.post(API.create, formData,
         { headers: { 'Content-Type': 'multipart/form-data' } }).then((value) => {

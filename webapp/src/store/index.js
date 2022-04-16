@@ -3,10 +3,14 @@ import Vuex from 'vuex';
 
 Vue.use(Vuex);
 
-function loadFromStore(state, property) {
+function parseBool(val) {
+  return val === 'true';
+}
+
+function loadFromStore(state, property, conv_fn = (val) => (val)) {
   const val = localStorage.getItem(property);
   if (val) {
-    state[property] = val;
+    state[property] = conv_fn(val);
   }
 }
 
@@ -22,6 +26,7 @@ export default new Vuex.Store({
     colorPrinting: null,
     printerId: null,
     twoSided: null,
+    fitToPage: null,
     files: [],
   },
   mutations: {
@@ -29,8 +34,10 @@ export default new Vuex.Store({
       state.user = user;
     },
     initialiseStore(state) {
-      loadFromStore(state, 'colorPrinting');
-      loadFromStore(state, 'printerId');
+      loadFromStore(state, 'colorPrinting', parseBool);
+      loadFromStore(state, 'printerId', parseInt);
+      loadFromStore(state, 'twoSided');
+      loadFromStore(state, 'fitToPage', parseBool);
     },
     updateColorPrinting(state, value) {
       saveToStore(state, 'colorPrinting', value);
@@ -40,6 +47,9 @@ export default new Vuex.Store({
     },
     updateTwoSided(state, value) {
       saveToStore(state, 'twoSided', value);
+    },
+    updateFitToPage(state, value) {
+      saveToStore(state, 'fitToPage', value);
     },
     setFiles(state, files) {
       state.files = files;
