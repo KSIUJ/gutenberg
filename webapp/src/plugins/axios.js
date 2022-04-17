@@ -18,6 +18,9 @@ _axios.interceptors.response.use(
     // Do something with response data
     response,
   (error) => {
+    if (error.config.noIntercept) {
+      return Promise.reject(error);
+    }
     if (error.response && error.response.status === 403) {
       window.location.reload(false);
       return Promise.reject(error);

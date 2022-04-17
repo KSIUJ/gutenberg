@@ -2,6 +2,12 @@ import logging
 from secrets import token_urlsafe
 from typing import Optional
 
+from django.contrib.auth import authenticate, login
+from django.middleware.csrf import rotate_token
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.debug import sensitive_post_parameters
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.generics import RetrieveAPIView
@@ -11,7 +17,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from api.serializers import GutenbergJobSerializer, PrinterSerializer, PrintRequestSerializer, UserInfoSerializer, \
-    CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer
+    CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer, LoginSerializer
 from common.models import User
 from control.models import GutenbergJob, Printer, JobStatus, PrintingProperties, TwoSidedPrinting, JobArtefact, \
     JobArtefactType, JobType
@@ -168,3 +174,38 @@ class ResetApiTokenView(APIView):
         self.request.user.api_key = _generate_token()
         self.request.user.save()
         return Response()
+
+
+class LoginApiView(APIView):
+    @classmethod
+    def as_view(cls, **initkwargs):
+        view = super(APIView, cls).as_view(**initkwargs)
+        view.cls = cls
+        view.initkwargs = initkwargs
+        return view
+
+    @method_decorator(sensitive_post_parameters())
+    @method_decorator(csrf_protect)
+    @method_decorator(never_cache)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        serializer = LoginSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        username = serializer.validated_data['username']
+        password = serializer.validated_data['password']
+        user = authenticate(username=username, password=password)
+        if not user:
+            return Response(data={'message': 'Username or password incorrect'}, status=403)
+        if not user.is_active:
+            return Response(data={'message': 'Account is not active'}, status=403)
+        login(request, user)
+        return Response(status=200)
+
+    def get(self, request, *args, **kwargs):
+        rotate_token(request)
+        return Response(status=200)

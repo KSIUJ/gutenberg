@@ -203,12 +203,6 @@ export default {
         (val) => val <= 100 || 'Max 100 copies allowed',
       ];
     },
-    validateScale() {
-      return [
-        (val) => !val || val === '' || val > 0 || 'Scale must be larger than 0%',
-        (val) => !val || val === '' || val <= 501 || 'Maximum scaling 500%',
-      ];
-    },
     printerNotChosen() {
       return this.printer === null;
     },

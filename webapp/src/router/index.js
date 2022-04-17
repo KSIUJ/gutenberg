@@ -1,5 +1,6 @@
 import Vue from 'vue';
 import VueRouter from 'vue-router';
+import Login from '../views/Login.vue';
 import Print from '../views/Print.vue';
 import JobStatus from '../views/JobStatus.vue';
 
@@ -21,6 +22,15 @@ const routes = [
     pathToRegexpOptions: { strict: true },
     meta: {
       title: 'Job status',
+    },
+  },
+  {
+    path: '/login/',
+    name: 'Login',
+    component: Login,
+    pathToRegexpOptions: { strict: true },
+    meta: {
+      title: 'Login',
     },
   },
 ];

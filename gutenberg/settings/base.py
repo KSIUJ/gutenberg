@@ -191,6 +191,6 @@ PRINT_DATE_FORMAT = '%Y-%m-%dT%H-%M-%S-%f'
 
 OIDC_RP_SIGN_ALGO = 'RS256'
 OIDC_RP_SCOPES = 'openid email'
-LOGIN_URL = '/api-auth/login/'
+LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'

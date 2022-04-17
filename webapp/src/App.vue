@@ -22,9 +22,9 @@
 
       <v-spacer></v-spacer>
 
-      <v-menu offset-y>
+      <v-menu offset-y v-if="!(isPublicPage && !user)">
         <template v-slot:activator="{ on, attrs }">
-          <v-btn class="text-none" plain large :loading="user===null" v-bind="attrs"
+          <v-btn class="text-none" plain large :loading="user === null" v-bind="attrs"
                  v-on="on">{{ username }}
             <v-icon>arrow_drop_down</v-icon>
           </v-btn>
@@ -45,7 +45,7 @@
 
     <v-main>
       <v-container style="max-width: 1140px">
-        <router-view></router-view>
+        <router-view @login="getUserInfo"></router-view>
       </v-container>
     </v-main>
     <form :action="API.logout" method="post" id="logout-form">
@@ -56,7 +56,8 @@
         class="text-center"
         cols="12"
       >
-        © 2015 - {{ new Date().getFullYear() }} <a class="text-decoration-none" href="https://ksi.ii.uj.edu.pl/">KSI
+        © 2015 - {{ new Date().getFullYear() }} <a class="text-decoration-none"
+                                                   href="https://ksi.ii.uj.edu.pl/">KSI
         UJ</a> |
         <a class="text-decoration-none" href="https://github.com/KSIUJ/gutenberg">Source</a>
       </v-col>
@@ -89,13 +90,16 @@ export default {
   },
   mounted() {
     this.$store.commit('initialiseStore');
-    if (this.$store.state.user === null) {
-      window.axios.get(API.me).then((value) => {
-        this.$store.commit('loginUser', value.data);
-      });
+    if (this.$store.state.user === null && !this.isPublicPage) {
+      this.getUserInfo();
     }
   },
   methods: {
+    getUserInfo() {
+      window.axios.get(API.me).then((value) => {
+        this.$store.commit('loginUser', value.data);
+      });
+    },
     logout() {
       document.getElementById('logout-form').submit();
     },
@@ -115,6 +119,9 @@ export default {
     },
     isStaff() {
       return this.user && this.user.is_staff;
+    },
+    isPublicPage() {
+      return this.$route.name === 'Login';
     },
   },
 };
