@@ -15,6 +15,9 @@ class JobArtefactAdmin(admin.TabularInline):
 
 class GutenbergJobAdmin(admin.ModelAdmin):
     inlines = [PrintingPropertiesInline, JobArtefactAdmin]
+    readonly_fields = ('pages', 'date_created', 'date_processed', 'date_finished')
+    list_display = ('date_created', 'owner', 'name', 'job_type', 'status', 'pages')
+    list_filter = ('date_created', 'owner', 'job_type', 'status')
 
 
 class LocalPrinterParamsInline(admin.StackedInline):
