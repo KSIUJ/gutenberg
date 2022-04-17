@@ -2,7 +2,8 @@
   <div>
     <h1 class="text-h2 mb-10 mt-4">Login</h1>
 
-    <v-alert :value="errorMessage.length > 0" type="error" class="my-5" transition="fade-transition">
+    <v-alert :value="errorMessage.length > 0" type="error" class="my-5"
+             transition="fade-transition">
       {{ errorMessage }}
     </v-alert>
 
