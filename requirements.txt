@@ -1,4 +1,4 @@
-Django==4.0.9
+Django==4.1.9
 celery==5.2.6
 redis==4.2.2
 python-magic==0.4.25
