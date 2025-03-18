@@ -6,7 +6,8 @@ from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 from django.core.files.storage import FileSystemStorage
 from django.db import models
-from django.db.models import F, Max, Q
+from django.db.models import F, Max, Q, IntegerField
+from django.db.models.functions import Cast
 from django.utils.translation import gettext_lazy as _
 
 from common.models import User
@@ -46,8 +47,7 @@ class Printer(models.Model):
         queryset = Printer.objects
         if not user.is_superuser:
             return queryset.filter(printerpermissions__group__user=user).annotate(
-                color_allowed=F('color_supported') * Max('printerpermissions__print_color',
-                                                         filter=Q(printerpermissions__group__user=user)))
+                color_allowed=Cast(F('color_supported'), IntegerField()) * Max(Cast('printerpermissions__print_color', IntegerField()), filter=Q(printerpermissions__group__user=user)))
         else:
             return queryset.annotate(color_allowed=F('color_supported'))
 

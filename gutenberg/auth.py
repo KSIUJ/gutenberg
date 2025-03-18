@@ -86,4 +86,4 @@ def oidc_op_logout(request):
     if redirect_url is None:
         redirect_url = getattr(settings, 'LOGOUT_REDIRECT_URL', '/')
     redirect_url = request.build_absolute_uri(redirect_url)
-    return '{}?redirect_uri={}'.format(oidc_op_logout_endpoint, quote(redirect_url, safe=''))
+    return '{}?post_logout_redirect_uri={}&id_token_hint={}'.format(oidc_op_logout_endpoint, quote(redirect_url, safe=''), request.session['oidc_id_token'])
