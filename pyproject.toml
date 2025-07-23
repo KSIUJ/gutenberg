@@ -1,0 +1,14 @@
+[project]
+name = "gutenberg"
+version = "0.1.0"
+description = "Office printer gateway: print documents via web GUI or driverless IPP"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "celery==5.2.6",
+    "django==4.0.9",
+    "djangorestframework==3.13.1",
+    "mozilla-django-oidc==2.0.0",
+    "python-magic==0.4.25",
+    "redis==4.2.2",
+]

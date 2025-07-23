@@ -5,7 +5,7 @@ Description=Gutenberg UWSGI service
 User=gutenberg
 Group=gutenberg
 WorkingDirectory=/home/gutenberg/gutenberg
-ExecStart=/home/gutenberg/gutenberg/venv/bin/celery -A gutenberg worker -l INFO
+ExecStart=/home/gutenberg/gutenberg/.venv/bin/celery -A gutenberg worker -l INFO
 KillSignal=SIGTERM
 StandardError=syslog
 Environment=DJANGO_SETTINGS_MODULE=gutenberg.settings.production_settings
