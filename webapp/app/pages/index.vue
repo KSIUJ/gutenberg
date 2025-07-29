@@ -1,6 +1,6 @@
 <template>
   <div class="m-4 flex flex-row gap-4 w-full max-w-5xl mx-auto">
-    <Panel header="Print now" class="w-md">
+    <Panel header="Print files online" class="w-md">
       <print-options />
     </Panel>
     <div class="grow">
