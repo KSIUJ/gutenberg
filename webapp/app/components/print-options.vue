@@ -35,12 +35,13 @@
         <ToggleSwitch aria-labelledby="duplex-enabled" />
       </div>
 
-      <label id="duplex-mode-select">Flip around</label>
+      <label id="duplex-mode-select">Flip backside around</label>
       <SelectButton
           :options="duplexOptions"
           option-value="value"
           data-key="value"
           option-label="label"
+          :allow-empty="false"
           fluid
           aria-labelledby="duplex-mode-select"
       >
@@ -58,9 +59,23 @@
         option-value="value"
         data-key="value"
         option-label="label"
+        :allow-empty="false"
         fluid
         aria-labelledby="colored-select"
-      />
+      >
+        <template #option="{ option }">
+          <div class="w-full">
+            {{option.label}}<br>
+            <div class="w-1/4 flex flex-row mx-auto mt-2 mb-1 rounded-xs overflow-hidden">
+              <div
+                v-for="(color, i) in option.colors"
+                :key="i"
+                :class="[color, 'h-1', 'grow']"
+              />
+            </div>
+          </div>
+        </template>
+      </SelectButton>
     </div>
     <div class="flex flex-row-reverse gap-2 pt-4">
       <Button severity="primary" @click="print()">
@@ -94,8 +109,17 @@ const duplexOptions = [
   { value: 'long', label: 'Long edge', description: 'for vertical documents' },
   { value: 'short', label: 'Short edge', description: 'for horizontal documents' },
 ];
+
+// Uses Tailwind color classes, see
+// https://tailwindcss.com/docs/detecting-classes-in-source-files#how-classes-are-detected
 const colorOptions = [
-  { value: false, label: 'Grayscale' },
-  { value: true, label: 'Colored' },
+  {
+    value: false, label: 'Grayscale',
+    colors: ['bg-gray-300', 'bg-gray-400', 'bg-gray-500'],
+  },
+  {
+    value: true, label: 'Colored',
+    colors: ['bg-cyan-300', 'bg-fuchsia-500', 'bg-yellow-300'],
+  },
 ];
 </script>
