@@ -1,15 +1,18 @@
 <template>
-  <div class="m-4 flex flex-row gap-4 w-full max-w-5xl mx-auto">
-    <Panel header="Print files online" class="w-md">
-      <print-options />
-    </Panel>
-    <div class="grow">
+  <div class="grid grid-cols-[var(--container-md)_1fr] gap-4 w-full max-w-5xl mx-auto">
+    <div class="col-1 py-4">
+      <div class="w-md fixed top-4 bottom-4">
+        <Panel header="Print files online" class="h-full">
+          <print-options />
+        </Panel>
+      </div>
+    </div>
+    <div class="col-2 py-4">
       <h1>Other ways to print</h1>
       <h2>IPP</h2>
-      <p>Content paragraph 1</p>
-      <p>Content paragraph 2</p>
-      <p>Content paragraph 3</p>
-      <p>Content paragraph 4</p>
+      <p v-for="i in 5" :key="i" class="h-50">
+        Content paragraph 1
+      </p>
     </div>
   </div>
 </template>
