@@ -1,16 +1,19 @@
 <template>
-  <div class="w-full">
+  <div class="w-full h-full flex flex-col">
+    <FileUpload
+      name="demo[]"
+      multiple
+      :show-upload-button="false"
+      cancel-label="Clear"
+      :pt="{
+        root: 'grow mb-4',
+      }"
+    >
+      <template #empty>
+        <span>Drag and drop files to here to upload.</span>
+      </template>
+    </FileUpload>
     <div class="space-y-4">
-      <FileUpload
-        name="demo[]"
-        multiple
-        :show-upload-button="false"
-        cancel-label="Clear"
-      >
-        <template #empty>
-          <span>Drag and drop files to here to upload.</span>
-        </template>
-      </FileUpload>
       <FloatLabel variant="in">
         <Select
           id="printer-select"
@@ -53,6 +56,25 @@
         </template>
       </SelectButton>
 
+      <label id="page-filter-select">Filter printed pages</label>
+      <SelectButton
+        :options="pageFilterOptions"
+        option-value="value"
+        data-key="value"
+        option-label="label"
+        :allow-empty="false"
+        fluid
+        aria-labelledby="page-filter-select"
+      />
+
+      <FloatLabel variant="in">
+        <InputText
+          fluid
+          input-id="page-filter-input"
+        />
+        <label for="page-filter-input">Page filter</label>
+      </FloatLabel>
+
       <label id="colored-select">Color mode</label>
       <SelectButton
         :options="colorOptions"
@@ -77,7 +99,7 @@
         </template>
       </SelectButton>
     </div>
-    <div class="flex flex-row-reverse gap-2 pt-4">
+    <div class="flex flex-row-reverse gap-2 pt-4 shrink-0">
       <Button severity="primary" @click="print()">
         Print
       </Button>
@@ -94,6 +116,7 @@ import FloatLabel from "primevue/floatlabel";
 import Select from "primevue/select";
 import FileUpload from "primevue/fileupload";
 import InputNumber from "primevue/inputnumber";
+import InputText from "primevue/inputtext";
 import SelectButton from "primevue/selectbutton";
 import ToggleSwitch from "primevue/toggleswitch";
 
@@ -121,5 +144,12 @@ const colorOptions = [
     value: true, label: 'Colored',
     colors: ['bg-cyan-300', 'bg-fuchsia-500', 'bg-yellow-300'],
   },
+];
+
+const pageFilterOptions = [
+  { value: 'all', label: 'All' },
+  { value: 'odd', label: 'Odd' },
+  { value: 'even', label: 'Even' },
+  { value: 'custom', label: 'Custom' },
 ];
 </script>

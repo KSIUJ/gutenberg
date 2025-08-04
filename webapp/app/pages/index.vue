@@ -2,7 +2,15 @@
   <div class="grid grid-cols-[var(--container-md)_1fr] gap-4 w-full max-w-5xl mx-auto">
     <div class="col-1 py-4">
       <div class="w-md fixed top-4 bottom-4">
-        <Panel header="Print files online" class="h-full">
+        <Panel
+          header="Print files online"
+          class="h-full"
+          :pt="{
+            root: 'flex flex-col',
+            contentContainer: 'grow',
+            content: 'h-full',
+          }"
+        >
           <print-options />
         </Panel>
       </div>
