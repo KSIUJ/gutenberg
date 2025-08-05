@@ -144,3 +144,20 @@ def auto_convert(input_file: str, input_type: str, work_dir: str) -> Tuple[str, 
         conv = conv_class(work_dir)
         file = conv.convert(file)
     return file, out_type
+
+
+def convert_preview(input_file: str, input_type: str, work_dir: str) -> str:
+    file, _ = auto_convert(input_file, input_type, work_dir)
+    original_name = os.path.splitext(os.path.basename(input_file))[0]
+    preview_filename = f"{original_name}_img.png"
+    preview_path = os.path.join(work_dir, preview_filename)
+
+    class _PreviewRunner(SandboxConverter):
+        @classmethod
+        def is_available(cls):
+            return True
+
+    runner = _PreviewRunner(work_dir)
+    runner.run_in_sandbox(['convert', file, preview_path])
+
+    return preview_path
