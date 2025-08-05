@@ -111,15 +111,6 @@
 </template>
 
 <script setup lang="ts">
-import Button from "primevue/button";
-import FloatLabel from "primevue/floatlabel";
-import Select from "primevue/select";
-import FileUpload from "primevue/fileupload";
-import InputNumber from "primevue/inputnumber";
-import InputText from "primevue/inputtext";
-import SelectButton from "primevue/selectbutton";
-import ToggleSwitch from "primevue/toggleswitch";
-
 function preview() {
   console.log('Preview clicked');
 }
