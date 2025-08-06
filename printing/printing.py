@@ -10,6 +10,7 @@ from django.conf import settings
 from django.core.files import File
 from django.db.models.functions import Greatest, Coalesce
 from django.utils import timezone
+from django.db.models import DateTimeField, Value, F
 
 from control.models import GutenbergJob, TwoSidedPrinting, JobStatus, PrinterType, Printer, PrintingProperties, \
     JobArtefact, JobArtefactType
@@ -125,11 +126,43 @@ def print_file(job_id):
         raise ex
 
 
+
+
 @shared_task
 def cleanup_print_jobs():
-    stale_jobs = GutenbergJob.objects.exclude(status__in=GutenbergJob.COMPLETED_STATUSES).annotate(
-        last_activity=Greatest('date_created', Coalesce('date_processed', 0), Coalesce(0, 'date_finished'))).filter(
-        last_activity__lt=timezone.now() - datetime.timedelta(seconds=2 * TASK_TIMEOUT_S))
-    stale_jobs.update(status=JobStatus.ERROR,
-                      status_reason='This task has expired. There is most likely an issue with Gutenberg background '
-                                    'workers. Please notify administrators about this.')
+    stale_jobs = GutenbergJob.objects.exclude(
+        status__in=GutenbergJob.COMPLETED_STATUSES
+    ).annotate(
+        created_coalesced=Coalesce('date_created', Value(datetime.datetime.min, output_field=DateTimeField())),
+        processed_coalesced=Coalesce('date_processed', Value(datetime.datetime.min, output_field=DateTimeField())),
+        finished_coalesced=Coalesce('date_finished', Value(datetime.datetime.min, output_field=DateTimeField())),
+    ).annotate(
+        last_activity=Greatest(
+            F('created_coalesced'),
+            F('processed_coalesced'),
+            F('finished_coalesced'),
+            output_field=DateTimeField()
+        )
+    ).filter(
+        last_activity__lt=timezone.now() - datetime.timedelta(seconds=2 * TASK_TIMEOUT_S)
+    )
+
+    for job in stale_jobs:
+        backend = {
+            PrinterType.DISABLED: DisabledPrinter,
+            PrinterType.LOCAL_CUPS: LocalCupsPrinter,
+        }.get(job.printer.printer_type, DisabledPrinter)()
+        backend_job_id = getattr(job, 'backend_job_id', None)
+        if backend_job_id and backend.check_status(job, backend_job_id):
+            continue
+        try:
+            backend.cancel_job(job, backend_job_id)
+        except Exception as ex:
+            logger.warning(f"Could not cancel job {job.id} in backend: {ex}")
+        job.status = JobStatus.ERROR
+        job.status_reason = (
+            'This task has expired and was canceled in backend. '
+            'There is most likely an issue with Gutenberg background workers. '
+            'Please notify administrators about this.'
+        )
+        job.save()
