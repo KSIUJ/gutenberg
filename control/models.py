@@ -184,5 +184,6 @@ class PrintingProperties(models.Model):
     copies = models.IntegerField(default=1)
     two_sides = models.CharField(max_length=2, default=TwoSidedPrinting.ONE_SIDED, choices=TwoSidedPrinting.choices)
     pages_to_print = models.CharField(max_length=100, null=True, blank=True, validators=[validate_pages_to_print])
-    job = models.OneToOneField(GutenbergJob, on_delete=models.CASCADE, related_name='properties')
+    #job = models.OneToOneField(GutenbergJob, on_delete=models.CASCADE, related_name='properties')
+    artefact=models.OneToOneField(JobArtefact, on_delete=models.CASCADE, related_name='properties')
     fit_to_page = models.BooleanField(default=True)

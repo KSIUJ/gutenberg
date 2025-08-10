@@ -87,8 +87,8 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
                             status=status.HTTP_400_BAD_REQUEST)
         try:
             self._upload_artefact(job, **serializer.validated_data)
-            if serializer.validated_data['last'] == True:
-                self._run_job(job)
+        #    if serializer.validated_data['last'] == True:
+        #        self._run_job(job)
         except UnsupportedDocumentError as ex:
             return Response("Error: {}".format(ex), status=status.HTTP_400_BAD_REQUEST)
         return Response(self.get_serializer(job).data)
@@ -114,23 +114,35 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         job = self._create_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
         return Response(self.get_serializer(job).data)
 
-    def _create_printing_job(self, printer_with_perms,
-                             copies: int, pages_to_print: str,
-                             color: bool, two_sides: str, fit_to_page: bool, **_):
+    # def _create_printing_job(self, printer_with_perms,
+    #                          copies: int, pages_to_print: str,
+    #                          color: bool, two_sides: str, fit_to_page: bool, **_):
+    #     job = GutenbergJob.objects.create(name='webrequest', job_type=JobType.PRINT, status=JobStatus.INCOMING,
+    #                                       owner=self.request.user, printer=printer_with_perms)
+    #     color = color if printer_with_perms.color_allowed else False
+    #     two_sides = two_sides if printer_with_perms.duplex_supported else TwoSidedPrinting.ONE_SIDED
+    #     PrintingProperties.objects.create(color=color, copies=copies, two_sides=two_sides,
+    #                                       pages_to_print=pages_to_print, job=job, fit_to_page=fit_to_page)
+    #     return job
+    
+    def _create_printing_job(self, printer_with_perms, **_):
         job = GutenbergJob.objects.create(name='webrequest', job_type=JobType.PRINT, status=JobStatus.INCOMING,
                                           owner=self.request.user, printer=printer_with_perms)
-        color = color if printer_with_perms.color_allowed else False
-        two_sides = two_sides if printer_with_perms.duplex_supported else TwoSidedPrinting.ONE_SIDED
-        PrintingProperties.objects.create(color=color, copies=copies, two_sides=two_sides,
-                                          pages_to_print=pages_to_print, job=job, fit_to_page=fit_to_page)
         return job
 
-    def _upload_artefact(self, job, file, **_):
+    def _upload_artefact(self, job, file,
+                         copies:int , pages_to_print:str , two_sides: str,
+                         color:bool, fit_to_page:bool, **_):
         artefact = JobArtefact.objects.create(job=job, artefact_type=JobArtefactType.SOURCE, file=file)
         file_type = detect_file_format(artefact.file.path)
         if file_type not in SUPPORTED_FILE_FORMATS:
             raise UnsupportedDocumentError("Unsupported file type: {}".format(file_type))
         artefact.mime_type = file_type
+        printer_with_perms = Printer.get_printer_for_user(user=self.request.user, printer_id=job.printer.id)
+        color = color if printer_with_perms.color_allowed else False
+        two_sides = two_sides if printer_with_perms.duplex_supported else TwoSidedPrinting.ONE_SIDED
+        PrintingProperties.objects.create(color=color, copies=copies, two_sides=two_sides,
+                                          pages_to_print=pages_to_print, artefact=artefact, fit_to_page=fit_to_page)
         artefact.save()
 
     def _run_job(self, job):
