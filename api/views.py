@@ -22,7 +22,7 @@ from common.models import User
 from control.models import GutenbergJob, Printer, JobStatus, PrintingProperties, TwoSidedPrinting, JobArtefact, \
     JobArtefactType, JobType
 from printing.converter import detect_file_format, SUPPORTED_FILE_FORMATS
-from printing.printing import print_file
+from printing.printing import print_file_api
 
 logger = logging.getLogger('gutenberg.api.printing')
 
@@ -99,7 +99,8 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         if job.status != JobStatus.INCOMING:
             return Response("Error: invalid job status for this request", status=status.HTTP_400_BAD_REQUEST)
         self._run_job(job)
-        return job
+        #return job
+        return Response(self.get_serializer(job).data)
 
     @action(detail=False, methods=['post'], name='Create new job')
     def create_job(self, request):
@@ -148,7 +149,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
     def _run_job(self, job):
         job.status = JobStatus.PENDING
         job.save()
-        print_file.delay(job.id)
+        print_file_api.delay(job.id)
         logger.info('User %s submitted job: "%s"', self.request.user.username)
         return job
 
