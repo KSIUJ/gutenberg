@@ -153,6 +153,21 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         logger.info('User %s submitted job: "%s"', self.request.user.username)
         return job
 
+    @action(detail=True, methods=['get'], name='Get artefacts')
+    def artefacts(self, request, pk=None):
+        job = self.get_object()
+        artefacts = job.artefacts.all()
+        artefact_data = [
+            {
+                "id": artefact.id,
+                "file_name": artefact.file.name,
+                "mime_type": artefact.mime_type,
+                "artefact_type": artefact.artefact_type,
+            }
+            for artefact in artefacts
+        ]
+        return Response(artefact_data)
+
 
 class PrinterViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Printer.objects.all()
