@@ -50,6 +50,9 @@ class UploadJobArtefactRequestSerializer(serializers.Serializer):
     two_sides = serializers.ChoiceField(choices=TwoSidedPrinting.choices, required=True)
     color = serializers.BooleanField(default=False)
     fit_to_page = serializers.BooleanField(default=True)
+    
+class DeleteJobArtefactRequestSerializer(serializers.Serializer):
+    artefact_id = serializers.IntegerField(required=True)
 
 
 class UserInfoSerializer(serializers.ModelSerializer):

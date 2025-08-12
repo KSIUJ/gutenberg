@@ -17,7 +17,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from api.serializers import GutenbergJobSerializer, PrinterSerializer, PrintRequestSerializer, UserInfoSerializer, \
-    CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer, LoginSerializer
+    CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer, LoginSerializer, DeleteJobArtefactRequestSerializer
 from common.models import User
 from control.models import GutenbergJob, Printer, JobStatus, PrintingProperties, TwoSidedPrinting, JobArtefact, \
     JobArtefactType, JobType
@@ -167,6 +167,21 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             for artefact in artefacts
         ]
         return Response(artefact_data)
+
+    @action(detail=True, methods=['delete'], name='Delete artefact')
+    def delete_artefact(self, request, pk=None):
+        job = self.get_object()
+        serializer = DeleteJobArtefactRequestSerializer(data=request.query_params)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        artefact_id = serializer.validated_data['artefact_id']
+        try:
+            artefact = job.artefacts.get(id=artefact_id)
+            artefact.delete()
+            return Response({"message": f"Artefact {artefact_id} deleted successfully"}, status=status.HTTP_200_OK)
+        except JobArtefact.DoesNotExist:
+            return Response({"error": f"Artefact with id {artefact_id} does not exist"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class PrinterViewSet(viewsets.ReadOnlyModelViewSet):
