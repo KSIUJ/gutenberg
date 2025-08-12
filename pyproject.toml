@@ -11,4 +11,7 @@ dependencies = [
     "mozilla-django-oidc==4.0.1",
     "python-magic==0.4.27",
     "redis==6.2.0",
+    "gunicorn",
+    "psycopg2-binary",
+    "whitenoise"
 ]

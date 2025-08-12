@@ -1,0 +1,33 @@
+FROM python:3.11-slim
+
+RUN apt-get update && apt-get install -y \
+    imagemagick \
+    unoconv \
+    ghostscript \
+    pdftk \
+    bubblewrap \
+    build-essential \
+    curl \
+    libpq-dev \
+    cups \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Dodaj uv do ścieżki
+ENV PATH="/root/.local/bin:${PATH}"
+
+ENV GUTENBERG_ENV=local
+ENV DJANGO_SETTINGS_MODULE=gutenberg.settings.local_settings
+
+WORKDIR /app
+
+COPY ./ /app
+
+
+RUN uv sync
+
+CMD ["uv", "run", "gunicorn", "gutenberg.wsgi:application", "--bind", "0.0.0.0:8000"]
+
+VOLUME ["/app/gutenberg"]
+VOLUME ["/app/db_data"]

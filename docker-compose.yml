@@ -1,0 +1,57 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: gutenbergdb
+      POSTGRES_USER: gutenberguser
+      POSTGRES_PASSWORD: gutenbergpass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: gutenberg-redis
+    ports:
+      - "6379:6379"   # tutaj port Redis
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: gutenberg-backend
+    ports:
+      - "8000:8000"     # backend na porcie 8000
+    environment:
+      - GUTENBERG_ENV=local
+      - DJANGO_SETTINGS_MODULE=gutenberg.settings.local_settings
+      - REDIS_URL=redis://redis:6379  # jeśli backend korzysta z redis, podaj adres kontenera redis
+    volumes:
+      - .:/app
+      - ./dist:/app/dist
+    depends_on:
+      - db
+      - redis
+    command: >
+      sh -c "
+        uv run python manage.py migrate &&
+        uv run gunicorn gutenberg.wsgi:application --bind 0.0.0.0:8000 --access-logfile -
+      "
+
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: gutenberg-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    volumes:
+      - .:/app/gutenberg  # albo ścieżka, gdzie jest build Vue
+    environment:
+      - NODE_OPTIONS=--openssl-legacy-provider
+
+volumes:
+  postgres_data:
+  db_data:
