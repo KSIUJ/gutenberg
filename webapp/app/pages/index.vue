@@ -1,7 +1,7 @@
 <template>
-  <div class="grid grid-cols-[var(--container-md)_1fr] gap-4 w-full max-w-5xl mx-auto">
+  <div class="px-4 grid grid-cols-[var(--container-md)_1fr] gap-4 w-full max-w-5xl mx-auto mt-(--header-height)">
     <div class="col-1 py-4">
-      <div class="w-md fixed top-4 bottom-4">
+      <div class="w-md fixed top-[calc(var(--spacing)*4+var(--header-height))] bottom-4">
         <Panel
           header="Print files online"
           class="h-full"

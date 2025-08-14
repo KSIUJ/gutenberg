@@ -34,16 +34,24 @@ export default defineNuxtConfig({
     preset: 'static',
     routeRules: isDev ? {
       '/api-auth/**': {
-        proxy: `${devDjangoUrl}api-auth/**`,
+        proxy: {
+          to: `${devDjangoUrl}api-auth/**`,
+        },
       },
       '/api/**': {
-        proxy: `${devDjangoUrl}api/**`,
+        proxy: {
+          to: `${devDjangoUrl}api/**`,
+        },
       },
       '/static/**': {
-        proxy: `${devDjangoUrl}static/**`,
+        proxy: {
+          to: `${devDjangoUrl}static/**`,
+        },
       },
       '/admin/**': {
-        proxy: `${devDjangoUrl}admin/**`,
+        proxy: {
+          to: `${devDjangoUrl}admin/**`,
+        },
       },
     } : {},
   },

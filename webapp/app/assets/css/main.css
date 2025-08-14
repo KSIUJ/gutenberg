@@ -1,2 +1,6 @@
 @import "tailwindcss";
 @import "tailwindcss-primeui";
+
+@theme {
+    --header-height: 4rem;
+}

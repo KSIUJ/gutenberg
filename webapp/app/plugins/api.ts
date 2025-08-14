@@ -3,6 +3,7 @@
 export default defineNuxtPlugin((nuxtApp) => {
   const api = $fetch.create({
     baseURL: '/api/',
+    credentials: 'same-origin',
     async onResponseError({ response }) {
       if (response.status === 401) {
         alert('Login is required');
