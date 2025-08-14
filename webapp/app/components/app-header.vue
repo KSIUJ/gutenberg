@@ -8,22 +8,39 @@
         <Menu id="user_menu" ref="user-menu" :popup="true" :model="userMenuItems" />
       </template>
     </div>
+    <form ref="logout-form" :action="logoutEndpoint" method="post">
+      <input type="hidden" name="csrfmiddlewaretoken" :value="$csrfToken" />
+    </form>
   </header>
 </template>
 
 <script setup lang="ts">
-const { me } = useAuth();
+const { $csrfToken } = useNuxtApp();
+const { logoutEndpoint } = useApiRepository();
+const { data: me } = await useAuthMe();
 
-const userMenuItems = ref([
-  {
-    label: 'Sign out',
-  },
-  {
-    label: 'Admin settings',
-    url: '/admin',
+const userMenuItems = computed(() => {
+  if (!me.value || me.value === Unauthenticated) {
+    return [];
   }
-]);
+  const adminItems = me.value.is_staff ? [
+    {
+      label: 'Admin settings',
+      url: '/admin',
+    },
+  ] : [];
+  return [
+    ...adminItems,
+    {
+      label: 'Sign out',
+      command: () => {
+        logoutForm.value?.submit();
+      }
+    },
+  ];
+});
 
+const logoutForm = useTemplateRef('logout-form');
 
 const userMenu = useTemplateRef('user-menu');
 const toggleUserMenu = (event: MouseEvent) => {

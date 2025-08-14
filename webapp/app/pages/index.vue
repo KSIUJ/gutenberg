@@ -1,5 +1,5 @@
 <template>
-  <div class="px-4 grid grid-cols-[var(--container-md)_1fr] gap-4 w-full max-w-5xl mx-auto mt-(--header-height)">
+  <div class="grid grid-cols-[var(--container-md)_1fr] gap-4 w-full max-w-5xl px-4 mx-auto">
     <div class="col-1 py-4">
       <div class="w-md fixed top-[calc(var(--spacing)*4+var(--header-height))] bottom-4">
         <Panel

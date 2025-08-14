@@ -32,6 +32,10 @@ export default defineNuxtConfig({
   ssr: false,
   nitro: {
     preset: 'static',
+    prerender: {
+      crawlLinks: false,
+      routes: ['/login'],
+    },
     routeRules: isDev ? {
       '/api-auth/**': {
         proxy: {
@@ -41,6 +45,11 @@ export default defineNuxtConfig({
       '/api/**': {
         proxy: {
           to: `${devDjangoUrl}api/**`,
+        },
+      },
+      '/oidc/**': {
+        proxy: {
+          to: `${devDjangoUrl}oidc/**`,
         },
       },
       '/static/**': {

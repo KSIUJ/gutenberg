@@ -112,7 +112,7 @@
         </template>
       </SelectButton>
     </div>
-    <div class="flex flex-row-reverse gap-2 pt-4 shrink-0">
+    <div class="flex flex-row-reverse gap-2 mt-4 shrink-0">
       <Button label="Print" severity="primary" @click="print()" />
       <Button label="Preview" severity="secondary" @click="preview()" />
     </div>

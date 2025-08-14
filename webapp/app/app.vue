@@ -1,8 +1,11 @@
 <template>
   <div>
+    <Toast position="bottom-right" />
     <app-header />
     <NuxtLoadingIndicator />
-    <NuxtPage />
+    <div class="mt-(--header-height)">
+      <NuxtPage />
+    </div>
   </div>
 </template>
 

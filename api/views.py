@@ -207,5 +207,9 @@ class LoginApiView(APIView):
         return Response(status=200)
 
     def get(self, request, *args, **kwargs):
+        """
+        Rotate the CSRF token. According to the `rotate_token` function documentation,
+        it should always be called on login.
+        """
         rotate_token(request)
         return Response(status=200)
