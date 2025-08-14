@@ -1,6 +1,10 @@
 import tailwindcss from "@tailwindcss/vite";
 import Aura from "@primeuix/themes/aura";
 
+const isDev = process.env.NODE_ENV === 'development';
+let devDjangoUrl = process.env['GUTENBERG_DEV_DJANGO_URL'] || 'http://localhost:11111/';
+if (!devDjangoUrl.endsWith('/')) devDjangoUrl += '/';
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
@@ -28,6 +32,20 @@ export default defineNuxtConfig({
   ssr: false,
   nitro: {
     preset: 'static',
+    routeRules: isDev ? {
+      '/api-auth/**': {
+        proxy: `${devDjangoUrl}api-auth/**`,
+      },
+      '/api/**': {
+        proxy: `${devDjangoUrl}api/**`,
+      },
+      '/static/**': {
+        proxy: `${devDjangoUrl}static/**`,
+      },
+      '/admin/**': {
+        proxy: `${devDjangoUrl}admin/**`,
+      },
+    } : {},
   },
   app: {
     cdnURL: '/static/'
