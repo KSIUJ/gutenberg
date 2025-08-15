@@ -28,14 +28,20 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [14.x, 16.x]
+        node-version: [22.x, lts/*, latest]
     steps:
-    - uses: actions/checkout@v2
-    - name: Use Node.js ${{ matrix.node-version }}
+    - uses: actions/checkout@v5
+      with:
+        sparse-checkout: |
+          .github
+          webapp
+    - name: Use Node.js version ${{ matrix.node-version }}
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
     - name: Install dependencies
-      run: yarn install --frozen-lockfile
+      working-directory: webapp
+      run: pnpm install --frozen-lockfile
     - name: Build
-      run: yarn build
+      working-directory: webapp
+      run: pnpm run build
