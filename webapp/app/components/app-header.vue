@@ -6,7 +6,7 @@
       </NuxtLink>
 
       <template v-if="$auth.me.value === Unauthenticated">
-        <Button v-if="!route.meta.hideSignInButton" label="Sign in" as="a" href="/login" variant="outlined" />
+        <Button v-if="!route.meta.hideSignInButton" label="Sign in" as="a" href="/login/" variant="outlined" />
       </template>
       <template v-else-if="$auth.me.value !== undefined">
         <Button variant="text" :label="$auth.me.value.username" aria-haspopup="menu" aria-controls="user_menu" @click="toggleUserMenu" />

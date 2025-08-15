@@ -1,5 +1,6 @@
 import tailwindcss from "@tailwindcss/vite";
 import Aura from "@primeuix/themes/aura";
+import type { NuxtPage } from '@nuxt/schema';
 
 const isDev = process.env.NODE_ENV === 'development';
 let devDjangoUrl = process.env['GUTENBERG_DEV_DJANGO_URL'] || 'http://localhost:11111/';
@@ -63,6 +64,30 @@ export default defineNuxtConfig({
         },
       },
     } : {},
+  },
+  router: {
+    options: {
+      // See the comment for the `pages:extend` hook for the explanation
+      strict: true,
+    }
+  },
+  hooks: {
+    // This hook, together with `router.options.strict` set to `true`,
+    // make sure all router pages end with a trailing slash.
+    //
+    // This makes sure the routing is consistent with Django, which
+    // automatically adds trailing slashes to routes using an HTTP redirect.
+    'pages:extend'(pages) {
+      const updatePathsRecursive = (pages: NuxtPage[]) => {
+        pages.forEach(page => {
+          if (!page.path.endsWith('/')) {
+            page.path += '/';
+          }
+          updatePathsRecursive(page.children ?? [])
+        });
+      };
+      updatePathsRecursive(pages);
+    },
   },
   app: {
     cdnURL: '/static/'
