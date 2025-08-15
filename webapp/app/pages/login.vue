@@ -2,7 +2,7 @@
 
 <template>
   <div class="w-full max-w-md p-4 mx-auto">
-    <Panel header="Login to Gutenberg">
+    <Panel header="Sign in to Gutenberg">
       <form method="post" class="space-y-4" @submit.prevent="onSubmit">
         <FloatLabel variant="in">
           <!--
@@ -19,7 +19,7 @@
         </FloatLabel>
 
         <div class="flex flex-row-reverse">
-          <Button type="submit" label="Login" :disabled="loading" />
+          <Button type="submit" label="Sign in" :disabled="loading" />
         </div>
       </form>
     </Panel>
@@ -29,8 +29,7 @@
 <script setup lang="ts">
 import { Unauthenticated } from "~/utils/api-repository";
 
-const { data: me } = await useAuthMe();
-const auth = await useAuth();
+const { $auth } = useNuxtApp();
 const route = useRoute();
 const toast = useToast();
 
@@ -49,7 +48,14 @@ async function onSubmit() {
   try {
     loading.value = true;
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    await auth.login(username.value, password.value);
+    await $auth.login(username.value, password.value);
+
+    toast.add({
+      summary: 'Login successful',
+      severity: 'success',
+      life: 3000,
+    });
+
     try {
       await navigateTo(next.value);
     } catch (error) {
@@ -58,12 +64,6 @@ async function onSubmit() {
         external: true,
       });
     }
-
-    toast.add({
-      summary: 'Login successful',
-      severity: 'success',
-      life: 3000,
-    });
   } catch (error) {
     alert(error); // TODO
     console.error('Failed to login', error);
@@ -73,7 +73,7 @@ async function onSubmit() {
 }
 
 watchEffect(async () => {
-  if (me.value === undefined || me.value === Unauthenticated) return;
+  if ($auth.me.value === undefined || $auth.me.value === Unauthenticated) return;
   try {
     await navigateTo(next.value);
   } catch (error) {
