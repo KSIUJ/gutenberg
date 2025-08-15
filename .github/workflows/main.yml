@@ -56,3 +56,7 @@ jobs:
     - name: Build
       working-directory: webapp
       run: pnpm run build
+
+    - name: Typecheck
+      working-directory: webapp
+      run: pnpm run typecheck
