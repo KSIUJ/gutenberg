@@ -54,3 +54,19 @@ export const apiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => ({
 
   logoutEndpoint: '/oidc/logout/',
 });
+
+export function getErrorMessage(error: unknown): string | undefined {
+  if (!(error instanceof FetchError)) return undefined;
+
+  if (typeof error.data === 'object' && error.data !== null) {
+    if ('message' in error.data && typeof error.data.message === 'string') {
+      return error.data.message;
+    }
+  }
+
+  if (error.response !== undefined) {
+    return `Got HTTP error ${error.response.status}: ${error.response.statusText}`;
+  }
+
+  return 'Failed to connect to the server';
+}

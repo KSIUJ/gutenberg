@@ -1,6 +1,7 @@
 import {Unauthenticated} from "~/utils/api-repository";
 
 export default defineNuxtPlugin({
+  name: 'auth-plugin',
   dependsOn: ['api-plugin'],
 
   async setup() {

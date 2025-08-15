@@ -14,7 +14,7 @@
       </template>
     </div>
     <form ref="logout-form" :action="logoutEndpoint" method="post">
-      <input type="hidden" name="csrfmiddlewaretoken" :value="$csrfToken" />
+      <input type="hidden" name="csrfmiddlewaretoken" :value="$csrfToken">
     </form>
   </header>
 </template>
@@ -31,7 +31,7 @@ const userMenuItems = computed(() => {
   const adminItems = $auth.me.value.is_staff ? [
     {
       label: 'Admin settings',
-      url: '/admin',
+      url: '/admin/',
     },
   ] : [];
   return [

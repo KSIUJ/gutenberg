@@ -18,6 +18,8 @@
           <label for="current-password">Password</label>
         </FloatLabel>
 
+        <Message v-if="errorMessage !== null" severity="error">{{ errorMessage }}</Message>
+
         <div class="flex flex-row-reverse">
           <Button type="submit" label="Sign in" :disabled="loading" />
         </div>
@@ -27,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import { Unauthenticated } from "~/utils/api-repository";
+import {Unauthenticated} from "~/utils/api-repository";
 
 const { $auth } = useNuxtApp();
 const route = useRoute();
@@ -36,6 +38,7 @@ const toast = useToast();
 const username = ref('');
 const password = ref('');
 const loading = ref(false);
+const errorMessage = ref<string | null>(null);
 
 const next = computed(() => {
   let result = route.query.next;
@@ -47,8 +50,9 @@ async function onSubmit() {
   if (loading.value) return;
   try {
     loading.value = true;
-    await new Promise((resolve) => setTimeout(resolve, 1000));
     await $auth.login(username.value, password.value);
+
+    errorMessage.value = null;
 
     toast.add({
       summary: 'Login successful',
@@ -65,8 +69,8 @@ async function onSubmit() {
       });
     }
   } catch (error) {
-    alert(error); // TODO
-    console.error('Failed to login', error);
+    console.error('Failed to sign in', error);
+    errorMessage.value = getErrorMessage(error) ?? 'Failed to sign in';
   } finally {
     loading.value = false;
   }
