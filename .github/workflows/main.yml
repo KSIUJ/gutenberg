@@ -35,13 +35,22 @@ jobs:
         sparse-checkout: |
           .github
           webapp
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        run_install: false
+
     - name: Use Node.js version ${{ matrix.node-version }}
       uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
+        cache: 'pnpm'
+
     - name: Install dependencies
       working-directory: webapp
       run: pnpm install --frozen-lockfile
+
     - name: Build
       working-directory: webapp
       run: pnpm run build
