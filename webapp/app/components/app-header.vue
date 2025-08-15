@@ -1,8 +1,13 @@
 <template>
   <header class="fixed top-0 left-0 right-0 block h-(--header-height) bg-gray-800">
     <div class="px-4 h-full mx-auto max-w-5xl flex flex-row items-center justify-between">
-      Gutenberg
-      <Button v-if="$auth.me.value === Unauthenticated" label="Sign in" as="a" href="/login" variant="outlined" />
+      <NuxtLink to="/">
+        Gutenberg
+      </NuxtLink>
+
+      <template v-if="$auth.me.value === Unauthenticated">
+        <Button v-if="!route.meta.hideSignInButton" label="Sign in" as="a" href="/login" variant="outlined" />
+      </template>
       <template v-else-if="$auth.me.value !== undefined">
         <Button variant="text" :label="$auth.me.value.username" aria-haspopup="menu" aria-controls="user_menu" @click="toggleUserMenu" />
         <Menu id="user_menu" ref="user-menu" :popup="true" :model="userMenuItems" />
@@ -17,6 +22,7 @@
 <script setup lang="ts">
 const { $csrfToken, $auth } = useNuxtApp();
 const { logoutEndpoint } = useApiRepository();
+const route = useRoute();
 
 const userMenuItems = computed(() => {
   if (!$auth.me.value || $auth.me.value === Unauthenticated) {

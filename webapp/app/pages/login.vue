@@ -81,4 +81,8 @@ watchEffect(async () => {
     window.location.href = next.value;
   }
 });
+
+definePageMeta({
+  hideSignInButton: true,
+});
 </script>
