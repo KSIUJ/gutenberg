@@ -1,6 +1,5 @@
 import logging
 from secrets import token_urlsafe
-from typing import Optional
 
 from django.contrib.auth import authenticate, login
 from django.middleware.csrf import rotate_token
