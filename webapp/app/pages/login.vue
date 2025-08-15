@@ -50,9 +50,8 @@ async function onSubmit() {
   if (loading.value) return;
   try {
     loading.value = true;
-    await $auth.login(username.value, password.value);
-
     errorMessage.value = null;
+    await $auth.login(username.value, password.value);
 
     toast.add({
       summary: 'Login successful',
