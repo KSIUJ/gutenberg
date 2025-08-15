@@ -1,4 +1,5 @@
 import type {$Fetch, NitroFetchRequest} from 'nitropack'
+import {FetchError} from "ofetch";
 
 export type User = {
   first_name: string;
@@ -12,13 +13,21 @@ export const Unauthenticated = Symbol('Unauthenticated');
 
 export const apiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => ({
   async getMe(): Promise<User | typeof Unauthenticated> {
-    console.trace('getMe');
-    return await fetch<User | null>('/api/me/', {
-      method: 'GET',
-      headers: {
-        'accept': 'application/json',
-      },
-    }) ?? Unauthenticated;
+    try {
+      return await fetch<User>('/api/me/', {
+        method: 'GET',
+        headers: {
+          'accept': 'application/json',
+        },
+        gutenbergDisableUnauthenticatedHandling: true,
+      });
+    } catch (error) {
+      if (!(error instanceof FetchError)) throw error;
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        return Unauthenticated;
+      }
+      throw error;
+    }
   },
 
   /**

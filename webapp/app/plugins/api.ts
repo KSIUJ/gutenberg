@@ -3,7 +3,8 @@
 export default defineNuxtPlugin({
   name: 'api-plugin',
 
-  setup: (nuxtApp) => {
+  setup: () => {
+    const nuxtApp = useNuxtApp();
     const csrfToken = useCookie('csrftoken', { readonly: true });
     // TODO: Remove this temporary solution
     const toast = useToast();
@@ -30,7 +31,9 @@ export default defineNuxtPlugin({
         refreshCookie('csrftoken');
       },
 
-      async onResponseError({response }) {
+      gutenbergDisableUnauthenticatedHandling: false,
+
+      async onResponseError({ options, response }) {
         // Currently, unauthenticated requests return the 403 Forbidden status code,
         // not 401 Unauthorized. See:
         // https://www.django-rest-framework.org/api-guide/authentication/#sessionauthentication
@@ -38,11 +41,17 @@ export default defineNuxtPlugin({
         // To distinguish between unauthenticated requests and missing permissions,
         // Gutenberg sets a custom X-Reason header for error responses.
 
+        if (options.gutenbergDisableUnauthenticatedHandling) return;
+
         const isAuthError = response.status === 401 || response.status === 403;
         if (isAuthError) {
           const reason = response.headers.get('X-Reason');
           if (reason === 'NotAuthenticated' || reason === 'AuthenticationFailed') {
-            // TODO: Reset `me` in the auth plugin
+            if ('$auth' in nuxtApp) {
+              nuxtApp.$auth.clearMe();
+            } else {
+              console.warn('The auth plugin was not available in API plugin\'s onResponseError handler');
+            }
 
             // TODO: Remove this temporary solution
             setTimeout(() => {

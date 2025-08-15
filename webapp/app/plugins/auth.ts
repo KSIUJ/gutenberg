@@ -1,5 +1,4 @@
 import {Unauthenticated} from "~/utils/api-repository";
-import {FetchError} from "ofetch";
 
 export default defineNuxtPlugin({
   dependsOn: ['api-plugin'],
@@ -8,15 +7,7 @@ export default defineNuxtPlugin({
     const apiRepository = useApiRepository();
 
     const me = await useAsyncData('api-me', async (): Promise<User | typeof Unauthenticated> => {
-      try {
-        return await apiRepository.getMe() ?? Unauthenticated;
-      } catch (error) {
-        if (!(error instanceof FetchError)) throw error;
-        if (error.response?.status === 401 || error.response?.status === 403) {
-          return Unauthenticated;
-        }
-        throw error;
-      }
+      return await apiRepository.getMe();
     });
 
     const login = async (username: string, password: string) => {
@@ -25,8 +16,17 @@ export default defineNuxtPlugin({
       await me.refresh();
     };
 
+    /**
+     * Set the `me` value to `Unauthenticated`.
+     * This function is intended to be used by the error handler is the API plugin.
+     */
+    const clearMe = () => {
+      me.data.value = Unauthenticated;
+    };
+
     const auth = {
       me: me.data,
+      clearMe,
       login,
     };
 
