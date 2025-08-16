@@ -74,7 +74,34 @@ The IPP operation is also sparse, meaning the client only has to provide the att
 This REST API endpoint should also allow sparse updates so that the addition of a new attribute is not a breaking change.
 
 ##### Unsupported job configuration handling
-...
+The IPP operations
+[`Print-Job`](https://datatracker.ietf.org/doc/html/rfc8011#section-4.2.1),
+[`Validate-Job`](https://datatracker.ietf.org/doc/html/rfc8011#section-4.2.3),
+[`Create-Job`](https://datatracker.ietf.org/doc/html/rfc8011#section-4.2.4) and
+[`Set-Job-Attributes`](https://datatracker.ietf.org/doc/html/rfc3380#section-4.2)
+should verify if the selected print configuration is valid and reject the operation if it is not (e.g., if some pair of 
+provided attribute values is conflicting).
+
+The same behavior might not be the optimal solution for the REST API.
+When the user is modifying to the print configuration, it is desirable to store it on the server after each change in
+the UI (with proper throttling/debouncing on the webapp side). This way refreshing the page will not cause data loss, 
+as the web app can retrieve the stored configuration after the reload.
+
+The suggested behavior in this case is to allow setting syntactically valid attributes that result in a configuration
+not supported by the selected printer in requests to `POST /api/jobs/create_job/` and `PATCH /api/jobs/:id/`.
+If the selected job configuration is invalid, the responses to these requests should indicate operation success (a 2xx
+status code) but should include a `errors` field in the response body, indicating the errors in the selected
+configuration. A human-readable warning message should be included for displaying in the webapp UI. The output could
+also include the warnings in a structured form, just like it would be returned from the IPP operations.
+
+The server should return a failure response for calls to `POST /api/jobs/submit/` and `POST /api/jobs/:id/run_job/`
+if the current job configuration is invalid.
+The same validation should also happen when executing IPP operations which
+start the print job ([`Print-Job`](https://datatracker.ietf.org/doc/html/rfc8011#section-4.2.1),
+[`Send-Document`](https://datatracker.ietf.org/doc/html/rfc8011#section-4.3.1) with `last-document` set to `true`
+and [`Close-Job`](https://ftp.pwg.org/pub/pwg/candidates/cs-ippjobext21-20230210-5100.7.pdf)) and the
+[`Validate-Job`](https://datatracker.ietf.org/doc/html/rfc8011#section-4.2.3) operation,
+as the configuration might be invalid if it has been created via IPP but modified using the REST API.
 
 #### ...
 #### ...
