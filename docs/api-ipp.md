@@ -54,8 +54,8 @@ would require reuploading the documents each time.
 ### Job modifications
 The goal of this extension is to allow the client to perform the following actions on a job:
 1. Modify job attributes
-2. Get the file list
-3. Delete an uploaded file
+2. Get the document (file) list
+3. Delete an uploaded document
 4. Change the document print order
 
 The first two actions can be implemented using standard IPP operations.
@@ -103,7 +103,19 @@ and [`Close-Job`](https://ftp.pwg.org/pub/pwg/candidates/cs-ippjobext21-20230210
 [`Validate-Job`](https://datatracker.ietf.org/doc/html/rfc8011#section-4.2.3) operation,
 as the configuration might be invalid if it has been created via IPP but modified using the REST API.
 
-#### ...
+The list of errors could also be retrievable using a new endpoint or could be included in the response to calls to the
+`GET /api/job/:id/` endpoint.
+
+#### Get the document list
+The IPP operations suitable for this action are
+[`Get-Documents`](https://ftp.pwg.org/pub/pwg/candidates/cs-ippdocobject12-20240517-5100.5.pdf)
+and [`Get-Document-Attributes`](https://ftp.pwg.org/pub/pwg/candidates/cs-ippdocobject12-20240517-5100.5.pdf).
+
+In the REST API the file list could be returned either in the response from `GET /api/job/:id/` or using a new
+[`ViewSet`](https://www.django-rest-framework.org/tutorial/6-viewsets-and-routers/) endpoint like
+`GET /api/job/:id/documents/`. The second solution follows the convention of providing a 1 to 1 mapping of the REST API
+endpoints to IPP operations.
+
 #### ...
 #### ...
 
