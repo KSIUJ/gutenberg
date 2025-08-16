@@ -17,4 +17,5 @@ features.
 ## Contributing to this book
 This source of this book is in the same [GitHub repository](https://github.com/KSIUJ/gutenberg) as Gutenberg's code,
 in the `docs` directory.
-To contribute fork this repository and create a pull request with your changes. 
+The book has been created using [mdBook](https://rust-lang.github.io/mdBook/index.html).
+To contribute, fork this repository and create a pull request with your changes. 
