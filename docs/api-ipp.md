@@ -88,7 +88,7 @@ should verify if the selected print configuration is valid and reject the operat
 provided attribute values is conflicting).
 
 The same behavior might not be the optimal solution for the REST API.
-When the user is modifying to the print configuration, it is desirable to store it on the server after each change in
+When the user is modifying the print configuration, it is desirable to store it on the server after each change in
 the UI (with proper throttling/debouncing on the webapp side). This way refreshing the page will not cause data loss, 
 as the web app can retrieve the stored configuration after the reload.
 
