@@ -1,4 +1,4 @@
-# Planned extensions
+# Planned API extensions
 The first two extensions are designed with the [#63 Printing Previews](https://github.com/KSIUJ/gutenberg/issues/63)
 feature in mind. The previews will be generated on the server (likely in a Celery worker), not on the client device.
 This requires uploading documents before the request to start the print job is made.

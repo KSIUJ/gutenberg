@@ -13,8 +13,8 @@ The **Admin documentation** section is intended for system administrators who ma
 The **API documentation** section documents Gutenberg's REST API and Internet Printing Protocol (IPP) implementation.
 
 The **Internals** section is mainly intended for Gutenberg's contributors.
-It explains the codebase structure, describes the design choices and their rationale and in some cases describes planned
-features.
+It explains the codebase structure, describes the design choices and their rationale.
+It also describes the suggested implementation and design considerations for planned features.
 
 ## Contributing to this book
 This source of this book is in the same [GitHub repository](https://github.com/KSIUJ/gutenberg) as Gutenberg's code,
