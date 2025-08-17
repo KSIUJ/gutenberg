@@ -1,0 +1,46 @@
+name: Gutenberg
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy_mdbook:
+    concurrency:
+      cancel-in-progress: false
+      group: "gh-pages"
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: |
+            book
+
+      - name: Setup mdBook
+        uses: peaceiris/actions-mdbook@v2
+        with:
+          mdbook-version: 'latest'
+
+      - name: Build book
+        working-directory: docs
+        run: mdbook build
+
+      - name: Upload GitHub Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./docs/book
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
