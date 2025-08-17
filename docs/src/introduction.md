@@ -10,6 +10,8 @@ This book is divided into two sections **Admin documentation** and **Internals**
 
 The **Admin documentation** section is intended for system administrators who manage a self-hosted Gutenberg instance.
 
+The **API documentation** section documents Gutenberg's REST API and Internet Printing Protocol (IPP) implementation.
+
 The **Internals** section is mainly intended for Gutenberg's contributors.
 It explains the codebase structure, describes the design choices and their rationale and in some cases describes planned
 features.

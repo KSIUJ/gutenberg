@@ -4,6 +4,12 @@
 - [Instance setup](admin/setup.md)
 - [Printer management](admin/printer-management.md)
 
+# API documentation
+- [IPP and REST APIs overview](api/overview.md)
+- [Internet Printing Protocol (IPP)](api/ipp.md)
+- [REST API](api/rest.md)
+- [IPP and REST API comparison](api/ipp-rest-comparision.md)
+- [Planned extensions](api/extensions.md)
+
 # Internals
-- [REST API and IPP](internals/api-ipp.md)
-- [UI and API design](internals/design.md)
+- [UI and UX design goals](internals/ui-ux-design.md)

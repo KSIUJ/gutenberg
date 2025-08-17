@@ -1,8 +1,8 @@
-# UX and implementation suggestions for Gutenberg
+# UX and UI design goals
 ## Goals
 ### Printing and config
 - Simple printing should be as easy as possible. 
-File upload should be possible from the main page.
+  File upload should be possible from the main page.
 - There should be an indication of what file types are allowed.
 ### Print config
 - The printing logic should be ready for manual duplex printing,
@@ -27,9 +27,9 @@ File upload should be possible from the main page.
 - It should be possible to cancel a print job from the print queue.
 ### General UI
 - The page should be responsive.
-- The UX on mobile and desktop can be different.
-For example, some options that are always visible on desktop can on mobile
-appear only after uploading the first file.
+  - The UX on mobile and desktop can be different.
+  For example, some options that are always visible on desktop can on mobile
+  appear only after uploading the first file.
 - A button with the text `Print` should only be used to start the print job.
 
 ## UI
