@@ -1,7 +1,8 @@
 [Introduction](introduction.md)
 
 # Admin documentation
-- [Printer Management](admin/printer-management.md)
+- [Instance setup](admin/setup.md)
+- [Printer management](admin/printer-management.md)
 
 # Internals
-- [UI and API Design](internals/design.md)
+- [UI and API design](internals/design.md)
