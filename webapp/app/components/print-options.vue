@@ -1,28 +1,39 @@
 <template>
-  <div class="w-full h-full flex flex-col">
+  <div class="w-full h-full flex flex-col space-y-4">
     <div>
       <FloatLabel variant="in">
         <Select
           id="printer-select"
-          :options="['Printer 1', 'Printer 2']"
+          v-model="selectedPrinterId"
+          :options="printers.data.value"
+          option-value="id"
+          option-label="name"
+          :default-value="null"
           fluid
+          :loading="printers.pending.value"
         />
         <label for="printer-select">Printer</label>
       </FloatLabel>
     </div>
-    <FileUpload
-      name="demo[]"
-      multiple
-      :show-upload-button="false"
-      cancel-label="Clear"
-      :pt="{
-        root: 'grow my-4',
-      }"
-    >
-      <template #empty>
-        <span>Drag and drop files to here to upload.</span>
-      </template>
-    </FileUpload>
+    <div>
+      <div class="flex flex-row space-x-2 items-center">
+        <FileUpload
+          mode="basic"
+          class="w-full"
+          auto
+          choose-label="Choose files"
+          :disabled="selectedPrinter === null"
+          :accept="selectedPrinter?.supported_extensions"
+        />
+        <div>or drop them anywhere</div>
+      </div>
+      <div v-if="selectedPrinter !== null">
+        Supported file formats:
+        <div>{{ selectedPrinter.supported_extensions }}</div>
+      </div>
+    </div>
+
+<!--    <Button label="Refresh printer list" variant="text" @click="printers.refresh()" />-->
     <div class="space-y-4">
       <FloatLabel variant="in">
         <InputNumber
@@ -112,6 +123,13 @@
         </template>
       </SelectButton>
     </div>
+    <Message
+      v-for="error in errorMessageList"
+      :key="error"
+      severity="error"
+    >
+      {{ error }}
+    </Message>
     <div class="flex flex-row-reverse gap-2 mt-4 shrink-0">
       <Button label="Print" severity="primary" @click="print()" />
       <Button label="Preview" severity="secondary" @click="preview()" />
@@ -120,6 +138,16 @@
 </template>
 
 <script setup lang="ts">
+const printers = await usePrinters();
+
+const errorMessageList = computed(() => {
+  const list = [];
+  if (printers.error.value !== undefined) {
+    list.push(getErrorMessage(printers.error.value) ?? 'Failed to get printer list');
+  }
+  return list;
+});
+
 function preview() {
   console.log('Preview clicked');
 }
@@ -127,6 +155,13 @@ function preview() {
 function print() {
   console.log('Print clicked');
 }
+
+const selectedPrinterId = ref(null);
+const selectedPrinter = computed(() => {
+  if (selectedPrinterId.value === null) return null;
+  if (!printers.data.value) return null;
+  return printers.data.value.find((printer) => printer.id === selectedPrinterId.value) ?? null;
+});
 
 type DuplexMode = 'duplex-long-edge' | 'duplex-short-edge';
 const duplexOptions = [
@@ -167,5 +202,5 @@ const colorMode = ref<ColorMode>('monochrome');
 
 watch(duplexEnabled, (value) => {
   if (!value) duplexMode.value = null;
-}, { immediate: true })
+}, { immediate: true });
 </script>

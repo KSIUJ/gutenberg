@@ -9,6 +9,14 @@ export type User = {
   is_staff: boolean;
 };
 
+export type Printer = {
+  id: number;
+  name: string;
+  color_allowed: boolean;
+  duplex_supported: boolean;
+  supported_extensions: string;
+};
+
 export const Unauthenticated = Symbol('Unauthenticated');
 
 export const apiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => ({
@@ -53,14 +61,29 @@ export const apiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => ({
   },
 
   logoutEndpoint: '/oidc/logout/',
+
+  async getPrinters(): Promise<Printer[]> {
+    return await fetch<Printer[]>('/api/printers/', {
+      method: 'GET',
+      headers: {
+        'accept': 'application/json',
+      },
+    });
+  },
 });
 
 export function getErrorMessage(error: unknown): string | undefined {
+  if (isNuxtError(error)) {
+    return getErrorMessage(error.cause) ?? error.message;
+  }
   if (!(error instanceof FetchError)) return undefined;
 
   if (typeof error.data === 'object' && error.data !== null) {
     if ('message' in error.data && typeof error.data.message === 'string') {
       return error.data.message;
+    }
+    if ('detail' in error.data && typeof error.data.detail === 'string') {
+      return error.data.detail;
     }
   }
 
