@@ -2,8 +2,11 @@
 This document is intended for Gutenberg instance admins;
 it explains how to configure printers and manage printing permissions.
 
-> [!NOTE]
-> This document is currently incomplete
+<div class="warning">
+
+This document is incomplete
+
+</div>
 
 ## Admin interface
 Management actions are performed in the Django admin interface,
@@ -34,5 +37,9 @@ Most other fields are optional.
 
 ## Managing printing permissions
 Only users who are in a group listed in the **Printer permissions** list can access the printer.
-> [!NOTE]
-> This restriction also applies to superuser accounts.
+
+<div class="warning">
+
+This restriction also applies to superuser accounts.
+
+</div>

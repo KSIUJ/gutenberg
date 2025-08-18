@@ -9,7 +9,7 @@ The REST API is intended for use in the webapp (UI) component of Gutenberg.
 In the future a token-based authentication scheme might be implemented for use by other API clients.
 
 Most existing REST API endpoints map to corresponding IPP operations and have similar semantics.
-This design reduces the code duplication in the IPP and REST API modules.
+This design reduces code duplication in the IPP and REST API modules.
 The page [IPP and REST API comparison](./ipp-rest-comparision.md) contains a table which lists the matching REST API
 endpoints and IPP operations.
 

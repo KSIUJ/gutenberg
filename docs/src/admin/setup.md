@@ -1,6 +1,11 @@
-## Instance setup
+# Instance setup
+<div class="warning">
 
-### Requirements
+This document is incomplete
+
+</div>
+
+## Requirements
 
 - Printer: make printing available for server network
 - Linux server: install drivers, configure CUPS
@@ -13,7 +18,7 @@
   See https://docs.astral.sh/uv/getting-started/installation/ for install instructions.
 - You will also need to have `yarn` or `npm` to build the web interface.
 
-### Setting up the app
+## Setting up the app
 
 First, set the temporary `GUTENBERG_ENV` environment variable to one of these two values:
 

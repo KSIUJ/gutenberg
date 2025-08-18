@@ -13,16 +13,36 @@ supplied documents. This has the implications of:
     way to use this feature via Gutenberg).
 
 ## Supported IPP standards and versions
-...
+<div class="warning">
+
+This section is incomplete
+
+</div>
 
 ## Supported IPP operations
-...
+<div class="warning">
+
+This section is incomplete
+
+</div>
 
 ## Supported job attributes
-...
+<div class="warning">
+
+This section is incomplete
+
+</div>
 
 ## Supported file formats
-...
+<div class="warning">
 
-## Authentication
-...
+This section is incomplete
+
+</div>
+
+## IPP endpoint and authentication
+<div class="warning">
+
+This section is incomplete
+
+</div>
