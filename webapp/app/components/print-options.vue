@@ -4,7 +4,7 @@
       <FloatLabel variant="in">
         <Select
           id="printer-select"
-          v-model="selectedPrinterId"
+          v-model="jobCreator.selectedPrinterId"
           :options="printers.data.value"
           option-value="id"
           option-label="name"
@@ -22,14 +22,14 @@
           class="w-full"
           auto
           choose-label="Choose files"
-          :disabled="selectedPrinter === null"
-          :accept="selectedPrinter?.supported_extensions"
+          :disabled="jobCreator.selectedPrinter === null"
+          :accept="jobCreator.selectedPrinter?.supported_extensions"
         />
         <div>or drop them anywhere</div>
       </div>
-      <div v-if="selectedPrinter !== null">
+      <div v-if="jobCreator.selectedPrinter !== null">
         Supported file formats:
-        <div>{{ selectedPrinter.supported_extensions }}</div>
+        <div>{{ jobCreator.selectedPrinter.supported_extensions }}</div>
       </div>
     </div>
 
@@ -37,7 +37,7 @@
     <div class="space-y-4">
       <FloatLabel variant="in">
         <InputNumber
-          v-model="copyCount"
+          v-model="jobCreator.copyCount"
           :min="1"
           :max="1000"
           show-buttons
@@ -48,7 +48,7 @@
         <label for="copy-number-input">Number of copies</label>
       </FloatLabel>
 
-      <template v-if="duplexSupported">
+      <template v-if="jobCreator.selectedPrinter?.duplex_supported">
         <div class="w-full flex flex-row items-center">
           <label id="duplex-enabled" class="grow">Enable two&dash;side printing</label>
           <ToggleSwitch
@@ -57,10 +57,10 @@
           />
         </div>
 
-        <template v-if="duplexEnabled">
+        <template v-if="jobCreator.duplexMode !== 'disabled'">
           <label id="duplex-mode-select">Flip backside around</label>
           <SelectButton
-            v-model="duplexMode"
+            v-model="jobCreator.duplexMode"
             :options="duplexOptions"
             option-value="value"
             data-key="value"
@@ -100,7 +100,7 @@
 
       <label id="color-mode-select">Color mode</label>
       <SelectButton
-        v-model="colorMode"
+        v-model="jobCreator.colorMode"
         :options="colorOptions"
         option-value="value"
         data-key="value"
@@ -124,52 +124,37 @@
       </SelectButton>
     </div>
     <Message
-      v-for="error in errorMessageList"
+      v-for="error in jobCreator.errorMessageList"
       :key="error"
       severity="error"
     >
       {{ error }}
     </Message>
     <div class="flex flex-row-reverse gap-2 mt-4 shrink-0">
-      <Button label="Print" severity="primary" @click="print()" />
-      <Button label="Preview" severity="secondary" @click="preview()" />
+      <Button label="Print" severity="primary" :loading="jobCreator.printLoading" @click="jobCreator.print" />
+      <Button label="Preview" severity="secondary" disabled @click="preview()" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 const printers = await usePrinters();
+const jobCreator = useJobCreator(printers);
 
-const errorMessageList = computed(() => {
-  const list = [];
-  if (printers.error.value !== undefined) {
-    list.push(getErrorMessage(printers.error.value) ?? 'Failed to get printer list');
-  }
-  return list;
-});
-
-function preview() {
-  console.log('Preview clicked');
-}
-
-function print() {
-  console.log('Print clicked');
-}
-
-const selectedPrinterId = ref(null);
-const selectedPrinter = computed(() => {
-  if (selectedPrinterId.value === null) return null;
-  if (!printers.data.value) return null;
-  return printers.data.value.find((printer) => printer.id === selectedPrinterId.value) ?? null;
-});
-
-type DuplexMode = 'duplex-long-edge' | 'duplex-short-edge';
 const duplexOptions = [
   { value: 'duplex-long-edge' as DuplexMode, label: 'Long edge', description: 'for vertical documents' },
   { value: 'duplex-short-edge' as DuplexMode, label: 'Short edge', description: 'for horizontal documents' },
 ];
+const duplexEnabled = computed({
+  get: () => jobCreator.duplexMode !== 'disabled',
+  set: (value) => {
+    if (value && jobCreator.duplexMode === 'disabled') {
+      jobCreator.duplexMode = 'duplex-unspecified';
+    }
+    if (!value) jobCreator.duplexMode = 'disabled';
+  },
+});
 
-type ColorMode = 'monochrome' | 'color';
 // Uses Tailwind color classes, see
 // https://tailwindcss.com/docs/detecting-classes-in-source-files#how-classes-are-detected
 const colorOptions = [
@@ -192,15 +177,7 @@ const colorOptions = [
 //   { value: 'custom', label: 'Custom' },
 // ];
 
-const copyCount = ref(1);
-
-const duplexSupported = ref(true);
-const duplexEnabled = ref(false);
-const duplexMode = ref<null | DuplexMode>(null);
-
-const colorMode = ref<ColorMode>('monochrome');
-
-watch(duplexEnabled, (value) => {
-  if (!value) duplexMode.value = null;
-}, { immediate: true });
+function preview() {
+  console.log('Preview clicked');
+}
 </script>

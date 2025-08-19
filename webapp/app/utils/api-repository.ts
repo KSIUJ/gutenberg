@@ -17,6 +17,30 @@ export type Printer = {
   supported_extensions: string;
 };
 
+/**
+ * One-sided | Two-sided long edge | Two-sided short edge
+ */
+export type ApiDuplexMode = 'OS' | 'TL' | 'TS';
+
+export type CreatePrintJobRequest = {
+  printer: number;
+  copies: number;
+  pages_to_print?: string;
+  two_sides: ApiDuplexMode,
+  color?: boolean;
+  fit_to_page?: boolean;
+};
+
+export type JobStatus = 'UNKNOWN' | 'INCOMING' | 'PENDING' | 'PROCESSING' | 'PRINTING' | 'SCANNING' | 'WAITING_PAGE' | 'COMPLETED' | 'CANCELED' | 'CANCELING' | 'ERROR';
+
+export type PrintJob = {
+  id: number;
+  pages: number | null;
+  printer: string | null;
+  status: JobStatus;
+  status_reason: string | null;
+};
+
 export const Unauthenticated = Symbol('Unauthenticated');
 
 export const apiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => ({
@@ -70,6 +94,16 @@ export const apiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => ({
       },
     });
   },
+
+  async createPrintJob(body: CreatePrintJobRequest): Promise<PrintJob> {
+    return await fetch<PrintJob>('/api/jobs/create_job/', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+      },
+      body,
+    });
+  }
 });
 
 export function getErrorMessage(error: unknown): string | undefined {
