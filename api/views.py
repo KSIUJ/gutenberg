@@ -17,7 +17,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from api.serializers import GutenbergJobSerializer, PrinterSerializer, PrintRequestSerializer, UserInfoSerializer, \
-    CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer, LoginSerializer
+    CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer, LoginSerializer, DeleteJobArtefactRequestSerializer
 from common.models import User
 from control.models import GutenbergJob, Printer, JobStatus, PrintingProperties, TwoSidedPrinting, JobArtefact, \
     JobArtefactType, JobType
@@ -87,8 +87,8 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
                             status=status.HTTP_400_BAD_REQUEST)
         try:
             self._upload_artefact(job, **serializer.validated_data)
-            if serializer.validated_data['last'] == True:
-                self._run_job(job)
+            #if serializer.validated_data['last'] == True:
+            #    self._run_job(job)
         except UnsupportedDocumentError as ex:
             return Response("Error: {}".format(ex), status=status.HTTP_400_BAD_REQUEST)
         return Response(self.get_serializer(job).data)
@@ -99,7 +99,8 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         if job.status != JobStatus.INCOMING:
             return Response("Error: invalid job status for this request", status=status.HTTP_400_BAD_REQUEST)
         self._run_job(job)
-        return job
+        #return job
+        return Response(self.get_serializer(job).data)
 
     @action(detail=False, methods=['post'], name='Create new job')
     def create_job(self, request):
@@ -139,6 +140,71 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         print_file.delay(job.id)
         logger.info('User %s submitted job: "%s"', self.request.user.username)
         return job
+    
+    @action(detail=True, methods=['get'], name='Get artefacts')
+    def artefacts(self, request, pk=None):
+        job = self.get_object()
+        artefacts = job.artefacts.all()
+        artefact_data = [
+            {
+                "id": artefact.id,
+                "file_name": artefact.file.name,
+                "mime_type": artefact.mime_type,
+                "artefact_type": artefact.artefact_type,
+            }
+            for artefact in artefacts
+        ]
+        return Response(artefact_data)
+
+    @action(detail=True, methods=['delete'], name='Delete artefact')
+    def delete_artefact(self, request, pk=None):
+        job = self.get_object()
+        serializer = DeleteJobArtefactRequestSerializer(data=request.query_params)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        artefact_id = serializer.validated_data['file_id']
+        try:
+            artefact = job.artefacts.get(id=artefact_id)
+            artefact.delete()
+            return Response({"message": f"Artefact {artefact_id} deleted successfully"}, status=status.HTTP_200_OK)
+        except JobArtefact.DoesNotExist:
+            return Response({"error": f"Artefact with id {artefact_id} does not exist"}, status=status.HTTP_404_NOT_FOUND)
+        
+    @action(detail=True, methods=['get'], name='Get properties')
+    def properties(self, request, pk=None):
+        job = self.get_object()
+        properties = PrintingProperties.objects.filter(job=job).first()
+        if not properties:
+            return Response("Error: job properties not found", status=status.HTTP_404_NOT_FOUND)
+        return Response({
+            "copies": properties.copies,
+            "pages_to_print": properties.pages_to_print,
+            "color": properties.color,
+            "two_sides": properties.two_sides,
+            "fit_to_page": properties.fit_to_page
+        })    
+    
+    @action(detail=True, methods=['post'], name="Change properties")
+    def change_properties(self, request, pk=None):
+        job = self.get_object()
+        if job.status != JobStatus.INCOMING:
+            return Response("Error: invalid job status for this request", status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = CreatePrintJobRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        properties = PrintingProperties.objects.get(job=job)
+        properties.copies = serializer.validated_data['copies']
+        properties.pages_to_print = serializer.validated_data['pages_to_print']
+        properties.color = serializer.validated_data['color']
+        properties.two_sides = serializer.validated_data['two_sides']
+        properties.fit_to_page = serializer.validated_data['fit_to_page']
+        properties.save()
+
+        return Response(self.get_serializer(job).data)
+
 
 
 class PrinterViewSet(viewsets.ReadOnlyModelViewSet):
