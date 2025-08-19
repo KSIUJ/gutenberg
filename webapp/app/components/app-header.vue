@@ -8,7 +8,7 @@
       <template v-if="$auth.me.value === Unauthenticated">
         <Button v-if="!route.meta.hideSignInButton" label="Sign in" as="a" href="/login/" variant="outlined" />
       </template>
-      <template v-else-if="$auth.me.value !== undefined">
+      <template v-else>
         <Button variant="text" :label="$auth.me.value.username" aria-haspopup="menu" aria-controls="user_menu" @click="toggleUserMenu" />
         <Menu id="user_menu" ref="user-menu" :popup="true" :model="userMenuItems" />
       </template>
@@ -25,7 +25,7 @@ const { logoutEndpoint } = useApiRepository();
 const route = useRoute();
 
 const userMenuItems = computed(() => {
-  if (!$auth.me.value || $auth.me.value === Unauthenticated) {
+  if ($auth.me.value === Unauthenticated) {
     return [];
   }
   const adminItems = $auth.me.value.is_staff ? [

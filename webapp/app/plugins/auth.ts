@@ -7,14 +7,25 @@ export default defineNuxtPlugin({
   async setup() {
     const apiRepository = useApiRepository();
 
-    const me = await useAsyncData('api-me', async (): Promise<User | typeof Unauthenticated> => {
-      return await apiRepository.getMe();
-    });
+    // The auth plugin returns a Promise (is async) to make sure the authentication info is loaded
+    // when the app is rendered.
+    // Failing to load the auth info is a fatal error because the routing logic needs to know if
+    // the user is signed in to handle redirects to the sign-in page.
+    let me: Ref<User | typeof Unauthenticated>;
+    try {
+      me = ref(await apiRepository.getMe());
+    } catch (error) {
+      throw createError({
+        message: 'Failed to load information about the current user',
+        cause: error,
+        fatal: true,
+      });
+    }
 
     const login = async (username: string, password: string) => {
       await apiRepository.refreshCsrfToken();
       await apiRepository.login(username, password);
-      await me.refresh();
+      me.value = await apiRepository.getMe();
     };
 
     /**
@@ -22,11 +33,11 @@ export default defineNuxtPlugin({
      * This function is intended to be used by the error handler is the API plugin.
      */
     const clearMe = () => {
-      me.data.value = Unauthenticated;
+      me.value = Unauthenticated;
     };
 
     const auth = {
-      me: me.data,
+      me: readonly(me),
       clearMe,
       login,
     };

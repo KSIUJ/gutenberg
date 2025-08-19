@@ -6,7 +6,7 @@ export const usePrinters = () => {
 
   // Refresh the printer list when the authenticated user changes
   watch(() => {
-    if (!$auth.me.value || $auth.me.value === Unauthenticated) return null;
+    if ($auth.me.value === Unauthenticated) return null;
     return $auth.me.value.username;
   }, (newUsername, previousUsername) => {
     // Do not automatically refresh the printer list if the user is not signed in.
