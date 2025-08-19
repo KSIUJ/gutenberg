@@ -29,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import {Unauthenticated} from "~/utils/api-repository";
+import type {RouteLocationNormalized} from "#vue-router";
 
 const { $auth } = useNuxtApp();
 const route = useRoute();
@@ -40,11 +40,16 @@ const password = ref('');
 const loading = ref(false);
 const errorMessage = ref<string | null>(null);
 
-const next = computed(() => {
+const extractNext = (route: RouteLocationNormalized) => {
   let result = route.query.next;
   if (result && typeof result !== 'string') result = result[0];
   return result || '/';
-});
+};
+
+const navigateToNext = (current: RouteLocationNormalized) => {
+  const next = extractNext(current);
+  return navigateToMaybeExternal(next, current);
+};
 
 async function onSubmit() {
   if (loading.value) return;
@@ -59,14 +64,7 @@ async function onSubmit() {
       life: 3000,
     });
 
-    try {
-      await navigateTo(next.value);
-    } catch (error) {
-      console.warn(`Internal navigation to ${next.value} failed`, error);
-      await navigateTo(next.value, {
-        external: true,
-      });
-    }
+    await navigateToNext(route);
   } catch (error) {
     console.error('Failed to sign in', error);
     errorMessage.value = getErrorMessage(error) ?? 'Failed to sign in';
@@ -75,17 +73,12 @@ async function onSubmit() {
   }
 }
 
-watchEffect(async () => {
-  if ($auth.me.value === undefined || $auth.me.value === Unauthenticated) return;
-  try {
-    await navigateTo(next.value);
-  } catch (error) {
-    console.warn(`Failed to navigate to ${next.value} after successful login`, error);
-    window.location.href = next.value;
-  }
-});
-
 definePageMeta({
   hideSignInButton: true,
+  middleware: defineNuxtRouteMiddleware((to) => {
+    const { $auth } = useNuxtApp();
+    if ($auth.me.value === Unauthenticated) return;
+    return navigateToNext(to);
+  }),
 });
 </script>
