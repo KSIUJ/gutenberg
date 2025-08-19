@@ -7,8 +7,8 @@
           class="h-full"
           :pt="{
             root: 'flex flex-col',
-            contentContainer: 'grow',
-            content: 'h-full',
+            contentContainer: 'grow h-0',
+            content: 'h-full overflow-y-auto',
           }"
         >
           <print-options />

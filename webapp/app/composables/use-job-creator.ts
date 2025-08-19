@@ -4,6 +4,14 @@ import type {_AsyncData} from "#app/composables/asyncData";
 export type DuplexMode = 'disabled' | 'duplex-unspecified' | 'duplex-long-edge' | 'duplex-short-edge';
 export type ColorMode = 'monochrome' | 'color';
 
+export type JobDocument = {
+  localId: number;
+  filename: string;
+  file: File;
+  state: 'pending' | 'uploading' | 'uploaded' | 'error';
+  remove(): void,
+};
+
 export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtError | undefined>) => {
   const apiRepository = useApiRepository();
 
@@ -44,10 +52,22 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
     };
   });
 
-  const fileQueue = ref<File[]>([]);
+  const documentQueue = ref<JobDocument[]>([]);
 
+  let nextLocalFileId = 0;
   const addFiles = (files: File[]) => {
-    fileQueue.value.push(...files);
+    documentQueue.value.push(...files.map((file) => reactive({
+      localId: nextLocalFileId++,
+      file,
+      filename: file.name,
+      state: 'pending' as const,
+      remove() {
+        if (printLoading.value) return;
+        documentQueue.value = documentQueue.value.filter(
+          (document) => document.localId !== this.localId,
+        );
+      },
+    })));
   };
 
   const printLoading = ref(false);
@@ -61,12 +81,24 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
     }
   };
 
+  const uploadDocument = async (jobId: number, document: JobDocument, isLast: boolean) => {
+    if (document.state !== 'pending' && document.state !== 'error') return;
+    try {
+      document.state = 'uploading';
+      await apiRepository.uploadArtefact(jobId, document.file, isLast)
+      document.state = 'uploaded';
+    } catch (error) {
+      document.state = 'error';
+      throw error;
+    }
+  };
+
   const completePrintJob = async (jobId: number) => {
     try {
-      const files = [...fileQueue.value];
-      for (const [index, file] of files.entries()) {
-        const isLast = index == files.length - 1;
-        await apiRepository.uploadArtefact(jobId, file, isLast);
+      const documents = [...documentQueue.value];
+      for (const [index, document] of documents.entries()) {
+        const isLast = index == documents.length - 1;
+        await uploadDocument(jobId, document, isLast);
       }
     } catch (error) {
       await tryCancel(jobId);
@@ -77,9 +109,13 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
   const print = async () => {
     if (printLoading.value || serializedSettings.value === null) return;
     // TODO: Do not start if the job contains no files
+
     try {
       printLoading.value = true;
       printError.value = null;
+      documentQueue.value.forEach((document) => {
+        document.state = 'pending';
+      });
       const job = await apiRepository.createPrintJob(serializedSettings.value);
       await completePrintJob(job.id);
     } catch (error) {
@@ -101,7 +137,6 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
     return list;
   });
 
-
   return reactive({
     printers,
     selectedPrinterId,
@@ -111,6 +146,7 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
     colorMode,
     errorMessageList,
     addFiles,
+    documents: readonly(documentQueue),
     print,
     printLoading,
   });

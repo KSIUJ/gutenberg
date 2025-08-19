@@ -23,6 +23,7 @@
           auto
           choose-label="Choose files"
           custom-upload
+          multiple
           :disabled="jobCreator.selectedPrinter === null"
           :accept="jobCreator.selectedPrinter?.supported_extensions"
           @select="onFileSelect"
@@ -34,6 +35,11 @@
         <div>{{ jobCreator.selectedPrinter.supported_extensions }}</div>
       </div>
     </div>
+
+    <document-list
+      v-if="jobCreator.documents.length > 0"
+      :documents="jobCreator.documents"
+    />
 
 <!--    <Button label="Refresh printer list" variant="text" @click="printers.refresh()" />-->
     <div class="space-y-4">

@@ -73,6 +73,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             self._upload_artefact(job, **serializer.validated_data)
             self._run_job(job)
         except UnsupportedDocumentError as ex:
+            # FIXME: Use a common error message format
             return Response("Error: {}".format(ex), status=status.HTTP_400_BAD_REQUEST)
         return Response(self.get_serializer(job).data)
 
@@ -90,6 +91,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             if serializer.validated_data['last'] == True:
                 self._run_job(job)
         except UnsupportedDocumentError as ex:
+            # FIXME: Use a common error message format
             return Response("Error: {}".format(ex), status=status.HTTP_400_BAD_REQUEST)
         return Response(self.get_serializer(job).data)
 

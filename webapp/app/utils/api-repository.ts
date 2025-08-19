@@ -134,6 +134,7 @@ export function getErrorMessage(error: unknown): string | undefined {
   }
   if (!(error instanceof FetchError)) return undefined;
 
+  if (typeof error.data === 'string') return error.data;
   if (typeof error.data === 'object' && error.data !== null) {
     if ('message' in error.data && typeof error.data.message === 'string') {
       return error.data.message;
