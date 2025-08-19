@@ -54,6 +54,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             status=JobStatus.CANCELED)
         GutenbergJob.objects.filter(id=job.id).exclude(status__in=GutenbergJob.COMPLETED_STATUSES).update(
             status=JobStatus.CANCELING)
+        # FIXME: previous status is returned in response, not CANCELED/CANCELING
         return Response(self.get_serializer(job).data)
 
     @action(detail=False, methods=['post'], name='Submit new job')

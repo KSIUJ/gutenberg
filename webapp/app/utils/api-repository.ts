@@ -103,7 +103,29 @@ export const apiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => ({
       },
       body,
     });
-  }
+  },
+
+  async uploadArtefact(jobId: number, file: File, last: boolean): Promise<PrintJob> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('last', last ? '1' : '0');
+    return await fetch<PrintJob>(`/api/jobs/${jobId}/upload_artefact/`, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+      },
+      body: formData,
+    });
+  },
+
+  async cancelPrintJob(jobId: number): Promise<PrintJob> {
+    return await fetch<PrintJob>(`/api/jobs/${jobId}/cancel/`, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+      },
+    });
+  },
 });
 
 export function getErrorMessage(error: unknown): string | undefined {

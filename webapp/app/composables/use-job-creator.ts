@@ -44,15 +44,44 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
     };
   });
 
+  const fileQueue = ref<File[]>([]);
+
+  const addFiles = (files: File[]) => {
+    fileQueue.value.push(...files);
+  };
+
   const printLoading = ref(false);
   const printError = ref<unknown | null>(null);
 
+  const tryCancel = async (jobId: number) => {
+    try {
+      await apiRepository.cancelPrintJob(jobId);
+    } catch (error) {
+      console.warn('Failed to cancel job after error', error);
+    }
+  };
+
+  const completePrintJob = async (jobId: number) => {
+    try {
+      const files = [...fileQueue.value];
+      for (const [index, file] of files.entries()) {
+        const isLast = index == files.length - 1;
+        await apiRepository.uploadArtefact(jobId, file, isLast);
+      }
+    } catch (error) {
+      await tryCancel(jobId);
+      throw error;
+    }
+  };
+
   const print = async () => {
     if (printLoading.value || serializedSettings.value === null) return;
+    // TODO: Do not start if the job contains no files
     try {
       printLoading.value = true;
       printError.value = null;
-      await apiRepository.createPrintJob(serializedSettings.value);
+      const job = await apiRepository.createPrintJob(serializedSettings.value);
+      await completePrintJob(job.id);
     } catch (error) {
       console.error('Failed to create print job', error);
       printError.value = error;
@@ -81,6 +110,7 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
     duplexMode,
     colorMode,
     errorMessageList,
+    addFiles,
     print,
     printLoading,
   });

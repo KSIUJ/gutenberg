@@ -22,8 +22,10 @@
           class="w-full"
           auto
           choose-label="Choose files"
+          custom-upload
           :disabled="jobCreator.selectedPrinter === null"
           :accept="jobCreator.selectedPrinter?.supported_extensions"
+          @select="onFileSelect"
         />
         <div>or drop them anywhere</div>
       </div>
@@ -138,6 +140,8 @@
 </template>
 
 <script setup lang="ts">
+import type {FileUploadSelectEvent} from "primevue";
+
 const printers = await usePrinters();
 const jobCreator = useJobCreator(printers);
 
@@ -176,6 +180,10 @@ const colorOptions = [
 //   { value: 'even', label: 'Even' },
 //   { value: 'custom', label: 'Custom' },
 // ];
+
+const onFileSelect = (event: FileUploadSelectEvent) => {
+  jobCreator.addFiles(event.files);
+};
 
 function preview() {
   console.log('Preview clicked');
