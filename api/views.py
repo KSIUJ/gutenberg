@@ -170,6 +170,40 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({"message": f"Artefact {artefact_id} deleted successfully"}, status=status.HTTP_200_OK)
         except JobArtefact.DoesNotExist:
             return Response({"error": f"Artefact with id {artefact_id} does not exist"}, status=status.HTTP_404_NOT_FOUND)
+        
+    @action(detail=True, methods=['get'], name='Get properties')
+    def properties(self, request, pk=None):
+        job = self.get_object()
+        properties = PrintingProperties.objects.filter(job=job).first()
+        if not properties:
+            return Response("Error: job properties not found", status=status.HTTP_404_NOT_FOUND)
+        return Response({
+            "copies": properties.copies,
+            "pages_to_print": properties.pages_to_print,
+            "color": properties.color,
+            "two_sides": properties.two_sides,
+            "fit_to_page": properties.fit_to_page
+        })    
+    
+    @action(detail=True, methods=['post'], name="Change properties")
+    def change_properties(self, request, pk=None):
+        job = self.get_object()
+        if job.status != JobStatus.INCOMING:
+            return Response("Error: invalid job status for this request", status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = CreatePrintJobRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        properties = PrintingProperties.objects.get(job=job)
+        properties.copies = serializer.validated_data['copies']
+        properties.pages_to_print = serializer.validated_data['pages_to_print']
+        properties.color = serializer.validated_data['color']
+        properties.two_sides = serializer.validated_data['two_sides']
+        properties.fit_to_page = serializer.validated_data['fit_to_page']
+        properties.save()
+
+        return Response(self.get_serializer(job).data)
 
 
 
