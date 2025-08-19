@@ -17,7 +17,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from api.serializers import GutenbergJobSerializer, PrinterSerializer, PrintRequestSerializer, UserInfoSerializer, \
-    CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer, LoginSerializer
+    CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer, LoginSerializer, DeleteJobArtefactRequestSerializer
 from common.models import User
 from control.models import GutenbergJob, Printer, JobStatus, PrintingProperties, TwoSidedPrinting, JobArtefact, \
     JobArtefactType, JobType
@@ -87,8 +87,8 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
                             status=status.HTTP_400_BAD_REQUEST)
         try:
             self._upload_artefact(job, **serializer.validated_data)
-            if serializer.validated_data['last'] == True:
-                self._run_job(job)
+            #if serializer.validated_data['last'] == True:
+            #    self._run_job(job)
         except UnsupportedDocumentError as ex:
             return Response("Error: {}".format(ex), status=status.HTTP_400_BAD_REQUEST)
         return Response(self.get_serializer(job).data)
@@ -139,6 +139,37 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         print_file.delay(job.id)
         logger.info('User %s submitted job: "%s"', self.request.user.username)
         return job
+    
+    @action(detail=True, methods=['get'], name='Get artefacts')
+    def artefacts(self, request, pk=None):
+        job = self.get_object()
+        artefacts = job.artefacts.all()
+        artefact_data = [
+            {
+                "id": artefact.id,
+                "file_name": artefact.file.name,
+                "mime_type": artefact.mime_type,
+                "artefact_type": artefact.artefact_type,
+            }
+            for artefact in artefacts
+        ]
+        return Response(artefact_data)
+
+    @action(detail=True, methods=['delete'], name='Delete artefact')
+    def delete_artefact(self, request, pk=None):
+        job = self.get_object()
+        serializer = DeleteJobArtefactRequestSerializer(data=request.query_params)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        artefact_id = serializer.validated_data['file_id']
+        try:
+            artefact = job.artefacts.get(id=artefact_id)
+            artefact.delete()
+            return Response({"message": f"Artefact {artefact_id} deleted successfully"}, status=status.HTTP_200_OK)
+        except JobArtefact.DoesNotExist:
+            return Response({"error": f"Artefact with id {artefact_id} does not exist"}, status=status.HTTP_404_NOT_FOUND)
+
 
 
 class PrinterViewSet(viewsets.ReadOnlyModelViewSet):
