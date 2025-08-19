@@ -99,7 +99,8 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         if job.status != JobStatus.INCOMING:
             return Response("Error: invalid job status for this request", status=status.HTTP_400_BAD_REQUEST)
         self._run_job(job)
-        return job
+        #return job
+        return Response(self.get_serializer(job).data)
 
     @action(detail=False, methods=['post'], name='Create new job')
     def create_job(self, request):
