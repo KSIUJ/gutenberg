@@ -1,21 +1,33 @@
 <template>
-  <div>
-    <div
+  <ul>
+    <li
       v-for="document in documents"
       :key="document.localId"
-      class="py-2 flex flex-row"
+      class="pl-1 py-2 flex flex-row space-x-2 group"
     >
       <div class="grow shrink w-0">
-        <div class="overflow-hidden whitespace-nowrap text-ellipsis">
+        <div class="overflow-hidden whitespace-nowrap text-ellipsis text-sm">
           {{ document.filename }}
         </div>
-        <div :class="formattedState(document.state).color">
+        <div
+          :class="[
+            formattedState(document.state).color,
+            'text-xs',
+          ]"
+        >
           {{ formattedState(document.state).label }}
         </div>
       </div>
-      <Button variant="text" label="Remove" severity="danger" @click="document.remove()" />
-    </div>
-  </div>
+      <Button
+        class="hide-unless-group-hovered"
+        variant="text"
+        label="Remove"
+        severity="danger"
+        size="small"
+        @click="document.remove()"
+      />
+    </li>
+  </ul>
 </template>
 
 <script setup lang="ts">
@@ -28,7 +40,7 @@ defineProps<{
 const formattedState = (state: JobDocument['state']) => {
   if (state === 'error') return {
     label: 'Upload failed',
-    color: 'text-red-500',
+    color: 'text-error',
   };
   return {
     label: {
@@ -36,7 +48,7 @@ const formattedState = (state: JobDocument['state']) => {
       uploading: 'Uploading…',
       uploaded: 'Uploaded',
     }[state],
-    color: 'text-neutral-400',
+    color: 'text-muted-color',
   }
 };
 </script>

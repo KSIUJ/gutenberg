@@ -1,5 +1,5 @@
 <template>
-  <header class="fixed top-0 left-0 right-0 block h-(--header-height) bg-gray-800">
+  <header class="fixed top-0 left-0 right-0 block h-(--header-height) bg-surface-50 border-b border-surface z-10">
     <div class="px-4 h-full mx-auto max-w-5xl flex flex-row items-center justify-between">
       <NuxtLink to="/">
         Gutenberg

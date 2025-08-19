@@ -26,6 +26,7 @@ export default defineNuxtConfig({
             name: 'primevue',
             order: 'theme, base, primevue',
           },
+          darkModeSelector: 'none',
         },
       },
     },

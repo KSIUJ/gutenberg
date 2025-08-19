@@ -21,7 +21,7 @@ useHead({
     lang: 'en',
   },
   bodyAttrs: {
-    class: 'bg-background text-foreground',
+    class: 'bg-surface-100 text-color',
   },
 });
 </script>

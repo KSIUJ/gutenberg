@@ -1,6 +1,6 @@
 <template>
-  <div class="w-full h-full flex flex-col space-y-4">
-    <div>
+  <div class="w-full h-full flex flex-col space-y-6">
+    <div class="mb-0">
       <FloatLabel variant="in">
         <Select
           id="printer-select"
@@ -15,31 +15,38 @@
         <label for="printer-select">Printer</label>
       </FloatLabel>
     </div>
-    <div>
-      <div class="flex flex-row space-x-2 items-center">
-        <FileUpload
-          mode="basic"
-          class="w-full"
-          auto
-          choose-label="Choose files"
-          custom-upload
-          multiple
-          :disabled="jobCreator.selectedPrinter === null"
-          :accept="jobCreator.selectedPrinter?.supported_extensions"
-          @select="onFileSelect"
-        />
-        <div>or drop them anywhere</div>
-      </div>
-      <div v-if="jobCreator.selectedPrinter !== null">
-        Supported file formats:
-        <div>{{ jobCreator.selectedPrinter.supported_extensions }}</div>
-      </div>
-    </div>
 
-    <document-list
-      v-if="jobCreator.documents.length > 0"
-      :documents="jobCreator.documents"
-    />
+    <Fieldset legend="Files">
+      <template v-if="jobCreator.documents.length > 0">
+        <document-list
+          v-if="jobCreator.documents.length > 0"
+          :documents="jobCreator.documents"
+        />
+        <divider />
+      </template>
+      <div>
+        <div class="flex flex-row space-x-2 items-center">
+          <FileUpload
+            mode="basic"
+            class="w-full"
+            auto
+            choose-label="Choose files"
+            custom-upload
+            multiple
+            :disabled="jobCreator.selectedPrinter === null"
+            :accept="jobCreator.selectedPrinter?.supported_extensions"
+            @select="onFileSelect"
+          />
+          <div class="text-muted-color text-sm">or drop them anywhere</div>
+        </div>
+        <div v-if="jobCreator.selectedPrinter !== null" class="mt-2 px-1">
+          <div class="label-text">
+            Supported file formats:
+          </div>
+          <div class="text-sm">{{ formatExtensions(jobCreator.selectedPrinter.supported_extensions) }}</div>
+        </div>
+      </div>
+    </Fieldset>
 
 <!--    <Button label="Refresh printer list" variant="text" @click="printers.refresh()" />-->
     <div class="space-y-4">
@@ -58,7 +65,7 @@
 
       <template v-if="jobCreator.selectedPrinter?.duplex_supported">
         <div class="w-full flex flex-row items-center">
-          <label id="duplex-enabled" class="grow">Enable two&dash;side printing</label>
+          <label id="duplex-enabled" class="grow pl-form">Enable two&dash;side printing</label>
           <ToggleSwitch
             v-model="duplexEnabled"
             aria-labelledby="duplex-enabled"
@@ -66,7 +73,7 @@
         </div>
 
         <template v-if="jobCreator.duplexMode !== 'disabled'">
-          <label id="duplex-mode-select">Flip backside around</label>
+          <label id="duplex-mode-select" class="label-text px-form">Flip backside around</label>
           <SelectButton
             v-model="jobCreator.duplexMode"
             :options="duplexOptions"
@@ -87,7 +94,7 @@
         </template>
       </template>
 
-<!--      <label id="page-filter-select">Filter printed pages</label>-->
+<!--      <label id="page-filter-select" class="label-text px-form">Filter printed pages</label>-->
 <!--      <SelectButton-->
 <!--        :options="pageFilterOptions"-->
 <!--        option-value="value"-->
@@ -106,7 +113,7 @@
 <!--        <label for="page-filter-input">Page filter</label>-->
 <!--      </FloatLabel>-->
 
-      <label id="color-mode-select">Color mode</label>
+      <label id="color-mode-select" class="label-text px-form">Color mode</label>
       <SelectButton
         v-model="jobCreator.colorMode"
         :options="colorOptions"
@@ -189,6 +196,10 @@ const colorOptions = [
 
 const onFileSelect = (event: FileUploadSelectEvent) => {
   jobCreator.addFiles(event.files);
+};
+
+const formatExtensions = (extensions: string) => {
+  return extensions.split(',').map(ext => ext.trim()).join(', ');
 };
 
 function preview() {

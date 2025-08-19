@@ -3,4 +3,28 @@
 
 @theme {
     --header-height: 4rem;
+    --color-error: var(--color-red-600);
+}
+
+@utility label-text {
+    @apply text-muted-color;
+    @apply text-xs;
+    @apply mb-1;
+    @apply inline-block;
+}
+
+@utility px-form {
+    @apply px-2;
+}
+
+@utility pl-form {
+    @apply pl-2;
+}
+
+@utility pr-form {
+    @apply pr-2;
+}
+
+.group:not(:hover):not(:focus):not(:focus-within) .hide-unless-group-hovered {
+    @apply sr-only;
 }
