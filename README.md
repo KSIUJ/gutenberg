@@ -2,7 +2,7 @@
 
 Office printer gateway: print documents via web GUI or driverless IPP.
 
-Made by [KSI UJ](http://ksi.ii.uj.edu.pl). Powered by Django, Celery and VueJS.
+Made by [KSI UJ](http://ksi.ii.uj.edu.pl). Powered by Django, Celery and Nuxt 4.
 
 ## Features
 
@@ -27,7 +27,7 @@ Made by [KSI UJ](http://ksi.ii.uj.edu.pl). Powered by Django, Celery and VueJS.
     - Arch Linux: `sudo pacman -S imagemagick unoconv ghostscript bubblewrap pdftk`
 - Gutenberg uses `uv` as the Python project manager.
   See https://docs.astral.sh/uv/getting-started/installation/ for install instructions.
-- You will also need to have `yarn` or `npm` to build the web interface.
+- You will also need to have `pnpm` to build the web interface.
 
 ### Setting up the app (for the lazy people)
 
@@ -49,18 +49,23 @@ Now, execute the following commands:
 ```sh
 export DJANGO_SETTINGS_MODULE=gutenberg.settings.${GUTENBERG_ENV}_settings
 git clone https://github.com/KSIUJ/gutenberg.git
+cd gutenberg
 
 # Setup the Python virtual environment in .venv and install required packages.
 # uv will also download the correct Python version based on pyproject.toml,
 # if the version installed on your machine is different.
 uv sync
 
-cd gutenberg/gutenberg/settings
+cd gutenberg/settings
 cp ${GUTENBERG_ENV}_settings.py.example ${GUTENBERG_ENV}_settings.py
 $EDITOR ${GUTENBERG_ENV}_settings.py # edit the values appropriately
-cd ../..
-yarn install
-yarn build
+cd ../../
+
+# Build the webapp
+cd webapp
+pnpm install
+pnpm run build
+cd ../
 
 # Execute all Python commands through uv
 uv run manage.py migrate
@@ -68,6 +73,16 @@ uv run manage.py runserver 0.0.0.0:11111
 
 # visit localhost:11111 and check if everything works
 ```
+
+For developing the webapp, you can start the Nuxt development server after
+starting the Django development server:
+```sh
+export GUTENBERG_DEV_DJANGO_URL=http://localhost:11111/
+cd webapp
+pnpm run dev
+```
+You can now access the webapp at http://localhost:3000/.
+API endpoints are proxied by the Nuxt dev server (based on the `GUTENBERG_DEV_DJANGO_URL` env variable).
 
 You will also need to start at least one worker. In the main directory after activating the virtual environment:
 
