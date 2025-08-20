@@ -106,8 +106,10 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
-
+WHITENOISE_ROOT = os.path.join(BASE_DIR, 'webapp', 'public')
 STATIC_URL = '/static/'
+# This is where collectstatic will put all static files
+STATIC_ROOT = os.path.join(BASE_DIR, "staticroot")
 
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',

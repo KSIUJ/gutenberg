@@ -1,18 +1,13 @@
 from django.contrib.auth.decorators import login_required
-from django.contrib.staticfiles.views import serve
-
+from django.views.static import serve
+from django.conf import settings
 
 @login_required
 def webapp(request):
-    # Serve webpack-built SPA.
-    return serve(request, "index.html", insecure=True)
-
+    return serve(request, 'index.html', document_root=settings.WHITENOISE_ROOT)
 
 def login(request):
-    # Serve webpack-built SPA.
-    return serve(request, "index.html", insecure=True)
-
+    return serve(request, 'index.html', document_root=settings.WHITENOISE_ROOT)
 
 def service_worker(request):
-    # Serve webpack-built SPA.
-    return serve(request, "service-worker.js", insecure=True)
+    return serve(request, 'service-worker.js', document_root=settings.WHITENOISE_ROOT)

@@ -11,23 +11,22 @@ services:
   redis:
     image: redis:7
     container_name: gutenberg-redis
-    ports:
-      - "6379:6379"   # tutaj port Redis
+    # ports:
+    #   - "6379:6379"  
 
   backend:
     build:
       context: .
-      dockerfile: Dockerfile.backend
+      dockerfile: Dockerfile
+      target: run_server
     container_name: gutenberg-backend
     ports:
-      - "8000:8000"     # backend na porcie 8000
+      - "8000:8000"
     environment:
-      - GUTENBERG_ENV=local
-      - DJANGO_SETTINGS_MODULE=gutenberg.settings.local_settings
-      - REDIS_URL=redis://redis:6379  # jeśli backend korzysta z redis, podaj adres kontenera redis
+      # - DJANGO_SETTINGS_MODULE=gutenberg.settings.gutenberg_settings
+      - REDIS_URL=redis://redis:6379
     volumes:
-      - .:/app
-      - ./dist:/app/dist
+      - backend_logs:/var/log/gutenberg
     depends_on:
       - db
       - redis
@@ -36,22 +35,37 @@ services:
         uv run python manage.py migrate &&
         uv run gunicorn gutenberg.wsgi:application --bind 0.0.0.0:8000 --access-logfile -
       "
-
-
-  frontend:
+    # --access-logfile - is for debug
+  celery:
     build:
       context: .
-      dockerfile: Dockerfile.frontend
-    container_name: gutenberg-frontend
+      dockerfile: Dockerfile
+      target: run_server
+    command: uv run celery -A gutenberg worker -l INFO
+    depends_on:
+      - redis
+      - db
+    volumes:
+      - backend_logs:/var/log/gutenberg
+    # environment:
+      # - DJANGO_SETTINGS_MODULE=gutenberg.settings.docker_settings
+      # - REDIS_URL=redis://redis:6379/0
+      
+  proxy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: run_nginx
+    container_name: gutenberg-proxy
     ports:
       - "3000:80"
     depends_on:
       - backend
-    volumes:
-      - .:/app/gutenberg  # albo ścieżka, gdzie jest build Vue
     environment:
+      # TODO: Remove or move to the build_webapp build? NGINX doesn't use Node.js 
       - NODE_OPTIONS=--openssl-legacy-provider
 
 volumes:
   postgres_data:
   db_data:
+  backend_logs:
