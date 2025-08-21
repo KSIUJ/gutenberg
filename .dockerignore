@@ -1,0 +1,30 @@
+/backend/gutenberg/settings/docker_settings.py
+/backend/gutenberg/settings/local_settings.py
+/backend/gutenberg/settings/production_settings.py
+
+/backend/.venv
+/backend/.python-version
+
+# celery beat schedule file
+/backend/celerybeat-schedule
+
+# Gutenberg
+# Upload directory (local_settings only)
+/backend/print/
+
+# Webapp
+/node_modules
+/dist
+
+# local env files
+/.env.local
+/.env.*.local
+
+# Editor directories and files
+/.idea
+/.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

@@ -5,6 +5,7 @@ WORKDIR /app
 COPY package.json yarn.lock ./
 RUN yarn install
 
+# TODO: When https://github.com/KSIUJ/gutenberg/pull/86 is merged copy only the webapp directory to improve layer caching
 COPY . .
 RUN yarn build
 
@@ -27,21 +28,24 @@ RUN apt-get update && apt-get install -y \
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Dodaj uv do ścieżki
+# uv is installed in /root/.local/bin, add it to PATH
 ENV PATH="/root/.local/bin:${PATH}"
 
 ENV DJANGO_SETTINGS_MODULE=gutenberg.settings.docker_base_settings
 RUN mkdir /var/log/gutenberg
 
-WORKDIR /app
+WORKDIR /app/backend
 
-COPY ./ /app
-
+COPY ./backend/pyproject.toml ./backend/uv.lock /app/backend/
 RUN uv sync
 
+COPY ./backend /app/backend
+
 COPY --from=build_webapp /app/dist /app/webapp_dist
+# collectstatic puts the collected static files into STATIC_ROOT, configured in docker_base_settings.py.
+# The STATIC_ROOT is copied in the run_nginx target
 RUN uv run python manage.py collectstatic --noinput
-# collectstatic puts the collected static files into STATIC_ROOT
+VOLUME ["/var/log/gutenberg"]
 
 FROM setup_django AS run_server
 ENV DJANGO_SETTINGS_MODULE=gutenberg.settings.docker_settings
@@ -51,7 +55,7 @@ VOLUME ["/var/log/gutenberg"]
 
 FROM nginx:alpine AS run_nginx
 
-# TODO: Replace STATIC_ROOT with the value set in settings
+# /app/staticroot is the value of STATIC_ROOT in docker_base_settings.py
 COPY --from=setup_django /app/staticroot /usr/share/nginx/html/static
 COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80

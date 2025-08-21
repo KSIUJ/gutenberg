@@ -12,7 +12,7 @@ services:
     image: redis:7
     container_name: gutenberg-redis
     # ports:
-    #   - "6379:6379"  
+    #   - "6379:6379"
 
   backend:
     build:
@@ -27,6 +27,9 @@ services:
       - REDIS_URL=redis://redis:6379
     volumes:
       - backend_logs:/var/log/gutenberg
+      - type: bind
+        source: ./backend/gutenberg/settings/docker_settings.py
+        target: /app/backend/gutenberg/settings/docker_settings.py
     depends_on:
       - db
       - redis
@@ -47,10 +50,13 @@ services:
       - db
     volumes:
       - backend_logs:/var/log/gutenberg
+      - type: bind
+        source: ./backend/gutenberg/settings/docker_settings.py
+        target: /app/backend/gutenberg/settings/docker_settings.py
     # environment:
       # - DJANGO_SETTINGS_MODULE=gutenberg.settings.docker_settings
       # - REDIS_URL=redis://redis:6379/0
-      
+
   proxy:
     build:
       context: .
@@ -62,7 +68,7 @@ services:
     depends_on:
       - backend
     environment:
-      # TODO: Remove or move to the build_webapp build? NGINX doesn't use Node.js 
+      # TODO: Remove or move to the build_webapp build? NGINX doesn't use Node.js
       - NODE_OPTIONS=--openssl-legacy-provider
 
 volumes:
