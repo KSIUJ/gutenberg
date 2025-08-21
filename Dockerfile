@@ -87,7 +87,11 @@ VOLUME ["/var/log/gutenberg"]
 #   - /app/backend/gutenberg/settings/docker_settings.py
 FROM setup_base AS run_celery
 
-# This command is time and space consuming, so it's run before copying backend after uv sync
+# This command is time and space consuming, so it's run early in the build chain for `run_celery`.
+# To avoid running `uv sync` twice and to benefit from layer catching for `uv sync`,
+# the /app/backend (already containing the `.venv` created by running `uv sync`) is copied from setup_django.
+# Making `run_celery` extend `setup_django` instead of copying files from it would work, but would usually be way
+# slower, because the `apt-get install` command would run after every change in the `backend` directory.
 RUN apt-get update && apt-get install -y \
     imagemagick \
     ghostscript \
