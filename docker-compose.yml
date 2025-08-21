@@ -21,6 +21,7 @@ services:
       target: run_server
     container_name: gutenberg-backend
     ports:
+      # TODO: Disable direct Django access, all requests should go through Nginx
       - "8000:8000"
     environment:
       # - DJANGO_SETTINGS_MODULE=gutenberg.settings.gutenberg_settings

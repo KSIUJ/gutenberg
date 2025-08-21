@@ -11,6 +11,8 @@ COPY ./webapp /app/webapp
 RUN yarn build
 
 
+# TODO: uv downloaded another Python version due to a mismatch in the version provided by the Docker image and
+#       the one expected (from pyproject.toml)
 FROM python:3.11-slim-bullseye AS setup_django
 
 RUN apt-get update && apt-get install -y \
@@ -42,23 +44,28 @@ RUN uv sync
 
 COPY ./backend /app/backend
 
+VOLUME ["/var/log/gutenberg"]
+
+
+FROM setup_django AS collect_static
+
 COPY --from=build_webapp /app/dist /app/webapp_dist
 # collectstatic puts the collected static files into STATIC_ROOT, configured in docker_base_settings.py.
 # The STATIC_ROOT is copied in the run_nginx target
 RUN uv run python manage.py collectstatic --noinput
-RUN rm -r /app/webapp_dist
 
-VOLUME ["/var/log/gutenberg"]
 
 FROM setup_django AS run_server
+
 ENV DJANGO_SETTINGS_MODULE=gutenberg.settings.docker_settings
 # TODO: This might be unnecessary if the command is set in docker-compose.yml
 CMD ["uv", "run", "gunicorn", "gutenberg.wsgi:application", "--bind", "0.0.0.0:8000"]
 VOLUME ["/var/log/gutenberg"]
 
+
 FROM nginx:alpine AS run_nginx
 
 # /app/staticroot is the value of STATIC_ROOT in docker_base_settings.py
-COPY --from=setup_django /app/staticroot /usr/share/nginx/html/static
+COPY --from=collect_static /app/staticroot /usr/share/nginx/html/static
 COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80

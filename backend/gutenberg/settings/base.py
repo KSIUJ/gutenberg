@@ -119,6 +119,13 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, '../dist'),
 ]
 
+# This is a custom setting which controls how the index.html file is served for the SPA webapp.
+# All webapp routes are handled by the Django server to handle authentication.
+# If enabled, Django will instruct Nginx to serve the index.html file using the X-Accel-Redirect header.
+# If disabled, django.contrib.staticfiles will be used to serve the file.
+# See backend/printing/views.py
+NGINX_ACCEL_ENABLED=False
+
 # Logging
 LOGGING = {
     'version': 1,
