@@ -11,8 +11,6 @@ services:
   redis:
     image: redis:7
     container_name: gutenberg-redis
-    # ports:
-    #   - "6379:6379"
 
   backend:
     build:
@@ -20,11 +18,7 @@ services:
       dockerfile: Dockerfile
       target: run_server
     container_name: gutenberg-backend
-    ports:
-      # TODO: Disable direct Django access, all requests should go through Nginx
-      - "8000:8000"
     environment:
-      # - DJANGO_SETTINGS_MODULE=gutenberg.settings.gutenberg_settings
       - REDIS_URL=redis://redis:6379
     volumes:
       - backend_logs:/var/log/gutenberg
@@ -54,9 +48,6 @@ services:
       - type: bind
         source: ./backend/gutenberg/settings/docker_settings.py
         target: /app/backend/gutenberg/settings/docker_settings.py
-    # environment:
-      # - DJANGO_SETTINGS_MODULE=gutenberg.settings.docker_settings
-      # - REDIS_URL=redis://redis:6379/0
 
   proxy:
     build:
@@ -68,9 +59,6 @@ services:
       - "3000:80"
     depends_on:
       - backend
-    environment:
-      # TODO: Remove or move to the build_webapp build? NGINX doesn't use Node.js
-      - NODE_OPTIONS=--openssl-legacy-provider
 
 volumes:
   postgres_data:
