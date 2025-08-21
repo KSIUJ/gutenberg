@@ -15,18 +15,27 @@ RUN yarn build
 #       the one expected (from pyproject.toml)
 FROM python:3.11-slim-bullseye AS setup_django
 
+# https://docs.docker.com/build/building/best-practices/#apt-get
+# Install pacakges required for installing uv and used by the backend server
+RUN apt-get update && apt-get install -y \
+    libmagic1 \
+    libmagic-dev \
+    build-essential \
+    curl \
+    libpq-dev \
+  && rm -rf /var/lib/apt/lists/*
+
+# Install packages required for the document processing and printing
+# TODO: This command should only be used in run_celery/
+#       The instalation should however happen as early as possible.
+#       This requires spiting the targets even more
 RUN apt-get update && apt-get install -y \
     imagemagick \
     ghostscript \
     pdftk \
     bubblewrap \
-    build-essential \
-    curl \
-    libpq-dev \
     cups \
     libreoffice \
-    libmagic1 \
-    libmagic-dev \
   && rm -rf /var/lib/apt/lists/*
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -55,11 +64,16 @@ COPY --from=build_webapp /app/dist /app/webapp_dist
 RUN uv run python manage.py collectstatic --noinput
 
 
-FROM setup_django AS run_server
+FROM setup_django AS run_backend
 
 ENV DJANGO_SETTINGS_MODULE=gutenberg.settings.docker_settings
-# TODO: This might be unnecessary if the command is set in docker-compose.yml
-CMD ["uv", "run", "gunicorn", "gutenberg.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["./docker-entrypoint.sh"]
+VOLUME ["/var/log/gutenberg"]
+
+
+FROM setup_django AS run_celery
+
+CMD ["uv", "run", "celery", "-A", "gutenberg", "worker", "-l", "INFO"]
 VOLUME ["/var/log/gutenberg"]
 
 

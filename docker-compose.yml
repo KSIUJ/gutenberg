@@ -16,7 +16,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: run_server
+      target: run_backend
     container_name: gutenberg-backend
     environment:
       - REDIS_URL=redis://redis:6379
@@ -28,18 +28,12 @@ services:
     depends_on:
       - db
       - redis
-    command: >
-      sh -c "
-        uv run python manage.py migrate &&
-        uv run gunicorn gutenberg.wsgi:application --bind 0.0.0.0:8000 --access-logfile -
-      "
-    # --access-logfile - is for debug
+
   celery:
     build:
       context: .
       dockerfile: Dockerfile
-      target: run_server
-    command: uv run celery -A gutenberg worker -l INFO
+      target: run_celery
     depends_on:
       - redis
       - db
