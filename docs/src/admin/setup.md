@@ -38,22 +38,28 @@ Now, execute the following commands:
 ```sh
 export DJANGO_SETTINGS_MODULE=gutenberg.settings.${GUTENBERG_ENV}_settings
 git clone https://github.com/KSIUJ/gutenberg.git
+cd gutenberg
 
 # Setup the Python virtual environment in .venv and install required packages.
 # uv will also download the correct Python version based on pyproject.toml,
 # if the version installed on your machine is different.
+cd backend
 uv sync
+cd ../
 
-cd gutenberg/gutenberg/settings
+cd backend
 cp ${GUTENBERG_ENV}_settings.py.example ${GUTENBERG_ENV}_settings.py
 $EDITOR ${GUTENBERG_ENV}_settings.py # edit the values appropriately
-cd ../..
+cd ../
+
 yarn install
 yarn build
 
 # Execute all Python commands through uv
+cd backend
 uv run manage.py migrate
 uv run manage.py runserver 0.0.0.0:11111
+cd ../
 
 # visit localhost:11111 and check if everything works
 ```
@@ -61,6 +67,7 @@ uv run manage.py runserver 0.0.0.0:11111
 You will also need to start at least one worker. In the main directory after activating the virtual environment:
 
 ```sh
+cd backend
 uv run celery -A gutenberg worker -B -l INFO
 ```
 
