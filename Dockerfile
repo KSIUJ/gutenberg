@@ -2,11 +2,12 @@ FROM node:16-alpine AS build_webapp
 
 WORKDIR /app
 
-COPY package.json yarn.lock ./
+COPY package.json yarn.lock /app/
 RUN yarn install
 
-# TODO: When https://github.com/KSIUJ/gutenberg/pull/86 is merged copy only the webapp directory to improve layer caching
-COPY . .
+# TODO: When https://github.com/KSIUJ/gutenberg/pull/86 is merged, copy only the webapp directory
+COPY vue.config.js babel.config.js .eslintrc.js .browserslistrc /app/
+COPY ./webapp /app/webapp
 RUN yarn build
 
 
@@ -45,6 +46,8 @@ COPY --from=build_webapp /app/dist /app/webapp_dist
 # collectstatic puts the collected static files into STATIC_ROOT, configured in docker_base_settings.py.
 # The STATIC_ROOT is copied in the run_nginx target
 RUN uv run python manage.py collectstatic --noinput
+RUN rm -r /app/webapp_dist
+
 VOLUME ["/var/log/gutenberg"]
 
 FROM setup_django AS run_server

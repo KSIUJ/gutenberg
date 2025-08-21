@@ -3,7 +3,13 @@ from .base import *
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = ''
 
+# https://docs.djangoproject.com/en/5.2/ref/settings/#allowed-hosts
+# Example value: [yoursite.example.com]
 ALLOWED_HOSTS = []
+
+# https://docs.djangoproject.com/en/5.2/ref/settings/#std-setting-CSRF_TRUSTED_ORIGINS
+# Example value: [https://yoursite.example.com]
+CSRF_TRUSTED_ORIGINS = []
 
 STATIC_ROOT = '/var/www/gutenberg/static'
 
