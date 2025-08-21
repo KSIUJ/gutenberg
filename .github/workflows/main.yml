@@ -8,20 +8,31 @@ jobs:
     env:
       DJANGO_SETTINGS_MODULE: gutenberg.settings.test_settings
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v5
+      with:
+        sparse-checkout: |
+          backend
+
     - name: "Set up Python"
       uses: actions/setup-python@v5
       with:
-        python-version-file: 'pyproject.toml'
+        python-version-file: 'backend/pyproject.toml'
+
     - name: Install uv
       uses: astral-sh/setup-uv@v6
       with:
         version: "0.8.2"
+
     - name: Configure venv and install dependencies
+      working-directory: backend
       run: uv sync
+
     - name: Run migrations
+      working-directory: backend
       run: uv run manage.py migrate
+
     - name: Run tests
+      working-directory: backend
       run: uv run manage.py test
 
   test_webapp:
