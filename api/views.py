@@ -96,11 +96,15 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=['post'], name='Run job')
     def run_job(self, request, pk=None):
         job = self.get_object()
-        if job.status != JobStatus.INCOMING:
-            return Response("Error: invalid job status for this request", status=status.HTTP_400_BAD_REQUEST)
-        self._run_job(job)
-        #return job
-        return Response(self.get_serializer(job).data)
+        #if job.status != JobStatus.INCOMING:
+        #    return Response("Error: invalid job status for this request", status=status.HTTP_400_BAD_REQUEST)
+        error = self._validate_properties(job, job.properties)
+        if error:
+            return Response(error, status=status.HTTP_400_BAD_REQUEST)
+        else:  
+            self._run_job(job)
+            #return job
+            return Response(self.get_serializer(job).data)
 
     @action(detail=False, methods=['post'], name='Create new job')
     def create_job(self, request):
@@ -120,8 +124,8 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
                              color: bool, two_sides: str, fit_to_page: bool, **_):
         job = GutenbergJob.objects.create(name='webrequest', job_type=JobType.PRINT, status=JobStatus.INCOMING,
                                           owner=self.request.user, printer=printer_with_perms)
-        color = color if printer_with_perms.color_allowed else False
-        two_sides = two_sides if printer_with_perms.duplex_supported else TwoSidedPrinting.ONE_SIDED
+        #color = color if printer_with_perms.color_allowed else False
+        #two_sides = two_sides if printer_with_perms.duplex_supported else TwoSidedPrinting.ONE_SIDED
         PrintingProperties.objects.create(color=color, copies=copies, two_sides=two_sides,
                                           pages_to_print=pages_to_print, job=job, fit_to_page=fit_to_page)
         return job
@@ -178,6 +182,9 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         if not properties:
             return Response("Error: job properties not found", status=status.HTTP_404_NOT_FOUND)
         return Response({
+            "id": job.id,
+            "status": job.status,
+            "printer": job.printer.name,
             "copies": properties.copies,
             "pages_to_print": properties.pages_to_print,
             "color": properties.color,
@@ -194,8 +201,20 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = CreatePrintJobRequestSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        error = self._validate_properties(job, serializer.validated_data["printer"], PrintingProperties(
+            color=serializer.validated_data['color'],
+            copies=serializer.validated_data['copies'],
+            two_sides=serializer.validated_data['two_sides'],
+            pages_to_print=serializer.validated_data['pages_to_print'],
+            fit_to_page=serializer.validated_data['fit_to_page']
+        ))
+        if error:
+            return Response(error, status=status.HTTP_400_BAD_REQUEST)
 
         properties = PrintingProperties.objects.get(job=job)
+        job.printer = Printer.get_printer_for_user(user=self.request.user,
+                                                   printer_id=serializer.validated_data['printer'])
         properties.copies = serializer.validated_data['copies']
         properties.pages_to_print = serializer.validated_data['pages_to_print']
         properties.color = serializer.validated_data['color']
@@ -204,6 +223,40 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         properties.save()
 
         return Response(self.get_serializer(job).data)
+    
+    
+    @action(detail=True, methods=['get'], name='Validate job')
+    def validate_job(self, request, pk=None):
+        job = self.get_object()
+        error = self._validate_properties(job, job.printer, job.properties)
+        
+        return Response(error if error else {"error": None, "message": "Job is valid"}, 
+                        status=status.HTTP_400_BAD_REQUEST if error else status.HTTP_200_OK)
+        
+    
+    
+    def _validate_properties(self, job: GutenbergJob, printer, properties:PrintingProperties):
+        
+        def Error(error, message):
+            return {"error": error, "message": message}
+        
+        if job.status != JobStatus.INCOMING:
+            return Error("status", "Job status must be INCOMING to validate")
+
+        printer = Printer.get_printer_for_user(user=self.request.user, printer_id=job.printer.id)
+        if not properties:
+            return Error("properties", "Job properties not found")
+
+        if not printer:
+            return Error("printer", "Printer not found or not available for this user")
+        if properties.color and not printer.color_allowed:
+            return Error("color", "Color printing is not allowed for this printer")
+        if properties.two_sides != TwoSidedPrinting.ONE_SIDED and not printer.duplex_supported:
+            return Error("duplex", "Duplex printing is not supported by this printer")
+            
+        return None
+        
+        
 
 
 
