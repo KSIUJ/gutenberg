@@ -88,17 +88,33 @@ VOLUME ["/var/log/gutenberg"]
 #   - /etc/gutenberg/docker_settings.py
 FROM setup_base AS run_celery
 
-# This command is time and space consuming, so it's run early in the build chain for `run_celery`.
+# These apt-get install commands are time and space consuming, so they are run early in the build chain for `run_celery`.
 # To avoid running `uv sync` twice and to benefit from layer catching for `uv sync`,
-# the /app/backend (already containing the `.venv` created by running `uv sync`) is copied from setup_django.
+# the /app/backend directory (already containing the `.venv` created by running `uv sync`) is copied from setup_django.
 # Making `run_celery` extend `setup_django` instead of copying files from it would work, but would usually be way
 # slower, because the `apt-get install` command would run after every change in the `backend` directory.
-RUN apt-get update && apt-get install -y \
+#
+# TODO: Consider installing some fonts recommended for libreoffice despite installing --no-install-recommends.
+# TIP:  You can use the command
+#       > apt-cache depends libreoffice
+#       to check the required, recommended (installed unless --no-install-recommends is enabled) and suggested
+#       (not installed by default) dependencies of the package.
+#
+# This step installs only cups-client (for the lp and cancel commands), not cups (which depends on cups-client).
+# This means that the container can only be used with an external CUPS server.
+# If needed, the user can deploy https://hub.docker.com/r/olbat/cupsd as a separate container.
+# NOTE: The size of cups vs cups-client is not a problem, cups instead of cups-client increases the image size by about
+#       17 MB.
+# TIP:  Run this command to check which package provides the specified binary:
+#       > dpkg -S $(which cancel)
+#       outputs: "cups-client: /usr/bin/cancel"
+#
+RUN apt-get update && apt-get install -y --no-install-recommends \
     imagemagick \
     ghostscript \
     pdftk \
     bubblewrap \
-    cups \
+    cups-client \
     libreoffice \
   && rm -rf /var/lib/apt/lists/*
 
