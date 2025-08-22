@@ -15,7 +15,15 @@ On top of that 3 more containers are required to run Gutenberg:
 **TODO**
 
 ## Configuration
+**TODO**
 
 ## docker-compose.yml
 The `docker-compose.yml` file provides an example Docker Compose configuration, which references the local `Dockerfile`
 to build the required Docker images. You might need to modify it to fit your deployment.
+
+## Creating a superuser
+After starting all Docker containers, the command below can be used to create a superuser account.
+`gutenberg-backend` is the name of the container running the Django server.
+```bash
+docker exec -it gutenberg-backend ./manage.py createsuperuser
+```
