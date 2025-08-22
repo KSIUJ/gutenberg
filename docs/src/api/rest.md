@@ -4,11 +4,8 @@ The endpoint for the REST API is `<GUTENBERG_INSTANCE_URL>/api/`.
 
 You can explore the API by browsing it. DRF generates interactive HTML views for all routes.
 
-<div class="warning">
-
-The auto-generated documentation is currently incomplete and in some cases displays incorrect schemas.
-
-</div>
+> [!NOTE]
+> The auto-generated documentation is currently incomplete and in some cases displays incorrect schemas.
 
 ## Authentication
 The REST API supports only cookie-based session authentication. This makes it unsuitable for uses other than the

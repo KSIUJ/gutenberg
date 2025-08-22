@@ -5,3 +5,13 @@ title = "Gutenberg documentation"
 
 [build]
 build-dir = "book"
+
+[preprocessor.alerts]
+
+[preprocessor.mermaid]
+command = "mdbook-mermaid"
+
+[output]
+
+[output.html]
+additional-js = ["static/mermaid.min.js", "static/mermaid-init.js"]

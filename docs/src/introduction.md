@@ -20,4 +20,8 @@ It also describes the suggested implementation and design considerations for pla
 This source of this book is in the same [GitHub repository](https://github.com/KSIUJ/gutenberg) as Gutenberg's code,
 in the `docs` directory.
 The book has been created using [mdBook](https://rust-lang.github.io/mdBook/index.html).
-To contribute, fork this repository and create a pull request with your changes. 
+These mdBook plugins are also installed:
+- [`mdbook-mermaid`](https://github.com/badboy/mdbook-mermaid)
+- [`mdbook-alerts`](https://github.com/lambdalisue/rs-mdbook-alerts)
+
+To contribute, fork this repository and create a pull request with your changes.

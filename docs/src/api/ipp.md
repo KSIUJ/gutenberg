@@ -4,7 +4,7 @@ Check the [IPP Guide](https://www.pwg.org/ipp/ippguide.html) for an overview of 
 
 Gutenberg implements an IPP server. The IPP operations are not proxied directly to the physical printer but are handled
 by Gutenberg. Gutenberg verifies printing permissions, manages accounting (print stats and quotas) and processes the
-supplied documents. This has the implications of: 
+supplied documents. This has the implications of:
 1. Gutenberg might support some IPP operations, attributes or formats that the physical printer does not.
     (E.g., it might support submitting .docx files, even if the physical printer can only accept PDFs. In this case
     Gutenberg will convert the document to PDF, which it will then send to the printer).
@@ -13,36 +13,21 @@ supplied documents. This has the implications of:
     way to use this feature via Gutenberg).
 
 ## Supported IPP standards and versions
-<div class="warning">
-
-This section is incomplete
-
-</div>
+> [!NOTE]
+> This section is incomplete
 
 ## Supported IPP operations
-<div class="warning">
-
-This section is incomplete
-
-</div>
+> [!NOTE]
+> This section is incomplete
 
 ## Supported job attributes
-<div class="warning">
-
-This section is incomplete
-
-</div>
+> [!NOTE]
+> This section is incomplete
 
 ## Supported file formats
-<div class="warning">
-
-This section is incomplete
-
-</div>
+> [!NOTE]
+> This section is incomplete
 
 ## IPP endpoint and authentication
-<div class="warning">
-
-This section is incomplete
-
-</div>
+> [!NOTE]
+> This section is incomplete

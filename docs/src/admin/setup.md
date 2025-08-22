@@ -1,9 +1,6 @@
 # Instance setup
-<div class="warning">
-
-This document is incomplete
-
-</div>
+> [!NOTE]
+> This document is incomplete
 
 ## Requirements
 
