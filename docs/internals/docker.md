@@ -11,9 +11,11 @@ The graph below visualizes the build-time layer dependencies.
 ```mermaid
 flowchart TD
     node{{_node..._}}
+    uv{{_uv:python..._}}
+    nginx{{_nginx..._}}
+    
     node --> build_webapp
 
-    uv{{_uv:python..._}}
     uv --> setup_base
     setup_base --> setup_django
 
@@ -25,5 +27,7 @@ flowchart TD
     setup_django -. copy /app/backend .-> run_celery
 
     build_webapp -. copy /app/dist .-> collect_static
-    collect_static --> run_nginx([run_nginx])
+    nginx --> run_nginx([run_nginx])
+    collect_static -. copy /app/staticroot .-> run_nginx([run_nginx])
+    
 ```
