@@ -1,5 +1,5 @@
 # build_webapp target
-#   Builds the web app
+#   Builds the static files for the web app
 #
 #   outputs:
 #   - /app/dist - the generated static files for the SPA
@@ -47,6 +47,8 @@ COPY ./backend /app/backend/
 #   Collects all the static files to be served under /static by NGINX
 #
 #   extends: setup_django
+#   build inputs:
+#   - /app/dist from build_webapp
 #   build outputs:
 #   - /app/staticroot - collected static files
 FROM setup_django AS collect_static
@@ -64,12 +66,12 @@ RUN uv run python manage.py collectstatic --noinput
 #
 #   extends: setup_django
 #   mounts:
-#   TODO: Change local mounts, a link could be created to support docker_settings.py
 #   - /var/log/gutenberg - the logs volume
-#   - /app/backend/gutenberg/settings/docker_settings.py
+#   - /etc/gutenberg/docker_settings.py
 #   exposes port 8000 for proxying by NGINX
 FROM setup_django AS run_backend
 
+RUN ln -s /etc/gutenberg/docker_settings.py /app/backend/gutenberg/settings/docker_settings.py
 ENV DJANGO_SETTINGS_MODULE=gutenberg.settings.docker_settings
 CMD ["./docker-entrypoint.sh"]
 VOLUME ["/var/log/gutenberg"]
@@ -82,9 +84,8 @@ VOLUME ["/var/log/gutenberg"]
 #   build inputs:
 #   - /app/backend from setup_django
 #   mounts:
-#   TODO: Change local mounts, a link could be created to support docker_settings.py
 #   - /var/log/gutenberg - the logs volume
-#   - /app/backend/gutenberg/settings/docker_settings.py
+#   - /etc/gutenberg/docker_settings.py
 FROM setup_base AS run_celery
 
 # This command is time and space consuming, so it's run early in the build chain for `run_celery`.
@@ -103,6 +104,7 @@ RUN apt-get update && apt-get install -y \
 
 COPY --from=setup_django /app/backend /app/backend/
 
+RUN ln -s /etc/gutenberg/docker_settings.py /app/backend/gutenberg/settings/docker_settings.py
 ENV DJANGO_SETTINGS_MODULE=gutenberg.settings.docker_settings
 CMD ["uv", "run", "celery", "-A", "gutenberg", "worker", "-l", "INFO"]
 VOLUME ["/var/log/gutenberg"]
@@ -115,6 +117,8 @@ VOLUME ["/var/log/gutenberg"]
 #   - /app/staticroot from collect_static
 #   depends on run_backend for server on port 8000
 #   exposes port 80 for public access
+# TODO: Make sure that this image can be extended with extra Nginx configuration files so the users of Gutenberg can
+#       create additional route handlers or customize the proxy for their setup.
 FROM nginx:alpine AS run_nginx
 
 # /app/staticroot is the value of STATIC_ROOT in docker_base_settings.py

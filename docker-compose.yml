@@ -19,12 +19,15 @@ services:
       target: run_backend
     container_name: gutenberg-backend
     environment:
+      # TODO: Remove this env variable or copy it to the Celery container too and verify how it interacts with the
+      #       settings in docker_settings.py. The REDIS_URL should be configurable, because some users might want to
+      #       use multiple Celery instances or put them on different machines.
       - REDIS_URL=redis://redis:6379
     volumes:
       - backend_logs:/var/log/gutenberg
       - type: bind
         source: ./backend/gutenberg/settings/docker_settings.py
-        target: /app/backend/gutenberg/settings/docker_settings.py
+        target: /etc/gutenberg/docker_settings.py
     depends_on:
       - db
       - redis
@@ -41,7 +44,7 @@ services:
       - backend_logs:/var/log/gutenberg
       - type: bind
         source: ./backend/gutenberg/settings/docker_settings.py
-        target: /app/backend/gutenberg/settings/docker_settings.py
+        target: /etc/gutenberg/docker_settings.py
 
   proxy:
     build:

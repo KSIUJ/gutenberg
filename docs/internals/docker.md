@@ -29,5 +29,4 @@ flowchart TD
     build_webapp -. copy /app/dist .-> collect_static
     nginx --> run_nginx([run_nginx])
     collect_static -. copy /app/staticroot .-> run_nginx([run_nginx])
-    
 ```
