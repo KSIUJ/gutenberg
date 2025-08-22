@@ -53,7 +53,7 @@ COPY ./backend /app/backend/
 #   - /app/staticroot - collected static files
 FROM setup_django AS collect_static
 
-ENV DJANGO_SETTINGS_MODULE=gutenberg.settings.docker_base_settings
+ENV DJANGO_SETTINGS_MODULE=gutenberg.settings.docker_base
 RUN mkdir /var/log/gutenberg
 COPY --from=build_webapp /app/dist /app/webapp_dist/
 # collectstatic puts the collected static files into STATIC_ROOT,
@@ -72,7 +72,7 @@ RUN uv run python manage.py collectstatic --noinput
 FROM setup_django AS run_backend
 
 RUN ln -s /etc/gutenberg/docker_settings.py /app/backend/gutenberg/settings/docker_settings.py
-ENV DJANGO_SETTINGS_MODULE=gutenberg.settings.docker_settings
+ENV DJANGO_SETTINGS_MODULE=gutenberg.settings.docker_server_overrides
 CMD ["./docker-entrypoint.sh"]
 VOLUME ["/var/log/gutenberg"]
 
@@ -105,7 +105,7 @@ RUN apt-get update && apt-get install -y \
 COPY --from=setup_django /app/backend /app/backend/
 
 RUN ln -s /etc/gutenberg/docker_settings.py /app/backend/gutenberg/settings/docker_settings.py
-ENV DJANGO_SETTINGS_MODULE=gutenberg.settings.docker_settings
+ENV DJANGO_SETTINGS_MODULE=gutenberg.settings.docker_server_overrides
 CMD ["uv", "run", "celery", "-A", "gutenberg", "worker", "-l", "INFO"]
 VOLUME ["/var/log/gutenberg"]
 
