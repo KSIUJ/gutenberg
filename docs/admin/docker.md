@@ -8,10 +8,11 @@ to the `Dockerfile` we encourage you to create an issue in the Gutenberg's
 are suitable for customized setups.
 
 ## Required images
-Gutenberg requires configuring a PostgreSQL database and a Redis instance. Both of them need to be accessible from the
-Django server and from the Celery worker. They can be deployed as Docker containers or as standalone instances.
+Gutenberg requires configuring a PostgreSQL database, a Redis instance and a CUPS server.
+All of them need to be accessible from the Django server and from the Celery worker.
+They can be deployed as Docker containers or as standalone instances.
 
-On top of that 3 more containers are required to run Gutenberg:
+On top of that, three more containers are required to run Gutenberg:
 **TODO**
 
 ## Configuration
