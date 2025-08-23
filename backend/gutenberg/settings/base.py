@@ -202,3 +202,7 @@ OIDC_RP_SCOPES = 'openid email'
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+
+# The hostname of the CUPS server.
+# This value will be used as the value of the -h argument for cups-client commands (lp, cancel, etc.).
+CUPS_SERVERNAME = '/run/cups/cups.sock'

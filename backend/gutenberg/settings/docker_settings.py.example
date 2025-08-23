@@ -27,10 +27,6 @@ DATABASES = {
     }
 }
 
-# Printing
-# Directory to store the printed files in
-MEDIA_ROOT = '/srv/printing/'
-
 # Uncomment lines below to enable Open ID Connect auth
 # LOGIN_URL = 'oidc_authentication_init'
 # OIDC_ADMIN_ROLE = 'ksi'
@@ -46,3 +42,10 @@ MEDIA_ROOT = '/srv/printing/'
 #     'django.contrib.auth.backends.ModelBackend',
 #     'gutenberg.auth.OIDCAuthenticationBackend',
 # )
+
+# Celery
+CELERY_BROKER_URL = 'redis://redis:6379'
+
+# The hostname of the CUPS server.
+# This value will be used as the value of the -f argument for cups-client commands (lp, cancel, etc.).
+CUPS_SERVERNAME = 'cups:631'

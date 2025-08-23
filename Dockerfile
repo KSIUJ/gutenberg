@@ -73,7 +73,7 @@ FROM setup_django AS run_backend
 
 RUN ln -s /etc/gutenberg/docker_settings.py /app/backend/gutenberg/settings/docker_settings.py
 ENV DJANGO_SETTINGS_MODULE=gutenberg.settings.docker_server_overrides
-CMD ["./docker-entrypoint.sh"]
+ENTRYPOINT ["./docker-entrypoint.sh", "run-backend"]
 VOLUME ["/var/log/gutenberg"]
 
 
@@ -122,7 +122,7 @@ COPY --from=setup_django /app/backend /app/backend/
 
 RUN ln -s /etc/gutenberg/docker_settings.py /app/backend/gutenberg/settings/docker_settings.py
 ENV DJANGO_SETTINGS_MODULE=gutenberg.settings.docker_server_overrides
-CMD ["uv", "run", "celery", "-A", "gutenberg", "worker", "-l", "INFO"]
+ENTRYPOINT ["./docker-entrypoint.sh", "run-celery"]
 VOLUME ["/var/log/gutenberg"]
 
 
