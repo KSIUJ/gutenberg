@@ -3,7 +3,7 @@ This document is intended for Gutenberg instance admins;
 it explains how to configure printers and manage printing permissions.
 
 > [!NOTE]
-> This document is currently incomplete
+> This document is incomplete
 
 ## Admin interface
 Management actions are performed in the Django admin interface,
@@ -22,7 +22,7 @@ A new printer can be created in the **Control** > **Printers** section of the ad
 CUPS provides a web interface for managing printers, which can be accessed at `http://localhost:631/`
 on the server where the Gutenberg Celery worker is running.
 
-When adding a printer a CUPS, the **Printer type** field should be set to **local cups**. 
+When adding a printer a CUPS, the **Printer type** field should be set to **local cups**.
 
 You can use the web interface or the command below to find the list of available printers:
 ```bash
@@ -34,5 +34,6 @@ Most other fields are optional.
 
 ## Managing printing permissions
 Only users who are in a group listed in the **Printer permissions** list can access the printer.
-> [!NOTE]
+
+> [!IMPORTANT]
 > This restriction also applies to superuser accounts.
