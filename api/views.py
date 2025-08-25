@@ -26,6 +26,9 @@ from printing.printing import print_file
 
 logger = logging.getLogger('gutenberg.api.printing')
 
+def Error(error, message):
+    return {"error": error, "message": message}
+
 
 class LargeResultsSetPagination(PageNumberPagination):
     page_size = 1000
@@ -80,7 +83,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
     def upload_artefact(self, request, pk=None):
         job = self.get_object()
         if job.status != JobStatus.INCOMING:
-            return Response("Error: invalid job status for this request", status=status.HTTP_400_BAD_REQUEST)
+            return Response(Error("status","JobStatus must be incoming"), status=status.HTTP_400_BAD_REQUEST)
         serializer = UploadJobArtefactRequestSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors,
@@ -90,7 +93,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             #if serializer.validated_data['last'] == True:
             #    self._run_job(job)
         except UnsupportedDocumentError as ex:
-            return Response("Error: {}".format(ex), status=status.HTTP_400_BAD_REQUEST)
+            return Response(Error("document type",ex), status=status.HTTP_400_BAD_REQUEST)
         return Response(self.get_serializer(job).data)
 
     @action(detail=True, methods=['post'], name='Run job')
@@ -114,8 +117,8 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
                             status=status.HTTP_400_BAD_REQUEST)
         printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
                                                           printer_id=serializer.validated_data['printer'])
-        if not printer_with_perms:
-            return Response("Printer does not exist", status=status.HTTP_400_BAD_REQUEST)
+        #if not printer_with_perms:
+        #    return Response("Printer does not exist", status=status.HTTP_400_BAD_REQUEST)
         job = self._create_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
         return Response(self.get_serializer(job).data)
 
@@ -236,9 +239,6 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
     
     
     def _validate_properties(self, job: GutenbergJob, printer, properties:PrintingProperties):
-        
-        def Error(error, message):
-            return {"error": error, "message": message}
         
         if job.status != JobStatus.INCOMING:
             return Error("status", "Job status must be INCOMING to validate")
