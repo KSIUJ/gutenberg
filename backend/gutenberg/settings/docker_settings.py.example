@@ -1,4 +1,4 @@
-from .base import *
+from .docker_base import *
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = ''
@@ -11,15 +11,6 @@ ALLOWED_HOSTS = []
 # Example value: [https://yoursite.example.com]
 CSRF_TRUSTED_ORIGINS = []
 
-STATIC_ROOT = '/var/www/gutenberg/static'
-
-# This is a custom setting which controls how the index.html file is served for the SPA webapp.
-# All webapp routes are handled by the Django server to handle authentication.
-# If enabled, Django will instruct Nginx to serve the index.html file using the X-Accel-Redirect header.
-# If disabled, django.contrib.staticfiles will be used to serve the file.
-# See backend/printing/views.py
-NGINX_ACCEL_ENABLED=True
-
 # Admin e-mail addresses to send messages to when errors occur
 ADMINS = []
 
@@ -28,21 +19,13 @@ ADMINS = []
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'gutenberg',
-        'USER': 'gutenberg',
-        'PASSWORD': '',
-        'HOST': '127.0.0.1',
+        'NAME': 'gutenbergdb',
+        'USER': 'gutenberguser',
+        'PASSWORD': 'gutenbergpass',
+        'HOST': 'db',
         'PORT': '5432',
     }
 }
-
-# Logging
-LOGGING['handlers']['print_file']['filename'] = '/var/log/gutenberg/print.log'
-LOGGING['handlers']['django_file']['filename'] = '/var/log/gutenberg/django.log'
-
-# Printing
-# Directory to store the printed files in
-MEDIA_ROOT = '/srv/printing/'
 
 # Uncomment lines below to enable Open ID Connect auth
 # LOGIN_URL = 'oidc_authentication_init'
@@ -61,7 +44,8 @@ MEDIA_ROOT = '/srv/printing/'
 # )
 
 # Celery
-CELERY_BROKER_URL = 'redis://localhost:6379'
+CELERY_BROKER_URL = 'redis://redis:6379'
 
-USE_X_FORWARDED_HOST = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# The hostname of the CUPS server.
+# This value will be used as the value of the -f argument for cups-client commands (lp, cancel, etc.).
+CUPS_SERVERNAME = 'cups:631'
