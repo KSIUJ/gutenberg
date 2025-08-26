@@ -119,7 +119,7 @@ STATICFILES_FINDERS = [
 ]
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'webapp/.output/public'),
+    os.path.join(BASE_DIR, '../webapp/.output/public'),
 ]
 
 # Logging
