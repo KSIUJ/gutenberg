@@ -161,6 +161,7 @@ class JobArtefact(models.Model):
     file = models.FileField(upload_to='artefacts/%Y/%m/%d/')
     artefact_type = models.CharField(max_length=4, default=JobArtefactType.SOURCE, choices=JobArtefactType.choices)
     mime_type = models.CharField(max_length=100, default='application/octet-stream')
+    order = models.IntegerField(default=0)
 
     def __str__(self):
         return self.file.name

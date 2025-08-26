@@ -17,7 +17,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from api.serializers import GutenbergJobSerializer, PrinterSerializer, PrintRequestSerializer, UserInfoSerializer, \
-    CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer, LoginSerializer, DeleteJobArtefactRequestSerializer
+    CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer, LoginSerializer, \
+        DeleteJobArtefactRequestSerializer, ChangeArtefactOrderRequestSerializer
 from common.models import User
 from control.models import GutenbergJob, Printer, JobStatus, PrintingProperties, TwoSidedPrinting, JobArtefact, \
     JobArtefactType, JobType
@@ -121,7 +122,21 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         #    return Response("Printer does not exist", status=status.HTTP_400_BAD_REQUEST)
         job = self._create_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
         return Response(self.get_serializer(job).data)
-
+    
+    @action(detail=True, methods=['post'], name='Change artefact order')
+    def change_order(self, request, pk=None):
+        job = self.get_object()
+        if job.status != JobStatus.INCOMING:
+            return Response(Error("status","JobStatus must be incoming"), status=status.HTTP_400_BAD_REQUEST)
+        serializer = ChangeArtefactOrderRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            self._change_order(job, **serializer.validated_data)
+        except Exception as ex:
+            return Response(Error("order",str(ex)), status=status.HTTP_400_BAD_REQUEST)
+        return Response(self.get_serializer(job).data)
+        
     def _create_printing_job(self, printer_with_perms,
                              copies: int, pages_to_print: str,
                              color: bool, two_sides: str, fit_to_page: bool, **_):
@@ -134,7 +149,10 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         return job
 
     def _upload_artefact(self, job, file, **_):
-        artefact = JobArtefact.objects.create(job=job, artefact_type=JobArtefactType.SOURCE, file=file)
+        last_artefact = job.artefacts.order_by('-order').first()
+        order = last_artefact.order + 1 if last_artefact else 1
+
+        artefact = JobArtefact.objects.create(job=job, artefact_type=JobArtefactType.SOURCE, file=file, order=order)
         file_type = detect_file_format(artefact.file.path)
         if file_type not in SUPPORTED_FILE_FORMATS:
             raise UnsupportedDocumentError("Unsupported file type: {}".format(file_type))
@@ -148,6 +166,21 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         logger.info('User %s submitted job: "%s"', self.request.user.username)
         return job
     
+    def _change_order(self, job, new_order):
+        for id in new_order:
+            if not job.artefacts.filter(id=id).exists():
+                raise ValueError(f"Artefact with id {id} does not exist in this job")
+        if len(new_order) != job.artefacts.count():
+            raise ValueError("New order list must contain all artefact IDs exactly once")
+        
+        idx = 1
+        for id in new_order:
+            artefact = job.artefacts.filter(id=id).first()
+            artefact.order = idx
+            artefact.save()
+            idx += 1
+        return job
+    
     @action(detail=True, methods=['get'], name='Get artefacts')
     def artefacts(self, request, pk=None):
         job = self.get_object()
@@ -158,6 +191,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
                 "file_name": artefact.file.name,
                 "mime_type": artefact.mime_type,
                 "artefact_type": artefact.artefact_type,
+                "order": artefact.order
             }
             for artefact in artefacts
         ]

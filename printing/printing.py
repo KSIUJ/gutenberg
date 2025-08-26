@@ -87,7 +87,7 @@ def print_file(job_id):
     try:
         with tempfile.TemporaryDirectory() as job_tmpdir:
             sum_num_pages = 0
-            for idx, artefact in enumerate(job.artefacts.filter(artefact_type=JobArtefactType.SOURCE)):
+            for idx, artefact in enumerate(job.artefacts.filter(artefact_type=JobArtefactType.SOURCE).order_by('order')):
                 with tempfile.TemporaryDirectory() as artefact_tmpdir:
                     file_path = artefact.file.path
                     file_format = artefact.mime_type

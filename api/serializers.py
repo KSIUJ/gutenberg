@@ -46,7 +46,10 @@ class UploadJobArtefactRequestSerializer(serializers.Serializer):
     last = serializers.BooleanField(default=False)
 
 class DeleteJobArtefactRequestSerializer(serializers.Serializer):
-    file_id = serializers.IntegerField(required=True)
+    artefact_id = serializers.IntegerField(required=True)
+    
+class ChangeArtefactOrderRequestSerializer(serializers.Serializer):
+    new_order = serializers.ListField(child=serializers.IntegerField(), required=True)
 
 class UserInfoSerializer(serializers.ModelSerializer):
     class Meta:
