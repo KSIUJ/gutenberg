@@ -1,23 +1,27 @@
 <template>
-  <div class="flex flex-row gap-6 w-full max-w-5xl px-4 mx-auto">
-    <!--
-      This trickery with sticky makes it so that:
-      - if the height of the left column is less than the screen height (minus the header height)
-        the left panel is fixed (not affected by scrolling),
-      - if it is greater then the left column will scroll with the page until its end touches
-        the bottom edge of the screen.
-      This way the left column is always in view, but if it doesn't fit on the screen global
-      scroll is used to avoid nested scrolling.
-    -->
-    <div class="w-md shrink-0 self-end sticky bottom-0">
-      <div class="sticky top-(--header-height) min-h-[calc(100vh-var(--header-height))] py-4 space-y-4">
+  <sidebar-layout>
+    <template #sidebar>
+      <ghost-panel
+        v-if="$auth.me.value === Unauthenticated"
+        class="p-4 grow flex flex-col items-center justify-center text-center space-y-4"
+      >
+        <div>
+          Sign in to print documents online
+        </div>
+        <!--
+           The sign in button is not a NuxtLink, because the /login/ route might be handled by Django,
+           not Vue Router, if OIDC sign-in is enabled.
+         -->
+        <Button label="Sign in" as="a" href="/login/" size="large" />
+      </ghost-panel>
+
+      <div v-else class="space-y-4">
         <Panel
           header="Print files online"
           :pt="{
-            root: 'flex flex-col',
-            // contentContainer: 'grow h-0',
-            content: 'h-full overflow-y-auto',
-          }"
+              root: 'flex flex-col',
+              content: 'h-full overflow-y-auto',
+            }"
         >
           <print-options />
         </Panel>
@@ -26,8 +30,9 @@
           <div class="text-muted-color text-center p-6">This feature is not yet implemented</div>
         </Panel>
       </div>
-    </div>
-    <div class="py-4 grow">
+    </template>
+
+    <template #content>
       <h1>Other ways to print</h1>
       <h2>IPP</h2>
       <div class="space-y-6 mt-4 text-justify text-sm text-muted-color">
@@ -62,8 +67,10 @@
           Nam a malesuada libero, ac convallis erat. Integer sed nulla vel lorem mattis rutrum eget id diam. Etiam quis lectus sagittis, suscipit sapien quis, varius metus. In hac habitasse platea dictumst. Suspendisse non sagittis risus. Cras sit amet elit sagittis purus ultricies tempus. Praesent nec feugiat urna.
         </p>
       </div>
-    </div>
-  </div>
+    </template>
+  </sidebar-layout>
 </template>
+
 <script setup lang="ts">
+const { $auth } = useNuxtApp();
 </script>

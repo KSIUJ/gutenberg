@@ -1,5 +1,15 @@
 <template>
-  <div class="w-full h-full flex flex-col space-y-6">
+  <div
+    v-if="printers.data.value === undefined || printers.data.value.length === 0"
+    class="w-full h-full py-2"
+  >
+    <message v-if="printersErrorMessage !== null" severity="error">{{ printersErrorMessage }}</message>
+    <message v-else severity="info">You do not have access to any printer</message>
+  </div>
+  <div
+    v-else
+    class="w-full h-full flex flex-col space-y-6"
+  >
     <div class="mb-0">
       <FloatLabel variant="in">
         <Select
@@ -157,6 +167,11 @@ import type {FileUploadSelectEvent} from "primevue";
 
 const printers = await usePrinters();
 const jobCreator = useJobCreator(printers);
+
+const printersErrorMessage = computed(() => {
+  if (printers.error.value === undefined) return null;
+  return getErrorMessage(printers.error.value) ?? 'Failed to load printer list';
+});
 
 const duplexOptions = [
   { value: 'duplex-long-edge' as DuplexMode, label: 'Long edge', description: 'for vertical documents' },

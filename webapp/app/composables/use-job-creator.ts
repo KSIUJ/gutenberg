@@ -15,11 +15,25 @@ export type JobDocument = {
 export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtError | undefined>) => {
   const apiRepository = useApiRepository();
 
-  const selectedPrinterId = ref(null);
+  const getFirstPrinterId = () => {
+    return printers.data.value?.at(0)?.id ?? null;
+  };
+
+  const selectedPrinterId = ref(getFirstPrinterId());
   const selectedPrinter = computed(() => {
     if (selectedPrinterId.value === null) return null;
     if (!printers.data.value) return null;
     return printers.data.value.find((printer) => printer.id === selectedPrinterId.value) ?? null;
+  });
+
+  watchEffect(() => {
+    if (printers.data.value === undefined) return;
+
+    // If no printer is selected or the selected printer is not on the printer list,
+    // select the first printer (or deselect if the printer list is empty).
+    if (selectedPrinterId.value === null || selectedPrinter.value === null) {
+      selectedPrinterId.value = getFirstPrinterId();
+    }
   });
 
   const copyCount = ref(1);

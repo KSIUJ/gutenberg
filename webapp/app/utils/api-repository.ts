@@ -133,8 +133,9 @@ export function getErrorMessage(error: unknown): string | undefined {
     return getErrorMessage(error.cause) ?? error.message;
   }
   if (!(error instanceof FetchError)) return undefined;
+  const responseIsJson = error?.response?.headers?.get('content-type')?.startsWith('application/json') ?? false;
 
-  if (typeof error.data === 'string') return error.data;
+  if (responseIsJson && typeof error.data === 'string') return error.data;
   if (typeof error.data === 'object' && error.data !== null) {
     if ('message' in error.data && typeof error.data.message === 'string') {
       return error.data.message;

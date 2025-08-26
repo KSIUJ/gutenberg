@@ -6,8 +6,8 @@ export default defineNuxtPlugin({
   setup: () => {
     const nuxtApp = useNuxtApp();
     const csrfToken = useCookie('csrftoken', { readonly: true });
-    // TODO: Remove this temporary solution
     const toast = useToast();
+    const route = useRoute();
 
     const api = $fetch.create({
       baseURL: '/api/',
@@ -34,41 +34,52 @@ export default defineNuxtPlugin({
       gutenbergDisableUnauthenticatedHandling: false,
 
       async onResponseError({ options, response }) {
+        if (options.gutenbergDisableUnauthenticatedHandling) return;
+
         // Currently, unauthenticated requests return the 403 Forbidden status code,
         // not 401 Unauthorized. See:
         // https://www.django-rest-framework.org/api-guide/authentication/#sessionauthentication
-        //
+        const isAuthError = response.status === 401 || response.status === 403;
+        if (!isAuthError) return;
         // To distinguish between unauthenticated requests and missing permissions,
         // Gutenberg sets a custom X-Reason header for error responses.
+        const reason = response.headers.get('X-Reason');
+        if (reason !== 'NotAuthenticated' && reason !== 'AuthenticationFailed') return;
 
-        if (options.gutenbergDisableUnauthenticatedHandling) return;
+        if (!('$auth' in nuxtApp)) {
+          console.warn('The auth plugin was not available in API plugin\'s onResponseError handler');
+          return;
+        }
 
-        const isAuthError = response.status === 401 || response.status === 403;
-        if (isAuthError) {
-          const reason = response.headers.get('X-Reason');
-          if (reason === 'NotAuthenticated' || reason === 'AuthenticationFailed') {
-            if ('$auth' in nuxtApp) {
-              nuxtApp.$auth.clearMe();
-            } else {
-              console.warn('The auth plugin was not available in API plugin\'s onResponseError handler');
-            }
+        if (nuxtApp.$auth.me.value === Unauthenticated) {
+          console.warn(`Got ${reason} auth error in API plugin\'s onResponseError handler, ` +
+            'but `$auth.me` was already `Unauthenticated`');
+          return;
+        }
 
-            // TODO: Remove this temporary solution
-            setTimeout(() => {
-              toast.add({
-                summary: 'The user is not authenticated',
-                detail: `Got code ${response.status}: ${response.statusText},\n X-Reason: ${reason}`,
-                severity: 'error',
-                life: 3000,
-              });
-            }, 1000);
+        try {
+          await navigateTo(
+            {
+              path: '/login/',
+              query: { next: useRoute().fullPath, expired: true },
+            },
+            { external: true },
+          );
 
-            // TODO: Decide on automatic redirects to the login page.
-            //  This might lead to unexpected data loss or the desired action not actually getting
-            //  executed after the user attempts an action resulting in the 401/403 error response.
-
-            // await nuxtApp.runWithContext(() => navigateTo('/login'))
-          }
+          // Keep the request in the processing state while navigating to the login page.
+          // The external navigation should cause a page load/reload, so this promise should
+          // never complete, unless the login page load fails or actually takes very long.
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+          console.error('Page was still active 5s after starting navigation to the sign in page');
+        } catch (error) {
+          console.error('Failed to navigate to the sign in page after the session has expired', error);
+        } finally {
+          nuxtApp.$auth.clearMe();
+          toast.add({
+            summary: 'Your session has expired',
+            detail: `Sign in again to continue`,
+            severity: 'error',
+          });
         }
       },
     });

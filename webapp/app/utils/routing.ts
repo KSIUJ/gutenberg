@@ -23,3 +23,33 @@ export const navigateToMaybeExternal = (next: string, current: RouteLocationNorm
     external: true,
   });
 };
+
+/**
+ * @returns a single non-empty string parameter from the query value or `null` if there are
+ * none or more than one such values.
+ */
+export const getSingleQueryParam = (
+  value: undefined | LocationQueryValue | LocationQueryValue[]
+): string | undefined => {
+  if (value === undefined) return null;
+  if (!Array.isArray(value)) return getSingleQueryParam([value]);
+  const candidates = value.filter((x) => typeof x === 'string' && x !== '');
+  if (candidates.length === 1) return candidates[0];
+  return null;
+};
+
+/**
+ * Tries to parse a route query value to check if a boolean flag is set.
+ * @returns `true` if the value contains at least one argument of the form:
+ * `?x`, `?x=`, `?x=true` (any case), `?x=t` (any case) and `?x=1`
+ * and `false` otherwise.
+ *
+ * @see https://router.vuejs.org/api/type-aliases/LocationQueryValue.html
+ */
+export const isQueryFlagEnabled = (
+  value: undefined | LocationQueryValue | LocationQueryValue[],
+): boolean => {
+  if (value === undefined) return false;
+  if (value === null || ['', 't', 'true', '1'].includes(value.toLowerCase())) return true;
+  return value.some(isQueryFlagEnabled);
+};

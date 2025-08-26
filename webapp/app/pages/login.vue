@@ -2,6 +2,11 @@
 
 <template>
   <div class="w-full max-w-md p-4 mx-auto">
+    <Message v-if="sessionExpired" severity="warn" class="mb-4">
+      <div class="w-full">Your session has expired</div>
+      <div class="text-sm">Sign in again to continue</div>
+    </Message>
+
     <Panel header="Sign in to Gutenberg">
       <form method="post" class="space-y-4" @submit.prevent="onSubmit">
         <FloatLabel variant="in">
@@ -40,14 +45,15 @@ const password = ref('');
 const loading = ref(false);
 const errorMessage = ref<string | null>(null);
 
-const extractNext = (route: RouteLocationNormalized) => {
-  let result = route.query.next;
-  if (result && typeof result !== 'string') result = result[0];
-  return result || '/';
-};
+const parseQuery = (route: RouteLocationNormalized) => ({
+  next: getSingleQueryParam(route.query.next) ?? '/',
+  expired: isQueryFlagEnabled(route.query.expired),
+});
+
+const sessionExpired = computed(() => parseQuery(route).expired);
 
 const navigateToNext = (current: RouteLocationNormalized) => {
-  const next = extractNext(current);
+  const { next } = parseQuery(current);
   return navigateToMaybeExternal(next, current);
 };
 
@@ -75,7 +81,15 @@ async function onSubmit() {
 
 definePageMeta({
   hideSignInButton: true,
-  middleware: defineNuxtRouteMiddleware((to) => {
+  middleware: defineNuxtRouteMiddleware((to, from) => {
+    // If the user is already authenticated, then skip the login page and go directly to the
+    // route indicated in the `next` query param.
+
+    // This redirect is disabled if the `expired` flag is set and the navigation is internal,
+    // as the `$auth.me` value might not have been cleared yet if the session just expired.
+    const isFirstRoute = to.fullPath == from.fullPath;
+    if (!isFirstRoute && parseQuery(to).expired) return;
+
     const { $auth } = useNuxtApp();
     if ($auth.me.value === Unauthenticated) return;
     return navigateToNext(to);
