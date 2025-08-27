@@ -15,11 +15,38 @@
             type="email" is not used here because it enforces e-mail validation,
             and the username does not necessarily have to be an email address.
           -->
-          <InputText v-model="username" input-id="username" name="username" required type="text" autocomplete="username" inputmode="email" fluid autofocus />
+          <InputText
+            v-model="username"
+            input-id="username"
+            name="username"
+            required
+            type="text"
+            autocomplete="username"
+            inputmode="email"
+            fluid
+            autofocus
+          />
           <label for="username">Username</label>
         </FloatLabel>
         <FloatLabel variant="in">
-          <Password v-model="password" input-id="current-password" name="password" required autocomplete="current-password" fluid toggle-mask :feedback="false" />
+          <!--
+            autocomplete is not passed through correctly by the PrimeVue Password element,
+            so the input-props property is used instead.
+            [dominik-korsa]: I've created a pull request to fix this upstream in PrimeVue:
+            https://github.com/primefaces/primevue/pull/8050
+          -->
+          <Password
+            v-model="password"
+            input-id="current-password"
+            name="password"
+            required
+            fluid
+            toggle-mask
+            :feedback="false"
+            :input-props="{
+              autocomplete: 'current-password',
+            }"
+          />
           <label for="current-password">Password</label>
         </FloatLabel>
 
