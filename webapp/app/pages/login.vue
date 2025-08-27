@@ -2,20 +2,20 @@
 
 <template>
   <div class="w-full max-w-md p-4 mx-auto">
-    <Message v-if="sessionExpired" severity="warn" class="mb-4">
+    <p-message v-if="sessionExpired" severity="warn" class="mb-4">
       <div class="w-full">Your session has expired</div>
       <div class="text-sm">Sign in again to continue</div>
-    </Message>
+    </p-message>
 
-    <Panel header="Sign in to Gutenberg">
+    <p-message header="Sign in to Gutenberg">
       <form method="post" class="space-y-4" @submit.prevent="onSubmit">
-        <FloatLabel variant="in">
+        <p-float-label variant="in">
           <!--
             inputmode="email" is used to show the email keyboard on mobile devices.
             type="email" is not used here because it enforces e-mail validation,
             and the username does not necessarily have to be an email address.
           -->
-          <InputText
+          <p-input-text
             v-model="username"
             input-id="username"
             name="username"
@@ -27,15 +27,15 @@
             autofocus
           />
           <label for="username">Username</label>
-        </FloatLabel>
-        <FloatLabel variant="in">
+        </p-float-label>
+        <p-float-label variant="in">
           <!--
             autocomplete is not passed through correctly by the PrimeVue Password element,
             so the input-props property is used instead.
             [dominik-korsa]: I've created a pull request to fix this upstream in PrimeVue:
             https://github.com/primefaces/primevue/pull/8050
           -->
-          <Password
+          <p-password
             v-model="password"
             input-id="current-password"
             name="password"
@@ -48,15 +48,15 @@
             }"
           />
           <label for="current-password">Password</label>
-        </FloatLabel>
+        </p-float-label>
 
-        <Message v-if="errorMessage !== null" severity="error">{{ errorMessage }}</Message>
+        <p-message v-if="errorMessage !== null" severity="error">{{ errorMessage }}</p-message>
 
         <div class="flex flex-row-reverse">
-          <Button type="submit" label="Sign in" :disabled="loading" />
+          <p-button type="submit" label="Sign in" :disabled="loading" />
         </div>
       </form>
-    </Panel>
+    </p-message>
   </div>
 </template>
 

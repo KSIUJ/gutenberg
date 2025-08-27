@@ -30,6 +30,32 @@ export default defineNuxtConfig({
         },
       },
     },
+    // The PrimeVue Nuxt module includes the styles of all PrimeVue components by default, and the
+    // tree-shaking does not work correctly, see:
+    // - https://github.com/primefaces/primevue/issues/7774
+    // - https://github.com/primefaces/primevue/issues/7959
+    // Until these issues are fixed upstream, manual imports are used.
+    autoImport: false,
+    components: {
+      prefix: 'p',
+      include: [
+        'Button',
+        'Divider',
+        'Fieldset',
+        'FileUpload',
+        'FloatLabel',
+        'InputNumber',
+        'InputText',
+        'Menu',
+        'Message',
+        'Panel',
+        'Password',
+        'Select',
+        'SelectButton',
+        'Toast',
+        'ToggleSwitch',
+      ],
+    },
   },
   ssr: false,
   nitro: {

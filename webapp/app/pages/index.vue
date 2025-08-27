@@ -12,11 +12,11 @@
            The sign in button is not a NuxtLink, because the /login/ route might be handled by Django,
            not Vue Router, if OIDC sign-in is enabled.
          -->
-        <Button label="Sign in" as="a" href="/login/" size="large" />
+        <p-button label="Sign in" as="a" href="/login/" size="large" />
       </ghost-panel>
 
       <div v-else class="space-y-4">
-        <Panel
+        <p-panel
           header="Print files online"
           :pt="{
               root: 'flex flex-col',
@@ -24,11 +24,11 @@
             }"
         >
           <print-options />
-        </Panel>
+        </p-panel>
 
-        <Panel header="Recently printed">
+        <p-panel header="Recently printed">
           <div class="text-muted-color text-center p-6">This feature is not yet implemented</div>
-        </Panel>
+        </p-panel>
       </div>
     </template>
 

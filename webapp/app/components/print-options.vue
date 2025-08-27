@@ -3,16 +3,16 @@
     v-if="printers.data.value === undefined || printers.data.value.length === 0"
     class="w-full h-full py-2"
   >
-    <message v-if="printersErrorMessage !== null" severity="error">{{ printersErrorMessage }}</message>
-    <message v-else severity="info">You do not have access to any printer</message>
+    <p-message v-if="printersErrorMessage !== null" severity="error">{{ printersErrorMessage }}</p-message>
+    <p-message v-else severity="info">You do not have access to any printer</p-message>
   </div>
   <div
     v-else
     class="w-full h-full flex flex-col space-y-6"
   >
     <div class="mb-0">
-      <FloatLabel variant="in">
-        <Select
+      <p-float-label variant="in">
+        <p-select
           id="printer-select"
           v-model="jobCreator.selectedPrinterId"
           :options="printers.data.value"
@@ -22,20 +22,20 @@
           :loading="printers.pending.value"
         />
         <label for="printer-select">Printer</label>
-      </FloatLabel>
+      </p-float-label>
     </div>
 
-    <Fieldset legend="Files">
+    <p-fieldset legend="Files">
       <template v-if="jobCreator.documents.length > 0">
         <document-list
           v-if="jobCreator.documents.length > 0"
           :documents="jobCreator.documents"
         />
-        <divider />
+        <p-divider />
       </template>
       <div>
         <div class="flex flex-row space-x-2 items-center">
-          <FileUpload
+          <p-file-upload
             mode="basic"
             class="w-full"
             auto
@@ -55,12 +55,12 @@
           <div class="text-sm">{{ formatExtensions(jobCreator.selectedPrinter.supported_extensions) }}</div>
         </div>
       </div>
-    </Fieldset>
+    </p-fieldset>
 
 <!--    <Button label="Refresh printer list" variant="text" @click="printers.refresh()" />-->
     <div class="space-y-4">
-      <FloatLabel variant="in">
-        <InputNumber
+      <p-float-label variant="in">
+        <p-input-number
           v-model="jobCreator.copyCount"
           :min="1"
           :max="1000"
@@ -70,12 +70,12 @@
           input-id="copy-number-input"
         />
         <label for="copy-number-input">Number of copies</label>
-      </FloatLabel>
+      </p-float-label>
 
       <template v-if="jobCreator.selectedPrinter?.duplex_supported">
         <div class="w-full flex flex-row items-center">
           <label id="duplex-enabled" class="grow pl-form">Enable two&dash;side printing</label>
-          <ToggleSwitch
+          <p-toggle-switch
             v-model="duplexEnabled"
             aria-labelledby="duplex-enabled"
           />
@@ -83,7 +83,7 @@
 
         <template v-if="jobCreator.duplexMode !== 'disabled'">
           <label id="duplex-mode-select" class="label-text px-form">Flip backside around</label>
-          <SelectButton
+          <p-select-button
             v-model="jobCreator.duplexMode"
             :options="duplexOptions"
             option-value="value"
@@ -99,7 +99,7 @@
                 <span class="text-xs">({{option.description}})</span>
               </div>
             </template>
-          </SelectButton>
+          </p-select-button>
         </template>
       </template>
 
@@ -123,7 +123,7 @@
 <!--      </FloatLabel>-->
 
       <label id="color-mode-select" class="label-text px-form">Color mode</label>
-      <SelectButton
+      <p-select-button
         v-model="jobCreator.colorMode"
         :options="colorOptions"
         option-value="value"
@@ -145,18 +145,18 @@
             </div>
           </div>
         </template>
-      </SelectButton>
+      </p-select-button>
     </div>
-    <Message
+    <p-message
       v-for="error in jobCreator.errorMessageList"
       :key="`${error.field ?? '-'}|${error.message}`"
       severity="error"
     >
       {{ error.message }}
-    </Message>
+    </p-message>
     <div class="flex flex-row-reverse gap-2 mt-4 shrink-0">
-      <Button label="Print" severity="primary" :loading="jobCreator.printLoading" @click="jobCreator.print" />
-      <Button label="Preview" severity="secondary" disabled @click="preview()" />
+      <p-button label="Print" severity="primary" :loading="jobCreator.printLoading" @click="jobCreator.print" />
+      <p-button label="Preview" severity="secondary" disabled @click="preview()" />
     </div>
   </div>
 </template>

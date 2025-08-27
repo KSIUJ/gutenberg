@@ -18,7 +18,8 @@
           {{ formattedState(document.state).label }}
         </div>
       </div>
-      <Button
+      <!-- FIXME: Hiding until hovered does not work with touch input -->
+      <p-button
         class="hide-unless-group-hovered"
         variant="text"
         label="Remove"

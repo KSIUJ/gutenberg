@@ -1,6 +1,6 @@
 <template>
   <div>
-    <Toast position="bottom-right" />
+    <p-toast position="bottom-right" />
     <app-header />
     <NuxtLoadingIndicator />
     <div class="mt-(--header-height)">
