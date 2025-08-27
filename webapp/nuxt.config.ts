@@ -62,7 +62,7 @@ export default defineNuxtConfig({
     preset: 'static',
     prerender: {
       crawlLinks: false,
-      routes: ['/login/'],
+      routes: [],
     },
     routeRules: isDev ? {
       '/api-auth/**': {

@@ -1,0 +1,36 @@
+<div class="h-screen flex items-center justify-center">
+    <div class="spa-loading-outer">
+        <div class="spa-loading-inner">
+            Gutenberg is loading&hellip;
+        </div>
+    </div>
+</div>
+
+<style>
+body {
+    background-color: var(--p-surface-100);
+    color: var(--p-text-muted-color);
+}
+
+@keyframes spa-loading-reveal {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes spa-loading-pulse {
+    0% { opacity: 1; }
+    40% { opacity: 0.5; }
+    80% { opacity: 1; }
+}
+
+.spa-loading-outer {
+    animation: spa-loading-reveal 0.7s ease-out;
+    animation-fill-mode: backwards;
+    animation-delay: 2s;
+}
+
+.spa-loading-inner {
+    animation: spa-loading-pulse 2s ease-in-out infinite;
+    animation-delay: 4s;
+}
+</style>

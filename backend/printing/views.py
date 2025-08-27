@@ -5,9 +5,9 @@ from django.contrib.staticfiles.views import serve
 @login_required
 def webapp(request):
     # Serve webpack-built SPA.
-    return serve(request, "index.html", insecure=True)
+    return serve(request, "200.html", insecure=True)
 
 
 def login(request):
     # Serve webpack-built SPA.
-    return serve(request, "index.html", insecure=True)
+    return serve(request, "200.html", insecure=True)
