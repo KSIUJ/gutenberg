@@ -65,9 +65,10 @@ async function onSubmit() {
     await $auth.login(username.value, password.value);
 
     toast.add({
-      summary: 'Login successful',
+      summary: 'Signed in successfully',
       severity: 'success',
       life: 3000,
+      closable: false,
     });
 
     await navigateToNext(route);

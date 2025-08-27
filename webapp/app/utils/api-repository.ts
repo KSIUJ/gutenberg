@@ -118,6 +118,15 @@ export const apiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => ({
     });
   },
 
+  async runJob(jobId: number): Promise<PrintJob> {
+    return await fetch<PrintJob>(`/api/jobs/${jobId}/run_job/`, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+      },
+    });
+  },
+
   async cancelPrintJob(jobId: number): Promise<PrintJob> {
     return await fetch<PrintJob>(`/api/jobs/${jobId}/cancel/`, {
       method: 'POST',

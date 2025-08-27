@@ -12,6 +12,17 @@ export type JobDocument = {
   remove(): void,
 };
 
+export type JobCreationError = {
+  field: keyof CreatePrintJobRequest | (string & {}) | null;
+  message: string;
+};
+
+const twoSidesMapping = {
+  disabled: "OS",
+  "duplex-long-edge": "TL",
+  "duplex-short-edge": "TS",
+} satisfies Record<Exclude<DuplexMode, 'duplex-unspecified'>, ApiDuplexMode>;
+
 export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtError | undefined>) => {
   const apiRepository = useApiRepository();
 
@@ -20,6 +31,15 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
   };
 
   const selectedPrinterId = ref(getFirstPrinterId());
+  const documentQueue = ref<JobDocument[]>([]);
+  const copyCount = ref(1);
+  const duplexMode = ref<DuplexMode>('disabled');
+  const colorMode = ref<ColorMode>('monochrome');
+
+  const printLoading = ref(false);
+  const printError = ref<unknown | null>(null);
+  const showSerializationErrors = ref(false);
+
   const selectedPrinter = computed(() => {
     if (selectedPrinterId.value === null) return null;
     if (!printers.data.value) return null;
@@ -36,37 +56,85 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
     }
   });
 
-  const copyCount = ref(1);
-  const duplexMode = ref<DuplexMode>('disabled');
-  const colorMode = ref<ColorMode>('monochrome');
-
+  // These settings do not show up the UI if they are not available.
   watchEffect(() => {
-    if (duplexMode.value !== 'disabled' && selectedPrinter.value?.duplex_supported === false) {
+    if (selectedPrinter.value === null) return;
+    if (duplexMode.value !== 'disabled' && !selectedPrinter.value.duplex_supported) {
       duplexMode.value = 'disabled';
+    }
+    if (colorMode.value === 'color' && !selectedPrinter.value.color_allowed) {
+      colorMode.value = 'monochrome';
     }
   });
 
-  const serializedSettings = computed<CreatePrintJobRequest | null>(() => {
-    if (selectedPrinterId.value === null) return null;
-    if (duplexMode.value === 'duplex-unspecified') return null;
+  const serializedSettings = computed(() => {
+    const errors: JobCreationError[] = [];
 
-    const twoSidesMapping = {
-      disabled: "OS",
-      "duplex-long-edge": "TL",
-      "duplex-short-edge": "TS",
-    } satisfies Record<Exclude<DuplexMode, 'duplex-unspecified'>, ApiDuplexMode>;
+    if (selectedPrinterId.value === null) {
+      errors.push({
+        field: 'printer',
+        message: 'No printer selected',
+      });
+    }
 
-    return {
+    let two_sides: ApiDuplexMode | undefined;
+    if (duplexMode.value === 'duplex-unspecified') {
+      errors.push({
+        field: 'two_sides',
+        message: 'Two-side printing mode not selected',
+      });
+      two_sides = undefined;
+    } else {
+      two_sides = twoSidesMapping[duplexMode.value];
+    }
+
+    if (documentQueue.value.length === 0) {
+      errors.push({
+        field: null,
+        message: 'No documents selected',
+      });
+    }
+
+    if (errors.length > 0 || two_sides === undefined || selectedPrinterId.value === null) {
+      return {
+        errors,
+        request: null,
+      };
+    }
+
+    const request = {
       printer: selectedPrinterId.value,
       copies: copyCount.value,
       pages_to_print: undefined,
-      two_sides: twoSidesMapping[duplexMode.value],
+      two_sides,
       color: colorMode.value === 'color',
       fit_to_page: undefined,
-    };
+    } satisfies CreatePrintJobRequest;
+    return {
+      errors,
+      request,
+    }
   });
 
-  const documentQueue = ref<JobDocument[]>([]);
+  const errorMessageList = computed<JobCreationError[]>(() => {
+    const list: JobCreationError[] = [];
+    if (printers.error.value !== undefined) {
+      list.push({
+        field: 'printer',
+        message: getErrorMessage(printers.error.value) ?? 'Failed to get printer list'
+      });
+    }
+    if (showSerializationErrors.value) {
+      list.push(...serializedSettings.value.errors);
+    }
+    if (printError.value !== null) {
+      list.push({
+        field: null,
+        message: getErrorMessage(printError.value) ?? 'Failed to create print job',
+      });
+    }
+    return list;
+  });
 
   let nextLocalFileId = 0;
   const addFiles = (files: File[]) => {
@@ -83,9 +151,6 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
       },
     })));
   };
-
-  const printLoading = ref(false);
-  const printError = ref<unknown | null>(null);
 
   const tryCancel = async (jobId: number) => {
     try {
@@ -110,10 +175,10 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
   const completePrintJob = async (jobId: number) => {
     try {
       const documents = [...documentQueue.value];
-      for (const [index, document] of documents.entries()) {
-        const isLast = index == documents.length - 1;
-        await uploadDocument(jobId, document, isLast);
+      for (const document of documents) {
+        await uploadDocument(jobId, document, false);
       }
+      await apiRepository.runJob(jobId);
     } catch (error) {
       await tryCancel(jobId);
       throw error;
@@ -121,8 +186,8 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
   };
 
   const print = async () => {
-    if (printLoading.value || serializedSettings.value === null) return;
-    // TODO: Do not start if the job contains no files
+    showSerializationErrors.value = true;
+    if (printLoading.value || serializedSettings.value.request === null) return;
 
     try {
       printLoading.value = true;
@@ -130,7 +195,7 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
       documentQueue.value.forEach((document) => {
         document.state = 'pending';
       });
-      const job = await apiRepository.createPrintJob(serializedSettings.value);
+      const job = await apiRepository.createPrintJob(serializedSettings.value.request);
       await completePrintJob(job.id);
     } catch (error) {
       console.error('Failed to create print job', error);
@@ -139,17 +204,6 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
       printLoading.value = false;
     }
   };
-
-  const errorMessageList = computed(() => {
-    const list = [];
-    if (printers.error.value !== undefined) {
-      list.push(getErrorMessage(printers.error.value) ?? 'Failed to get printer list');
-    }
-    if (printError.value !== null) {
-      list.push(getErrorMessage(printError.value) ?? 'Failed to create print job');
-    }
-    return list;
-  });
 
   return reactive({
     printers,

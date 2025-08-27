@@ -18,7 +18,6 @@
           :options="printers.data.value"
           option-value="id"
           option-label="name"
-          :default-value="null"
           fluid
           :loading="printers.pending.value"
         />
@@ -150,10 +149,10 @@
     </div>
     <Message
       v-for="error in jobCreator.errorMessageList"
-      :key="error"
+      :key="`${error.field ?? '-'}|${error.message}`"
       severity="error"
     >
-      {{ error }}
+      {{ error.message }}
     </Message>
     <div class="flex flex-row-reverse gap-2 mt-4 shrink-0">
       <Button label="Print" severity="primary" :loading="jobCreator.printLoading" @click="jobCreator.print" />
