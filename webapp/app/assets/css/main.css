@@ -4,6 +4,8 @@
 @theme {
     --header-height: 4rem;
     --color-error: var(--color-red-600);
+
+    --breakpoint-sm: 32rem;
 }
 
 @utility label-text {

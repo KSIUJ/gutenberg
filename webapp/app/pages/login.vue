@@ -1,62 +1,64 @@
 <!-- See https://web.dev/articles/sign-in-form-best-practices?hl=en for login form best practices -->
 
 <template>
-  <div class="w-full max-w-md p-4 mx-auto">
+  <div class="w-full sm:max-w-md py-4 sm:px-4 mx-auto">
     <p-message v-if="sessionExpired" severity="warn" class="mb-4">
       <div class="w-full">Your session has expired</div>
       <div class="text-sm">Sign in again to continue</div>
     </p-message>
 
-    <p-message header="Sign in to Gutenberg">
-      <form method="post" class="space-y-4" @submit.prevent="onSubmit">
-        <p-float-label variant="in">
-          <!--
-            inputmode="email" is used to show the email keyboard on mobile devices.
-            type="email" is not used here because it enforces e-mail validation,
-            and the username does not necessarily have to be an email address.
-          -->
-          <p-input-text
-            v-model="username"
-            input-id="username"
-            name="username"
-            required
-            type="text"
-            autocomplete="username"
-            inputmode="email"
-            fluid
-            autofocus
-          />
-          <label for="username">Username</label>
-        </p-float-label>
-        <p-float-label variant="in">
-          <!--
-            autocomplete is not passed through correctly by the PrimeVue Password element,
-            so the input-props property is used instead.
-            [dominik-korsa]: I've created a pull request to fix this upstream in PrimeVue:
-            https://github.com/primefaces/primevue/pull/8050
-          -->
-          <p-password
-            v-model="password"
-            input-id="current-password"
-            name="password"
-            required
-            fluid
-            toggle-mask
-            :feedback="false"
-            :input-props="{
+    <form method="post" @submit.prevent="onSubmit">
+      <app-panel header="Sign in to Gutenberg">
+        <div class="space-y-4">
+          <p-float-label variant="in">
+            <!--
+              inputmode="email" is used to show the email keyboard on mobile devices.
+              type="email" is not used here because it enforces e-mail validation,
+              and the username does not necessarily have to be an email address.
+            -->
+            <p-input-text
+              v-model="username"
+              input-id="username"
+              name="username"
+              required
+              type="text"
+              autocomplete="username"
+              inputmode="email"
+              fluid
+              autofocus
+            />
+            <label for="username">Username</label>
+          </p-float-label>
+          <p-float-label variant="in">
+            <!--
+              autocomplete is not passed through correctly by the PrimeVue Password element,
+              so the input-props property is used instead.
+              [dominik-korsa]: I've created a pull request to fix this upstream in PrimeVue:
+              https://github.com/primefaces/primevue/pull/8050
+            -->
+            <p-password
+              v-model="password"
+              input-id="current-password"
+              name="password"
+              required
+              fluid
+              toggle-mask
+              :feedback="false"
+              :input-props="{
               autocomplete: 'current-password',
             }"
-          />
-          <label for="current-password">Password</label>
-        </p-float-label>
+            />
+            <label for="current-password">Password</label>
+          </p-float-label>
 
-        <p-message v-if="errorMessage !== null" severity="error">{{ errorMessage }}</p-message>
-
-        <div class="flex flex-row-reverse">
-          <p-button type="submit" label="Sign in" :disabled="loading" />
+          <p-message v-if="errorMessage !== null" severity="error">{{ errorMessage }}</p-message>
         </div>
-      </form>
-    </p-message>
+
+        <template #actions>
+          <p-button type="submit" label="Sign in" :disabled="loading" />
+        </template>
+      </app-panel>
+    </form>
   </div>
 </template>
 
