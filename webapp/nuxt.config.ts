@@ -119,4 +119,10 @@ export default defineNuxtConfig({
   app: {
     cdnURL: '/static/'
   },
+  components: [
+    {
+      path: '~/components',
+      pathPrefix: false,
+    },
+  ],
 });

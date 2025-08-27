@@ -1,11 +1,13 @@
 <!-- See https://web.dev/articles/sign-in-form-best-practices?hl=en for login form best practices -->
 
 <template>
-  <div class="w-full sm:max-w-md py-4 sm:px-4 mx-auto">
-    <p-message v-if="sessionExpired" severity="warn" class="mb-4">
-      <div class="w-full">Your session has expired</div>
-      <div class="text-sm">Sign in again to continue</div>
-    </p-message>
+  <single-column-layout narrow>
+    <app-content>
+      <p-message v-if="sessionExpired" severity="warn" class="mb-4">
+        <div class="w-full">Your session has expired</div>
+        <div class="text-sm">Sign in again to continue</div>
+      </p-message>
+    </app-content>
 
     <form method="post" @submit.prevent="onSubmit">
       <app-panel header="Sign in to Gutenberg">
@@ -59,7 +61,7 @@
         </template>
       </app-panel>
     </form>
-  </div>
+  </single-column-layout>
 </template>
 
 <script setup lang="ts">
