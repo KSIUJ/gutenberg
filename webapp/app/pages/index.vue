@@ -21,9 +21,9 @@
       <div v-else class="space-y-4 flex flex-col grow">
         <print-options />
 
-        <app-panel header="Recently printed" class="grow">
-          <div class="text-muted-color text-center p-6">This feature is not yet implemented</div>
-        </app-panel>
+<!--        <app-panel header="Recently printed" class="grow">-->
+<!--          <div class="text-muted-color text-center p-6">This feature is not yet implemented</div>-->
+<!--        </app-panel>-->
       </div>
     </template>
 

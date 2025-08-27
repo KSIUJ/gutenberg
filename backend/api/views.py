@@ -101,7 +101,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         if job.status != JobStatus.INCOMING:
             return Response("Error: invalid job status for this request", status=status.HTTP_400_BAD_REQUEST)
         self._run_job(job)
-        return job
+        return Response(self.get_serializer(job).data)
 
     @action(detail=False, methods=['post'], name='Create new job')
     def create_job(self, request):
@@ -139,7 +139,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         job.status = JobStatus.PENDING
         job.save()
         print_file.delay(job.id)
-        logger.info('User %s submitted job: "%s"', self.request.user.username)
+        logger.info('User %s submitted job: %s', self.request.user.username, job.id)
         return job
 
 
@@ -206,7 +206,7 @@ class LoginApiView(APIView):
         if not user.is_active:
             return Response(data={'message': 'Account is not active'}, status=403)
         login(request, user)
-        return Response(status=200)
+        return Response(status=204)
 
     def get(self, request, *args, **kwargs):
         """
@@ -214,4 +214,4 @@ class LoginApiView(APIView):
         it should always be called on login.
         """
         rotate_token(request)
-        return Response(status=200)
+        return Response(status=204)

@@ -7,13 +7,14 @@ export default defineNuxtPlugin({
     const nuxtApp = useNuxtApp();
     const csrfToken = useCookie('csrftoken', { readonly: true });
     const toast = useToast();
-    const route = useRoute();
 
     const api = $fetch.create({
       baseURL: '/api/',
       // Avoid leaking the X-CSRFToken, recommended by the Django docs (see the link below).
       mode: 'same-origin',
       credentials: 'same-origin',
+      gutenbergExpectJson: true,
+      gutenbergDisableUnauthenticatedHandling: false,
 
       onRequest(request) {
         // https://docs.djangoproject.com/en/5.2/howto/csrf/#using-csrf-protection-with-ajax
@@ -23,15 +24,37 @@ export default defineNuxtPlugin({
         if (csrfToken.value) {
           request.options.headers.append('X-CSRFToken', csrfToken.value);
         }
+        if (request.options.gutenbergExpectJson === true) {
+          request.options.headers.set('accept', 'application/json');
+        }
       },
 
-      onResponse() {
+      onResponse({ options, response }) {
         // An API response might update the CSRF token, make sure
         // the value of the `csrfToken` ref is up to date.
         refreshCookie('csrftoken');
-      },
 
-      gutenbergDisableUnauthenticatedHandling: false,
+        if (!response.ok || options.gutenbergExpectJson !== true) return;
+        if (response.status === 204) {
+          console.error(
+            `Unexpected empty response from a request to "${response.url}. gutenbergExpectJson was set to true.`,
+          );
+          throw createError({
+            message: "Empty response received from the server",
+            statusCode: 500,
+          });
+        }
+        if (response.headers.get('content-type') !== 'application/json') {
+          console.error(
+            `Unexpected content type in a response from a request to "${response.url}".
+            Expected "application/json", because gutenbergExpectJson was set to true, got: ${response.headers.get('content-type')}.`,
+          );
+          throw createError({
+            message: 'Unexpected content type in a response from the server',
+            statusCode: 500,
+          });
+        }
+      },
 
       async onResponseError({ options, response }) {
         if (options.gutenbergDisableUnauthenticatedHandling) return;
@@ -52,7 +75,7 @@ export default defineNuxtPlugin({
         }
 
         if (nuxtApp.$auth.me.value === Unauthenticated) {
-          console.warn(`Got ${reason} auth error in API plugin\'s onResponseError handler, ` +
+          console.warn(`Got ${reason} auth error in API plugin's onResponseError handler, ` +
             'but `$auth.me` was already `Unauthenticated`');
           return;
         }
@@ -61,7 +84,7 @@ export default defineNuxtPlugin({
           await navigateTo(
             {
               path: '/login/',
-              query: { next: useRoute().fullPath, expired: true },
+              query: { next: useRoute().fullPath, expired: 'true' },
             },
             { external: true },
           );

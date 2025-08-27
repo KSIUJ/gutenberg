@@ -41,6 +41,13 @@ export type PrintJob = {
   status_reason: string | null;
 };
 
+export type ListResponse<T> = {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+};
+
 export const Unauthenticated = Symbol('Unauthenticated');
 
 export const apiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => ({
@@ -48,9 +55,6 @@ export const apiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => ({
     try {
       return await fetch<User>('/api/me/', {
         method: 'GET',
-        headers: {
-          'accept': 'application/json',
-        },
         gutenbergDisableUnauthenticatedHandling: true,
       });
     } catch (error) {
@@ -68,19 +72,18 @@ export const apiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => ({
   async refreshCsrfToken(): Promise<void> {
     await fetch('/api/login/', {
       method: 'GET',
+      gutenbergExpectJson: false,
     });
   },
 
   async login(username: string, password: string): Promise<void> {
-    await fetch<User | null>('/api/login/', {
+    await fetch('/api/login/', {
       method: 'POST',
-      headers: {
-        'accept': 'application/json',
-      },
       body: {
         username,
         password,
       },
+      gutenbergExpectJson: false,
     });
   },
 
@@ -89,18 +92,12 @@ export const apiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => ({
   async getPrinters(): Promise<Printer[]> {
     return await fetch<Printer[]>('/api/printers/', {
       method: 'GET',
-      headers: {
-        'accept': 'application/json',
-      },
     });
   },
 
   async createPrintJob(body: CreatePrintJobRequest): Promise<PrintJob> {
     return await fetch<PrintJob>('/api/jobs/create_job/', {
       method: 'POST',
-      headers: {
-        'accept': 'application/json',
-      },
       body,
     });
   },
@@ -111,9 +108,6 @@ export const apiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => ({
     formData.append('last', last ? '1' : '0');
     return await fetch<PrintJob>(`/api/jobs/${jobId}/upload_artefact/`, {
       method: 'POST',
-      headers: {
-        'accept': 'application/json',
-      },
       body: formData,
     });
   },
@@ -121,18 +115,27 @@ export const apiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => ({
   async runJob(jobId: number): Promise<PrintJob> {
     return await fetch<PrintJob>(`/api/jobs/${jobId}/run_job/`, {
       method: 'POST',
-      headers: {
-        'accept': 'application/json',
-      },
     });
   },
 
   async cancelPrintJob(jobId: number): Promise<PrintJob> {
     return await fetch<PrintJob>(`/api/jobs/${jobId}/cancel/`, {
       method: 'POST',
-      headers: {
-        'accept': 'application/json',
+    });
+  },
+
+  async listJobs(pageSize: number = 1000): Promise<ListResponse<PrintJob>> {
+    return await fetch<ListResponse<PrintJob>>(`/api/jobs/`, {
+      query: {
+        page_size: pageSize,
       },
+      method: 'GET',
+    });
+  },
+
+  async getJob(jobId: number): Promise<PrintJob> {
+    return await fetch<PrintJob>(`/api/jobs/${jobId}/`, {
+      method: 'GET',
     });
   },
 });

@@ -11,13 +11,18 @@ declare module '#app' {
 }
 
 declare module 'ofetch' {
+  // The names are prefixed with `gutenberg` to avoid breaking changes when updating the `ofetch`
+  // package (a dependency of Nuxt 4).
   interface FetchOptions {
+    /**
+     * Add the `Accept` header with the value `application/json` to the request.
+     * Verify that the response contains the `Content-Type` header with the value `application/json`.
+     */
+    gutenbergExpectJson?: boolean;
+
     /**
      * Disable setting `$auth.me` to `Unauthenticated` upon receiving a 401 or 403 response with
      * the appropriate header indicating unauthenticated API access.
-     *
-     * The name is prefixed with `gutenberg` to avoid breaking changes when updating the `ofetch`
-     * package (a dependency of Nuxt 4).
      */
     gutenbergDisableUnauthenticatedHandling?: boolean;
   }
