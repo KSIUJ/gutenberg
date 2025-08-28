@@ -107,6 +107,10 @@
 </template>
 
 <script setup lang="ts">
+import { useIntervalFn } from '@vueuse/core';
+
+const COMPLETED_STATUES: JobStatus[] = ['COMPLETED', 'ERROR', 'CANCELED', 'UNKNOWN'];
+
 const apiRepository = useApiRepository();
 const route = useRoute();
 const toast = useToast();
@@ -121,6 +125,12 @@ watch(() => job.error.value, (error) => {
   console.error(error);
 }, { immediate: true });
 
+useIntervalFn(() => {
+  if (job.pending.value || !job.data.value) return;
+  if (COMPLETED_STATUES.includes(job.data.value.status)) return;
+  job.refresh().catch();
+}, 1000);
+
 const errorMessage = computed(() => {
   if (job.error.value) {
     return getErrorMessage(job.error.value) ?? 'Failed to load print job details';
@@ -128,10 +138,9 @@ const errorMessage = computed(() => {
   return null;
 });
 
-const NOT_CANCELLABLE_STATUSES: JobStatus[] = ['COMPLETED', 'ERROR', 'CANCELED', 'CANCELING', 'UNKNOWN'];
 const cancelable = computed(() => {
   if (!job.data.value) return false;
-  return !NOT_CANCELLABLE_STATUSES.includes(job.data.value.status);
+  return !COMPLETED_STATUES.includes(job.data.value.status) && job.data.value.status !== 'CANCELING';
 });
 
 const cancelLoading = ref(false);

@@ -17,6 +17,7 @@
     "@primeuix/themes": "^1.2.3",
     "@primevue/nuxt-module": "^4.3.7",
     "@tailwindcss/vite": "^4.1.12",
+    "@vueuse/core": "^13.8.0",
     "eslint": "^9.33.0",
     "nuxt": "^4.0.3",
     "primevue": "^4.3.7",
