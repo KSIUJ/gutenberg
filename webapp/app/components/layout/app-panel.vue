@@ -2,16 +2,16 @@
   <div :class="rootClass">
     <div
       v-if="header"
-      class="px-7 sm:px-5 pt-5"
+      class="px-5 pt-5"
     >
       <h1>{{ header }}</h1>
     </div>
-    <div class="px-7 sm:px-5 py-5 shrink grow overflow-y-auto flex flex-col">
+    <div class="px-5 py-5 shrink grow overflow-y-auto flex flex-col">
       <slot />
     </div>
     <div
       v-if="$slots.actions"
-      class="px-7 sm:px-5 pb-5 flex flex-row-reverse gap-2 shrink-0"
+      class="px-5 pb-5 flex flex-row-reverse gap-2 shrink-0"
     >
       <slot name="actions" />
     </div>
