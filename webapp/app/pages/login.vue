@@ -97,7 +97,7 @@ const loading = ref(false);
 const errorMessage = ref<string | null>(null);
 
 const parseQuery = (route: RouteLocationNormalized) => ({
-  next: getSingleQueryParam(route.query.next) ?? '/',
+  next: getNextQueryParam(route) ?? '/',
   expired: isQueryFlagEnabled(route.query.expired),
 });
 

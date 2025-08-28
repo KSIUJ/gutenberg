@@ -1,4 +1,4 @@
-import type {LocationQueryValue, RouteLocationNormalized} from '#vue-router';
+import type { LocationQueryValue, RouteLocationNormalized } from '#vue-router';
 
 /**
  * Tries to resolve the `next` route using Vue Router.
@@ -36,6 +36,35 @@ export const getSingleQueryParam = (
   const candidates = value.filter(x => typeof x === 'string' && x !== '');
   if (candidates.length === 1 && candidates[0] !== null) return candidates[0];
   return undefined;
+};
+
+/**
+ * Returns the value of the `next` query parameter normalized as a relative path.
+ * If the path is not a valid relative path returns `undefined`.
+ *
+ * SECURITY: The next parameter can only be used for same-origin redirects to avoid attacks with
+ *           fabricated login URLs redirecting to other hosts.
+ */
+export const getNextQueryParam = (
+  route: RouteLocationNormalized,
+) => {
+  const next = getSingleQueryParam(route.query.next);
+  if (next === undefined) return undefined;
+
+  let url: URL;
+  try {
+    url = new URL(next, window.location.origin);
+  } catch (error) {
+    console.warn(`Failed to parse next search query parameter: ${next}`, error);
+    return undefined;
+  }
+
+  if (url.origin !== window.location.origin) {
+    console.warn(`Invalid non-relative next search query parameter: ${next}`);
+    return undefined;
+  }
+
+  return url.pathname + url.search + url.hash;
 };
 
 /**

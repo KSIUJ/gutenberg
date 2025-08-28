@@ -1,5 +1,5 @@
 <template>
-  <single-column-layout>
+  <single-column-layout narrow>
     <app-panel>
       <p-message
         v-if="job.error.value !== undefined"
@@ -38,5 +38,8 @@ definePageMeta({
   validate: async (route) => {
     return typeof route.params.jobId === 'string' && /^\d+$/.test(route.params.jobId);
   },
+  middleware: [
+    'require-auth',
+  ],
 });
 </script>
