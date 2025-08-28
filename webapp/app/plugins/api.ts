@@ -1,12 +1,18 @@
 // This file is based on https://nuxt.com/docs/4.x/guide/recipes/custom-usefetch
+import Cookies from 'js-cookie';
 
 export default defineNuxtPlugin({
   name: 'api-plugin',
 
   setup: () => {
     const nuxtApp = useNuxtApp();
-    const csrfToken = useCookie('csrftoken', { readonly: true });
     const toast = useToast();
+
+    // Previously useCookie was used for this, but the refreshing logic of useCookie was unreliable.
+    // There is a short delay between calling refreshCookie() and the refs returned by useCookie()
+    // updating, due to Nuxt's internal event system.
+    const csrfToken = ref(Cookies.get('csrftoken'));
+    if (import.meta.server) throw new Error('api-plugin does not support server-side rendering');
 
     const api = $fetch.create({
       baseURL: '/api/',
@@ -20,7 +26,7 @@ export default defineNuxtPlugin({
         // https://docs.djangoproject.com/en/5.2/howto/csrf/#using-csrf-protection-with-ajax
 
         // Make sure the CSRF token is up to date before sending the request
-        refreshCookie('csrftoken');
+        csrfToken.value = Cookies.get('csrftoken');
         if (csrfToken.value) {
           request.options.headers.append('X-CSRFToken', csrfToken.value);
         }
@@ -29,10 +35,10 @@ export default defineNuxtPlugin({
         }
       },
 
-      onResponse({ options, response }) {
+      async onResponse({ options, response }) {
         // An API response might update the CSRF token, make sure
         // the value of the `csrfToken` ref is up to date.
-        refreshCookie('csrftoken');
+        csrfToken.value = Cookies.get('csrftoken');
 
         if (!response.ok || options.gutenbergExpectJson !== true) return;
         if (response.status === 204) {
