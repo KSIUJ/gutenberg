@@ -16,6 +16,7 @@ db.sqlite3
 
 # celery beat schedule file
 celerybeat-schedule
+celerybeat-schedule-*
 
 # Gutenberg
 # Upload directory (local_settings only)

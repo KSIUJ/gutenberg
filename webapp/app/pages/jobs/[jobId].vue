@@ -2,20 +2,103 @@
   <single-column-layout narrow>
     <app-panel>
       <p-message
-        v-if="job.error.value !== undefined"
+        v-if="errorMessage !== null"
         severity="error"
       >
         {{ errorMessage }}
       </p-message>
-      <template v-else-if="job.data.value !== undefined">
-        {{ job.data.value.id }}
-        {{ job.data.value.status }}
-        {{ job.data.value.status_reason }}
+      <div
+        v-else-if="job.data.value !== undefined"
+        class="space-y-4"
+      >
+        <p-stepper
+          v-if="stepNumber !== null"
+          linear
+          :value="stepNumber"
+        >
+          <p-step-item :value="1">
+            <p-step>
+              Creating job
+            </p-step>
+            <p-step-panel>
+              The print job has not been started yet.
+            </p-step-panel>
+          </p-step-item>
+          <p-step-item :value="2">
+            <p-step>
+              Pending
+            </p-step>
+            <p-step-panel>
+              Gutenberg has received all required information
+              and should start processing the request shortly.
+            </p-step-panel>
+          </p-step-item>
+          <p-step-item :value="3">
+            <p-step>
+              Processing
+            </p-step>
+            <p-step-panel>
+              Gutenberg is processing the request.
+            </p-step-panel>
+          </p-step-item>
+          <p-step-item :value="4">
+            <p-step>
+              Printing
+            </p-step>
+            <p-step-panel>
+              The request has been sent to the printer.
+            </p-step-panel>
+          </p-step-item>
+          <p-step-item :value="5">
+            <p-step>
+              Completed
+            </p-step>
+          </p-step-item>
+        </p-stepper>
+        <p-message
+          v-if="job.data.value.status === 'CANCELED' || job.data.value.status === 'CANCELING'"
+          severity="warn"
+        >
+          <p>
+            This print job has been cancelled.
+          </p>
+          <p class="text-sm mt-3">
+            Some pages might still get printed if the printer has already started processing the request.
+          </p>
+        </p-message>
+        <p-message
+          v-if="job.data.value.status === 'COMPLETED'"
+          severity="success"
+        >
+          Your document is ready or will finish printing soon.<br>
+          Thank you for using Gutenberg.
+        </p-message>
+        <p-message
+          v-if="job.data.value.status === 'ERROR'"
+          severity="error"
+        >
+          <p>
+            This print job has failed.
+          </p>
+          <code
+            v-if="job.data.value.status_reason"
+            class="block text-sm mt-3"
+          >
+            {{ job.data.value.status_reason }}
+          </code>
+        </p-message>
+      </div>
+
+      <template
+        v-if="cancelable"
+        #actions
+      >
         <p-button
           v-if="cancelable"
           severity="danger"
           label="Cancel"
           :loading="cancelLoading"
+          variant="text"
           @click="cancelJob"
         />
       </template>
@@ -39,14 +122,16 @@ watch(() => job.error.value, (error) => {
 }, { immediate: true });
 
 const errorMessage = computed(() => {
-  if (job.error.value === undefined) return null;
-  return getErrorMessage(job.error.value) ?? 'Failed to load print job details';
+  if (job.error.value) {
+    return getErrorMessage(job.error.value) ?? 'Failed to load print job details';
+  }
+  return null;
 });
 
-const COMPLETED_STATUSES: JobStatus[] = ['COMPLETED', 'ERROR', 'CANCELED', 'UNKNOWN'];
+const NOT_CANCELLABLE_STATUSES: JobStatus[] = ['COMPLETED', 'ERROR', 'CANCELED', 'CANCELING', 'UNKNOWN'];
 const cancelable = computed(() => {
   if (!job.data.value) return false;
-  return !COMPLETED_STATUSES.includes(job.data.value.status);
+  return !NOT_CANCELLABLE_STATUSES.includes(job.data.value.status);
 });
 
 const cancelLoading = ref(false);
@@ -66,6 +151,23 @@ const cancelJob = async () => {
     cancelLoading.value = false;
   }
 };
+
+const stepNumber = computed(() => {
+  if (!job.data.value) return null;
+  switch (job.data.value.status) {
+    case 'INCOMING':
+      return 1;
+    case 'PENDING':
+      return 2;
+    case 'PROCESSING':
+      return 3;
+    case 'PRINTING':
+      return 4;
+    case 'COMPLETED':
+      return 5;
+  }
+  return null;
+});
 
 definePageMeta({
   validate: async (route) => {
