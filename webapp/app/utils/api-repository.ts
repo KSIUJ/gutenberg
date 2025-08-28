@@ -1,5 +1,5 @@
-import type {$Fetch, NitroFetchRequest} from 'nitropack'
-import {FetchError} from "ofetch";
+import type { $Fetch, NitroFetchRequest } from 'nitropack';
+import { FetchError } from 'ofetch';
 
 export type User = {
   first_name: string;
@@ -26,7 +26,7 @@ export type CreatePrintJobRequest = {
   printer: number;
   copies: number;
   pages_to_print?: string;
-  two_sides: ApiDuplexMode,
+  two_sides: ApiDuplexMode;
   color?: boolean;
   fit_to_page?: boolean;
 };

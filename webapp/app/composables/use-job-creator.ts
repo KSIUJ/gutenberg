@@ -1,5 +1,5 @@
-import type {NuxtError} from "#app";
-import type {_AsyncData} from "#app/composables/asyncData";
+import type { NuxtError } from '#app';
+import type { _AsyncData } from '#app/composables/asyncData';
 
 export type DuplexMode = 'disabled' | 'duplex-unspecified' | 'duplex-long-edge' | 'duplex-short-edge';
 export type ColorMode = 'monochrome' | 'color';
@@ -9,7 +9,7 @@ export type JobDocument = {
   filename: string;
   file: File;
   state: 'pending' | 'uploading' | 'uploaded' | 'error';
-  remove(): void,
+  remove(): void;
 };
 
 export type JobCreationError = {
@@ -18,9 +18,9 @@ export type JobCreationError = {
 };
 
 const twoSidesMapping = {
-  disabled: "OS",
-  "duplex-long-edge": "TL",
-  "duplex-short-edge": "TS",
+  'disabled': 'OS',
+  'duplex-long-edge': 'TL',
+  'duplex-short-edge': 'TS',
 } satisfies Record<Exclude<DuplexMode, 'duplex-unspecified'>, ApiDuplexMode>;
 
 export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtError | undefined>) => {
@@ -43,7 +43,7 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
   const selectedPrinter = computed(() => {
     if (selectedPrinterId.value === null) return null;
     if (!printers.data.value) return null;
-    return printers.data.value.find((printer) => printer.id === selectedPrinterId.value) ?? null;
+    return printers.data.value.find(printer => printer.id === selectedPrinterId.value) ?? null;
   });
 
   watchEffect(() => {
@@ -113,7 +113,7 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
     return {
       errors,
       request,
-    }
+    };
   });
 
   const errorMessageList = computed<JobCreationError[]>(() => {
@@ -121,7 +121,7 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
     if (printers.error.value !== undefined) {
       list.push({
         field: 'printer',
-        message: getErrorMessage(printers.error.value) ?? 'Failed to get printer list'
+        message: getErrorMessage(printers.error.value) ?? 'Failed to get printer list',
       });
     }
     if (showSerializationErrors.value) {
@@ -138,7 +138,7 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
 
   let nextLocalFileId = 0;
   const addFiles = (files: File[]) => {
-    documentQueue.value.push(...files.map((file) => reactive({
+    documentQueue.value.push(...files.map(file => reactive({
       localId: nextLocalFileId++,
       file,
       filename: file.name,
@@ -146,7 +146,7 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
       remove() {
         if (printLoading.value) return;
         documentQueue.value = documentQueue.value.filter(
-          (document) => document.localId !== this.localId,
+          document => document.localId !== this.localId,
         );
       },
     })));
@@ -164,7 +164,7 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
     if (document.state !== 'pending' && document.state !== 'error') return;
     try {
       document.state = 'uploading';
-      await apiRepository.uploadArtefact(jobId, document.file, isLast)
+      await apiRepository.uploadArtefact(jobId, document.file, isLast);
       document.state = 'uploaded';
     } catch (error) {
       document.state = 'error';

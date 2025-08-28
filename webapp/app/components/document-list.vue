@@ -32,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-import type {JobDocument} from "~/composables/use-job-creator";
+import type { JobDocument } from '~/composables/use-job-creator';
 
 defineProps<{
   documents: readonly JobDocument[];
@@ -50,6 +50,6 @@ const formattedState = (state: JobDocument['state']) => {
       uploaded: 'Uploaded',
     }[state],
     color: 'text-muted-color',
-  }
+  };
 };
 </script>

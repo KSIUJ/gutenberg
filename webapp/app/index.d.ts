@@ -28,4 +28,4 @@ declare module 'ofetch' {
   }
 }
 
-export {}
+export {};

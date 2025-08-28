@@ -1,5 +1,5 @@
-import tailwindcss from "@tailwindcss/vite";
-import Aura from "@primeuix/themes/aura";
+import tailwindcss from '@tailwindcss/vite';
+import Aura from '@primeuix/themes/aura';
 import type { NuxtPage } from '@nuxt/schema';
 
 const isDev = process.env.NODE_ENV === 'development';
@@ -8,14 +8,92 @@ if (!devDjangoUrl.endsWith('/')) devDjangoUrl += '/';
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
   modules: ['@nuxt/eslint', '@primevue/nuxt-module'],
+  ssr: false,
+  components: [
+    {
+      path: '~/components',
+      pathPrefix: false,
+    },
+  ],
+  devtools: { enabled: true },
+  app: {
+    cdnURL: '/static/',
+  },
   css: ['~/assets/css/main.css'],
+  router: {
+    options: {
+      // See the comment for the `pages:extend` hook for the explanation
+      strict: true,
+    },
+  },
+  compatibilityDate: '2025-07-15',
+  nitro: {
+    preset: 'static',
+    prerender: {
+      crawlLinks: false,
+      routes: [],
+    },
+    routeRules: isDev
+      ? {
+          '/api-auth/**': {
+            proxy: {
+              to: `${devDjangoUrl}api-auth/**`,
+            },
+          },
+          '/api/**': {
+            proxy: {
+              to: `${devDjangoUrl}api/**`,
+            },
+          },
+          '/oidc/**': {
+            proxy: {
+              to: `${devDjangoUrl}oidc/**`,
+            },
+          },
+          '/static/**': {
+            proxy: {
+              to: `${devDjangoUrl}static/**`,
+            },
+          },
+          '/admin/**': {
+            proxy: {
+              to: `${devDjangoUrl}admin/**`,
+            },
+          },
+        }
+      : {},
+  },
   vite: {
     plugins: [
       tailwindcss(),
     ],
+  },
+  hooks: {
+    // This hook, together with `router.options.strict` set to `true`,
+    // make sure all router pages end with a trailing slash.
+    //
+    // This makes sure the routing is consistent with Django, which
+    // automatically adds trailing slashes to routes using an HTTP redirect.
+    'pages:extend'(pages) {
+      const updatePathsRecursive = (pages: NuxtPage[]) => {
+        pages.forEach((page) => {
+          if (!page.path.endsWith('/')) {
+            page.path += '/';
+          }
+          updatePathsRecursive(page.children ?? []);
+        });
+      };
+      updatePathsRecursive(pages);
+    },
+  },
+  eslint: {
+    config: {
+      stylistic: {
+        semi: true,
+        braceStyle: '1tbs',
+      },
+    },
   },
   primevue: {
     options: {
@@ -57,72 +135,4 @@ export default defineNuxtConfig({
       ],
     },
   },
-  ssr: false,
-  nitro: {
-    preset: 'static',
-    prerender: {
-      crawlLinks: false,
-      routes: [],
-    },
-    routeRules: isDev ? {
-      '/api-auth/**': {
-        proxy: {
-          to: `${devDjangoUrl}api-auth/**`,
-        },
-      },
-      '/api/**': {
-        proxy: {
-          to: `${devDjangoUrl}api/**`,
-        },
-      },
-      '/oidc/**': {
-        proxy: {
-          to: `${devDjangoUrl}oidc/**`,
-        },
-      },
-      '/static/**': {
-        proxy: {
-          to: `${devDjangoUrl}static/**`,
-        },
-      },
-      '/admin/**': {
-        proxy: {
-          to: `${devDjangoUrl}admin/**`,
-        },
-      },
-    } : {},
-  },
-  router: {
-    options: {
-      // See the comment for the `pages:extend` hook for the explanation
-      strict: true,
-    }
-  },
-  hooks: {
-    // This hook, together with `router.options.strict` set to `true`,
-    // make sure all router pages end with a trailing slash.
-    //
-    // This makes sure the routing is consistent with Django, which
-    // automatically adds trailing slashes to routes using an HTTP redirect.
-    'pages:extend'(pages) {
-      const updatePathsRecursive = (pages: NuxtPage[]) => {
-        pages.forEach(page => {
-          if (!page.path.endsWith('/')) {
-            page.path += '/';
-          }
-          updatePathsRecursive(page.children ?? [])
-        });
-      };
-      updatePathsRecursive(pages);
-    },
-  },
-  app: {
-    cdnURL: '/static/'
-  },
-  components: [
-    {
-      path: '~/components',
-      pathPrefix: false,
-    },
-  ],
 });

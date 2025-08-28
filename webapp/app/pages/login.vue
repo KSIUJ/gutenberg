@@ -3,13 +3,24 @@
 <template>
   <single-column-layout narrow>
     <app-content>
-      <p-message v-if="sessionExpired" severity="warn" class="mb-4">
-        <div class="w-full">Your session has expired</div>
-        <div class="text-sm">Sign in again to continue</div>
+      <p-message
+        v-if="sessionExpired"
+        severity="warn"
+        class="mb-4"
+      >
+        <div class="w-full">
+          Your session has expired
+        </div>
+        <div class="text-sm">
+          Sign in again to continue
+        </div>
       </p-message>
     </app-content>
 
-    <form method="post" @submit.prevent="onSubmit">
+    <form
+      method="post"
+      @submit.prevent="onSubmit"
+    >
       <app-panel header="Sign in to Gutenberg">
         <div class="space-y-4">
           <p-float-label variant="in">
@@ -47,17 +58,26 @@
               toggle-mask
               :feedback="false"
               :input-props="{
-              autocomplete: 'current-password',
-            }"
+                autocomplete: 'current-password',
+              }"
             />
             <label for="current-password">Password</label>
           </p-float-label>
 
-          <p-message v-if="errorMessage !== null" severity="error">{{ errorMessage }}</p-message>
+          <p-message
+            v-if="errorMessage !== null"
+            severity="error"
+          >
+            {{ errorMessage }}
+          </p-message>
         </div>
 
         <template #actions>
-          <p-button type="submit" label="Sign in" :disabled="loading" />
+          <p-button
+            type="submit"
+            label="Sign in"
+            :disabled="loading"
+          />
         </template>
       </app-panel>
     </form>
@@ -65,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import type {RouteLocationNormalized} from "#vue-router";
+import type { RouteLocationNormalized } from '#vue-router';
 
 const { $auth } = useNuxtApp();
 const route = useRoute();

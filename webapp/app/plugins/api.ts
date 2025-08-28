@@ -40,7 +40,7 @@ export default defineNuxtPlugin({
             `Unexpected empty response from a request to "${response.url}. gutenbergExpectJson was set to true.`,
           );
           throw createError({
-            message: "Empty response received from the server",
+            message: 'Empty response received from the server',
             statusCode: 500,
           });
         }
@@ -75,8 +75,8 @@ export default defineNuxtPlugin({
         }
 
         if (nuxtApp.$auth.me.value === Unauthenticated) {
-          console.warn(`Got ${reason} auth error in API plugin's onResponseError handler, ` +
-            'but `$auth.me` was already `Unauthenticated`');
+          console.warn(`Got ${reason} auth error in API plugin's onResponseError handler, `
+            + 'but `$auth.me` was already `Unauthenticated`');
           return;
         }
 
@@ -92,7 +92,7 @@ export default defineNuxtPlugin({
           // Keep the request in the processing state while navigating to the login page.
           // The external navigation should cause a page load/reload, so this promise should
           // never complete, unless the login page load fails or actually takes very long.
-          await new Promise((resolve) => setTimeout(resolve, 5000));
+          await new Promise(resolve => setTimeout(resolve, 5000));
           console.error('Page was still active 5s after starting navigation to the sign in page');
         } catch (error) {
           console.error('Failed to navigate to the sign in page after the session has expired', error);

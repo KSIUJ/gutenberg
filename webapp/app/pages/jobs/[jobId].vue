@@ -1,7 +1,10 @@
 <template>
   <single-column-layout>
     <app-panel>
-      <p-message v-if="job.error.value !== undefined" severity="error">
+      <p-message
+        v-if="job.error.value !== undefined"
+        severity="error"
+      >
         {{ errorMessage }}
       </p-message>
       <template v-else-if="job.data.value !== undefined">
@@ -33,7 +36,7 @@ const errorMessage = computed(() => {
 
 definePageMeta({
   validate: async (route) => {
-    return typeof route.params.jobId === 'string' && /^\d+$/.test(route.params.jobId)
-  }
-})
+    return typeof route.params.jobId === 'string' && /^\d+$/.test(route.params.jobId);
+  },
+});
 </script>

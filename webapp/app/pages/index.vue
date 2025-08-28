@@ -14,16 +14,24 @@
              The sign in button is not a NuxtLink, because the /login/ route might be handled by Django,
              not Vue Router, if OIDC sign-in is enabled.
            -->
-          <p-button label="Sign in" as="a" href="/login/" size="large" />
+          <p-button
+            label="Sign in"
+            as="a"
+            href="/login/"
+            size="large"
+          />
         </div>
       </app-panel>
 
-      <div v-else class="space-y-4 flex flex-col grow">
+      <div
+        v-else
+        class="space-y-4 flex flex-col grow"
+      >
         <print-options />
 
-<!--        <app-panel header="Recently printed" class="grow">-->
-<!--          <div class="text-muted-color text-center p-6">This feature is not yet implemented</div>-->
-<!--        </app-panel>-->
+        <!--        <app-panel header="Recently printed" class="grow"> -->
+        <!--          <div class="text-muted-color text-center p-6">This feature is not yet implemented</div> -->
+        <!--        </app-panel> -->
       </div>
     </template>
 

@@ -1,4 +1,4 @@
-import type {RouteLocationNormalized} from "#vue-router";
+import type {LocationQueryValue, RouteLocationNormalized} from '#vue-router';
 
 /**
  * Tries to resolve the `next` route using Vue Router.
@@ -29,13 +29,13 @@ export const navigateToMaybeExternal = (next: string, current: RouteLocationNorm
  * none or more than one such values.
  */
 export const getSingleQueryParam = (
-  value: undefined | LocationQueryValue | LocationQueryValue[]
+  value: undefined | LocationQueryValue | LocationQueryValue[],
 ): string | undefined => {
-  if (value === undefined) return null;
+  if (value === undefined) return undefined;
   if (!Array.isArray(value)) return getSingleQueryParam([value]);
-  const candidates = value.filter((x) => typeof x === 'string' && x !== '');
-  if (candidates.length === 1) return candidates[0];
-  return null;
+  const candidates = value.filter(x => typeof x === 'string' && x !== '');
+  if (candidates.length === 1 && candidates[0] !== null) return candidates[0];
+  return undefined;
 };
 
 /**
@@ -50,6 +50,9 @@ export const isQueryFlagEnabled = (
   value: undefined | LocationQueryValue | LocationQueryValue[],
 ): boolean => {
   if (value === undefined) return false;
-  if (value === null || ['', 't', 'true', '1'].includes(value.toLowerCase())) return true;
+  if (value === null) return true;
+  if (typeof value === 'string') {
+    return ['', 't', 'true', '1'].includes(value.toLowerCase());
+  }
   return value.some(isQueryFlagEnabled);
 };
