@@ -55,8 +55,6 @@ const cancelJob = async () => {
   try {
     cancelLoading.value = true;
     job.data.value = await apiRepository.cancelPrintJob(jobId.value);
-    // TODO: Remove when the response after cancelling is fixed in the API
-    await job.refresh();
   } catch (error) {
     console.error('Failed to cancel job', error);
     toast.add({
