@@ -183,7 +183,7 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
       await tryCancel(jobId);
       throw error;
     }
-    await navigateTo(`/jobs/${jobId}/`);
+    await navigateTo(`/print/jobs/${jobId}/`);
   };
 
   const print = async () => {
