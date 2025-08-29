@@ -1,6 +1,6 @@
 import tailwindcss from '@tailwindcss/vite';
-import Aura from '@primeuix/themes/aura';
 import type { NuxtPage } from '@nuxt/schema';
+import { GutenbergPreset } from './app/style/gutenberg-preset';
 
 const isDev = process.env.NODE_ENV === 'development';
 let devDjangoUrl = process.env['GUTENBERG_DEV_DJANGO_URL'] || 'http://localhost:11111/';
@@ -98,7 +98,7 @@ export default defineNuxtConfig({
   primevue: {
     options: {
       theme: {
-        preset: Aura,
+        preset: GutenbergPreset,
         options: {
           cssLayer: {
             name: 'primevue',

@@ -2,7 +2,7 @@
   <div :class="rootClass">
     <div
       v-if="header"
-      class="p-2 border-b border-surface shrink-0 group"
+      class="p-2 border-b border-surface shrink-0 group transition-colors"
       :class="{
         'cursor-pointer hover:bg-primary-50 outline-none select-none': headerClickable,
       }"

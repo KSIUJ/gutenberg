@@ -77,7 +77,7 @@
         </a>
         <p>
           The project's source&nbsp;code is hosted on GitHub.
-          The&nbsp;GitHub repository is also the place to report issues and submit featue requests.
+          The&nbsp;GitHub repository is also the place to report issues and submit feature requests.
         </p>
         <a
           href="https://github.com/KSIUJ/gutenberg/"
