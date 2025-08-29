@@ -146,33 +146,49 @@
         <!--        <label for="page-filter-input">Page filter</label> -->
         <!--      </FloatLabel> -->
 
-        <label
-          id="color-mode-select"
-          class="label-text px-form"
-        >Color mode</label>
-        <p-select-button
-          v-model="jobCreator.colorMode"
-          :options="colorOptions"
-          option-value="value"
-          data-key="value"
-          option-label="label"
-          :allow-empty="false"
-          fluid
-          aria-labelledby="color-mode-select"
-        >
-          <template #option="{ option }">
-            <div class="w-full">
-              {{ option.label }}<br>
-              <div class="w-1/4 flex flex-row mx-auto mt-2 mb-1 rounded-xs overflow-hidden">
-                <div
-                  v-for="(color, i) in option.colors"
-                  :key="i"
-                  :class="[color, 'h-1', 'grow']"
-                />
+        <div>
+          <label
+            id="color-mode-select"
+            class="label-text px-form"
+          >Color mode</label>
+          <p-select-button
+            v-model="jobCreator.colorMode"
+            :options="colorOptions"
+            option-value="value"
+            data-key="value"
+            option-label="label"
+            option-disabled="disabled"
+            :allow-empty="false"
+            fluid
+            aria-labelledby="color-mode-select"
+          >
+            <template #option="{ option }">
+              <div class="w-full">
+                {{ option.label }}<br>
+                <div class="w-1/4 flex flex-row mx-auto mt-2 mb-1 rounded-xs overflow-hidden">
+                  <div
+                    v-for="(color, i) in option.colors"
+                    :key="i"
+                    :class="[color, 'h-1', 'grow']"
+                  />
+                </div>
               </div>
-            </div>
-          </template>
-        </p-select-button>
+            </template>
+          </p-select-button>
+          <p-message
+            v-if="jobCreator.selectedPrinter?.color_allowed === false"
+            variant="simple"
+            severity="secondary"
+            class="mt-2 px-form"
+            :pt="{
+              text: {
+                class: 'text-sm',
+              },
+            }"
+          >
+            The selected printer does not support color printing or you do not have permission to use it
+          </p-message>
+        </div>
       </div>
       <p-message
         v-for="error in jobCreator.errorMessageList"
@@ -227,18 +243,20 @@ const duplexEnabled = computed({
 
 // Uses Tailwind color classes, see
 // https://tailwindcss.com/docs/detecting-classes-in-source-files#how-classes-are-detected
-const colorOptions = [
+const colorOptions = computed(() => [
   {
     value: 'monochrome' as ColorMode,
     label: 'Grayscale',
     colors: ['bg-gray-300', 'bg-gray-400', 'bg-gray-500'],
+    disabled: false,
   },
   {
     value: 'color' as ColorMode,
     label: 'Colored',
     colors: ['bg-cyan-300', 'bg-fuchsia-500', 'bg-yellow-300'],
+    disabled: jobCreator.selectedPrinter?.color_allowed === false,
   },
-];
+]);
 
 // const pageFilterOptions = [
 //   { value: 'all', label: 'All' },

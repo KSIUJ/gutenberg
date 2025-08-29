@@ -25,12 +25,13 @@ const twoSidesMapping = {
 
 export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtError | undefined>) => {
   const apiRepository = useApiRepository();
+  const toast = useToast();
 
-  const getFirstPrinterId = () => {
-    return printers.data.value?.at(0)?.id ?? null;
+  const getDefaultPrinter = () => {
+    return printers.data.value?.at(0) ?? null;
   };
 
-  const selectedPrinterId = ref(getFirstPrinterId());
+  const selectedPrinterId = ref(getDefaultPrinter()?.id ?? null);
   const documentQueue = ref<JobDocument[]>([]);
   const copyCount = ref(1);
   const duplexMode = ref<DuplexMode>('disabled');
@@ -49,21 +50,40 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
   watchEffect(() => {
     if (printers.data.value === undefined) return;
 
-    // If no printer is selected or the selected printer is not on the printer list,
-    // select the first printer (or deselect if the printer list is empty).
-    if (selectedPrinterId.value === null || selectedPrinter.value === null) {
-      selectedPrinterId.value = getFirstPrinterId();
+    const firstPrinter = printers.data.value.at(0) ?? null;
+    if (selectedPrinterId.value === null && firstPrinter !== null) {
+      selectedPrinterId.value = firstPrinter.id;
+    } else if (selectedPrinterId.value !== null && selectedPrinter.value === null) {
+      selectedPrinterId.value = firstPrinter?.id ?? null;
+      toast.add({
+        severity: 'warn',
+        summary: 'The previously selected printer is no longer available',
+        detail: firstPrinter === null ? undefined : `The printer "${firstPrinter.name}" was selected instead`,
+      });
     }
   });
 
-  // These settings do not show up the UI if they are not available.
+  // Automatically change the settings to their default values if the selected printer
+  // does not support changing them.
+  //
+  // The automatic change is required because the UI inputs for unsupported settings get hidden.
   watchEffect(() => {
     if (selectedPrinter.value === null) return;
     if (duplexMode.value !== 'disabled' && !selectedPrinter.value.duplex_supported) {
       duplexMode.value = 'disabled';
+      toast.add({
+        severity: 'warn',
+        summary: 'Disabled two-side printing',
+        detail: 'The selected printer does not support it',
+      });
     }
     if (colorMode.value === 'color' && !selectedPrinter.value.color_allowed) {
       colorMode.value = 'monochrome';
+      toast.add({
+        severity: 'warn',
+        summary: 'Disabled color printing',
+        detail: 'The selected printer does not support color printing or you do not have permission to use it',
+      });
     }
   });
 
