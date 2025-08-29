@@ -40,7 +40,11 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
   const printLoading = ref(false);
   const printError = ref<unknown | null>(null);
   const showSerializationErrors = ref(false);
+
   const optionsExpanded = ref(false);
+  const expandOptions = () => {
+    optionsExpanded.value = true;
+  };
 
   const selectedPrinter = computed(() => {
     if (selectedPrinterId.value === null) return null;
@@ -241,5 +245,6 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
     print,
     printLoading,
     optionsExpanded: readonly(optionsExpanded),
+    expandOptions,
   });
 };

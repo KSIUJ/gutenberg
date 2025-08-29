@@ -19,6 +19,8 @@
   <app-panel
     v-else
     header="Print online"
+    :header-clickable="!jobCreator.optionsExpanded"
+    @header-click="jobCreator.expandOptions()"
   >
     <div>
       <div>

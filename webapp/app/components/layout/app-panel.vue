@@ -1,11 +1,21 @@
 <template>
   <div :class="rootClass">
-    <h1
+    <div
       v-if="header"
-      class="block px-5 py-3 text-header border-b border-surface shrink-0"
+      class="p-2 border-b border-surface shrink-0 group"
+      :class="{
+        'cursor-pointer hover:bg-primary-50 outline-none select-none': headerClickable,
+      }"
+      :tabindex="headerClickable ? 0 : undefined"
+      :role="headerClickable ? 'button' : undefined"
+      @click="onHeaderClick"
+      @keydown.enter.prevent="onHeaderClick"
+      @keyup.space.prevent="onHeaderClick"
     >
-      {{ header }}
-    </h1>
+      <h1 class="px-3 py-1 text-header rounded-xs outline-primary outline-offset-4 group-focus-visible:outline">
+        {{ header }}
+      </h1>
+    </div>
     <div class="px-5 py-5 shrink grow overflow-y-auto flex flex-col">
       <slot />
     </div>
@@ -22,19 +32,29 @@
 const props = withDefaults(
   defineProps<{
     header?: string;
+    headerClickable?: boolean;
     ghost?: boolean;
   }>(),
   {
     header: undefined,
+    headerClickable: false,
     ghost: false,
   },
 );
 
+const emit = defineEmits<{
+  headerClick: [event: MouseEvent];
+}>();
+
 const rootClass = computed(() => {
-  const commonClasses = 'border-y border-surface sm:rounded-border sm:border-x flex flex-col';
+  const commonClasses = 'border-y border-surface sm:rounded-border sm:border-x flex flex-col overflow-hidden';
   if (props.ghost) {
     return `${commonClasses} border-dashed bg-surface-50`;
   }
   return `${commonClasses} bg-surface-0`;
 });
+
+const onHeaderClick = (event: MouseEvent) => {
+  emit('headerClick', event);
+};
 </script>
