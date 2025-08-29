@@ -32,3 +32,8 @@
 .group:not(:hover):not(:focus):not(:focus-within) .hide-unless-group-hovered {
     @apply sr-only;
 }
+
+@utility text-link {
+    text-decoration: underline;
+    cursor: pointer;
+}
