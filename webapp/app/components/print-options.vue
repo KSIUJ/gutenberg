@@ -47,19 +47,24 @@
           <p-divider />
         </template>
         <div>
-          <div class="flex flex-row space-x-2 items-center">
+          <div class="flex flex-row gap-2 items-center">
             <p-file-upload
               mode="basic"
-              class="w-full"
               auto
               choose-label="Choose files"
               custom-upload
               multiple
               :disabled="jobCreator.selectedPrinter === null"
               :accept="jobCreator.selectedPrinter?.supported_extensions"
+              class="grow"
+              :pt="{
+                root: {
+                  class: 'grow sm:grow-0 sm:shrink-0',
+                },
+              }"
               @select="onFileSelect"
             />
-            <div class="text-muted-color text-sm">
+            <div class="hidden sm:block text-muted-color text-sm">
               or drop them anywhere
             </div>
           </div>
@@ -218,6 +223,7 @@
       />
     </template>
   </app-panel>
+  <file-drop-target @files-dropped="(files) => jobCreator.addFiles(files)" />
 </template>
 
 <script setup lang="ts">
