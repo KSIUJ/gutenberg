@@ -175,7 +175,7 @@ class ResetApiTokenView(APIView):
     def post(self, request, *args, **kwargs):
         self.request.user.api_key = _generate_token()
         self.request.user.save()
-        return Response()
+        return Response(status=204)
 
 
 class LoginApiView(APIView):
