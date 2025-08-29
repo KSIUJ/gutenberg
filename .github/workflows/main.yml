@@ -71,3 +71,7 @@ jobs:
     - name: Typecheck
       working-directory: webapp
       run: pnpm run typecheck
+
+    - name: Lint
+      working-directory: webapp
+      run: pnpm run lint
