@@ -50,7 +50,7 @@ export type ListResponse<T> = {
 
 export const Unauthenticated = Symbol('Unauthenticated');
 
-export const apiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => ({
+export const createApiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => ({
   async getMe(): Promise<User | typeof Unauthenticated> {
     try {
       return await fetch<User>('/api/me/', {
@@ -144,6 +144,13 @@ export const apiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => ({
       method: 'POST',
       gutenbergExpectJson: false,
     });
+  },
+
+  createIppUri(ippToken: string | null, printerId: number) {
+    const useHttps = window.location.protocol === 'https:';
+    const [proto, defaultPort] = useHttps ? ['ipps://', '443'] : ['ipp://', '80'];
+    const port = window.location.port || defaultPort;
+    return `${proto}${window.location.hostname}:${port}/ipp/${ippToken ?? 'basic'}/${printerId}/print`;
   },
 });
 

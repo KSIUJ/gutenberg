@@ -146,8 +146,7 @@
 </template>
 
 <script setup lang="ts">
-import { API } from '../../../../webapp_old/src/common/api';
-
+const apiRepository = useApiRepository();
 const { $auth } = useNuxtApp();
 const confirm = useConfirm();
 const toast = useToast();
@@ -174,15 +173,9 @@ const details = computed(() => {
   const printer = printers.data.value.find(printer => printer.id === selectedPrinterId.value);
   if (!printer) return null;
 
-  const createIppUrl = (authField: string) => {
-    const useHttps = window.location.protocol === 'https:';
-    const [proto, defaultPort] = useHttps ? ['ipps://', '443'] : ['ipp://', '80'];
-    const port = window.location.port || defaultPort;
-    return `${proto}${window.location.hostname}:${port}${API.ipp}${authField}/${selectedPrinterId.value}/print`;
-  };
   return {
-    ippTokenUrl: createIppUrl($auth.me.value.api_key),
-    ippBasicAuthUrl: createIppUrl('basic'),
+    ippTokenUrl: apiRepository.createIppUri($auth.me.value.api_key, selectedPrinterId.value),
+    ippBasicAuthUrl: apiRepository.createIppUri(null, selectedPrinterId.value),
     ippUsername: $auth.me.value.username,
     ippPassword: $auth.me.value.api_key,
   };

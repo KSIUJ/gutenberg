@@ -1,4 +1,4 @@
 export const useApiRepository = () => {
   const { $api } = useNuxtApp();
-  return apiRepository($api);
+  return createApiRepository($api);
 };
