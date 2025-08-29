@@ -4,6 +4,8 @@
 @theme {
     --header-height: 4rem;
     --color-error: var(--color-red-600);
+    --color-warn: var(--color-yellow-600);
+    --color-success: var(--color-green-600);
 
     --breakpoint-sm: 32rem;
 }

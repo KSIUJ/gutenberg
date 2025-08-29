@@ -175,19 +175,9 @@
               </div>
             </template>
           </p-select-button>
-          <p-message
-            v-if="jobCreator.selectedPrinter?.color_allowed === false"
-            variant="simple"
-            severity="secondary"
-            class="mt-2 px-form"
-            :pt="{
-              text: {
-                class: 'text-sm',
-              },
-            }"
-          >
+          <input-hint v-if="jobCreator.selectedPrinter?.color_allowed === false">
             The selected printer does not support color printing or you do not have permission to use it
-          </p-message>
+          </input-hint>
         </div>
       </div>
       <p-message

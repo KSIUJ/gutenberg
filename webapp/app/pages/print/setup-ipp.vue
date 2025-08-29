@@ -53,20 +53,13 @@
                 IPP endpoint with HTTP-basic authentication for this printer
               </label>
             </p-ifta-label>
-            <p-message
+            <input-hint
               id="ipp-basic-auth-url-description"
-              variant="simple"
-              severity="secondary"
-              class="mt-1 mb-4"
-              :pt="{
-                text: {
-                  class: 'text-sm',
-                },
-              }"
+              class="mb-4"
             >
               You will be asked to authenticate using your username and IPP token/password to print
               using this endpoint.
-            </p-message>
+            </input-hint>
 
             <div class="flex flex-col lg:flex-row gap-4">
               <div class="grow">
@@ -94,19 +87,12 @@
                   />
                   <label for="ipp-password">Your IPP token/password</label>
                 </p-ifta-label>
-                <p-message
+                <input-hint
                   id="ipp-password-description"
-                  variant="simple"
-                  severity="warn"
-                  class="mt-1"
-                  :pt="{
-                    text: {
-                      class: 'text-sm',
-                    },
-                  }"
+                  warn
                 >
                   Do not share this with others.
-                </p-message>
+                </input-hint>
               </div>
             </div>
           </p-fieldset>
@@ -126,20 +112,13 @@
               />
               <label for="ipp-token-url">Your personal IPP endpoint for this printer</label>
             </p-ifta-label>
-            <p-message
+            <input-hint
               id="ipp-token-url-description"
-              variant="simple"
-              severity="warn"
-              class="mt-1"
-              :pt="{
-                text: {
-                  class: 'text-sm',
-                },
-              }"
+              warn
             >
               Do not share this with others - all files printed using this address
               will be accounted to your quota.
-            </p-message>
+            </input-hint>
           </p-fieldset>
 
           <p-fieldset legend="Reset IPP token/password">
