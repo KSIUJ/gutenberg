@@ -1,7 +1,7 @@
 <template>
   <app-panel
     v-if="printers.data.value === undefined || printers.data.value.length === 0"
-    header="Print options"
+    header="Print online"
   >
     <p-message
       v-if="printersErrorMessage !== null"
@@ -18,7 +18,7 @@
   </app-panel>
   <app-panel
     v-else
-    header="Print options"
+    header="Print online"
   >
     <div class="space-y-4">
       <div class="mb-0">

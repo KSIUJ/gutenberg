@@ -117,7 +117,7 @@ export default defineNuxtPlugin({
     return {
       provide: {
         api,
-        csrfToken,
+        csrfToken: readonly(csrfToken),
       },
     };
   },

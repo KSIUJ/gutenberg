@@ -10,16 +10,7 @@
           <div>
             Sign in to print documents online
           </div>
-          <!--
-             The sign in button is not a NuxtLink, because the /login/ route might be handled by Django,
-             not Vue Router, if OIDC sign-in is enabled.
-           -->
-          <p-button
-            label="Sign in"
-            as="a"
-            href="/login/"
-            size="large"
-          />
+          <sign-in-button size="large" />
         </div>
       </app-panel>
 
@@ -37,9 +28,30 @@
 
     <template #content>
       <app-content>
-        <h1>Other ways to print</h1>
-        <h2>IPP</h2>
-        <div class="space-y-6 mt-4 text-justify text-sm text-muted-color">
+        <h1 class="text-center">
+          Welcome to Gutenberg
+        </h1>
+        <p class="my-4 text-xl text-center">
+          A <span class="text-primary">reliable</span> office printing gateway
+        </p>
+
+        <h1>Print directly from your device</h1>
+        <p>
+          Gutenberg supports printing using the <b class="text-emphasis-color">Internet Printing Protocol</b>
+          <p-button
+            v-slot="slotProps"
+            variant="link"
+            severity="primary"
+            as-child
+          >
+            <NuxtLink
+              v-bind="slotProps"
+              to="/print/setup-ipp/"
+            >
+              Learn more
+            </NuxtLink>
+          </p-button>
+        </p><div class="space-y-6 mt-4 text-justify text-sm text-muted-color">
           <p>
             Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus vel luctus ante, vel dictum odio. Morbi posuere mi in lacus semper, at sollicitudin elit sodales. Interdum et malesuada fames ac ante ipsum primis in faucibus. Ut neque sapien, efficitur ut justo eu, luctus tempor urna. Vivamus a mollis lectus. Fusce lacinia et purus ac maximus. Donec facilisis, nibh in tempus sollicitudin, velit sem pharetra ligula, a accumsan odio tellus in tortor. Donec condimentum tortor eu arcu pretium, id elementum tellus porttitor. Mauris in ultricies eros. Sed pretium justo nec congue molestie.
           </p>

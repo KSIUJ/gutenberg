@@ -36,10 +36,16 @@ export default defineNuxtPlugin({
       me.value = Unauthenticated;
     };
 
+    const resetIppToken = async () => {
+      await apiRepository.resetIppToken();
+      me.value = await apiRepository.getMe();
+    };
+
     const auth = {
       me: readonly(me),
       clearMe,
       login,
+      resetIppToken,
     };
 
     return {

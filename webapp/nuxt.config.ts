@@ -118,10 +118,12 @@ export default defineNuxtConfig({
       prefix: 'p',
       include: [
         'Button',
+        'ConfirmDialog',
         'Divider',
         'Fieldset',
         'FileUpload',
         'FloatLabel',
+        'IftaLabel',
         'InputNumber',
         'InputText',
         'Menu',

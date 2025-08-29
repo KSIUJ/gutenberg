@@ -2,6 +2,8 @@
   <div>
     <NuxtLoadingIndicator />
     <p-toast position="bottom-right" />
+    <p-confirm-dialog />
+
     <app-header />
     <div class="mt-(--header-height)">
       <NuxtPage />

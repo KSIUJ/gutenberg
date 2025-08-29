@@ -6,16 +6,9 @@
       </NuxtLink>
 
       <template v-if="$auth.me.value === Unauthenticated">
-        <!--
-          The sign in button is not a NuxtLink, because the /login/ route might be handled by Django,
-          not Vue Router, if OIDC sign-in is enabled.
-        -->
-        <p-button
+        <sign-in-button
           v-if="!route.meta.hideSignInButton"
-          label="Sign in"
-          as="a"
-          href="/login/"
-          variant="outlined"
+          variant="text"
         />
       </template>
       <template v-else>

@@ -138,6 +138,13 @@ export const apiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => ({
       method: 'GET',
     });
   },
+
+  async resetIppToken(): Promise<void> {
+    await fetch('/api/resettoken/', {
+      method: 'POST',
+      gutenbergExpectJson: false,
+    });
+  },
 });
 
 export function getErrorMessage(error: unknown): string | undefined {
