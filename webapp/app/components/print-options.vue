@@ -65,7 +65,7 @@
             v-if="jobCreator.selectedPrinter !== null"
             class="mt-2 px-1"
           >
-            <div class="label-text">
+            <div class="text-label">
               Supported file formats:
             </div>
             <div class="text-sm">
@@ -105,7 +105,7 @@
           <template v-if="jobCreator.duplexMode !== 'disabled'">
             <label
               id="duplex-mode-select"
-              class="label-text px-form"
+              class="text-label px-form"
             >Flip backside around</label>
             <p-select-button
               v-model="jobCreator.duplexMode"
@@ -127,7 +127,7 @@
           </template>
         </template>
 
-        <!--      <label id="page-filter-select" class="label-text px-form">Filter printed pages</label> -->
+        <!--      <label id="page-filter-select" class="text-label px-form">Filter printed pages</label> -->
         <!--      <SelectButton -->
         <!--        :options="pageFilterOptions" -->
         <!--        option-value="value" -->
@@ -149,7 +149,7 @@
         <div>
           <label
             id="color-mode-select"
-            class="label-text px-form"
+            class="text-label px-form"
           >Color mode</label>
           <p-select-button
             v-model="jobCreator.colorMode"

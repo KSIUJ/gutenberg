@@ -2,7 +2,7 @@
   <div :class="rootClass">
     <div
       v-if="header"
-      class="px-5 pt-5"
+      class="px-5 py-3 text-header border-b border-surface shrink-0"
     >
       <h1>{{ header }}</h1>
     </div>

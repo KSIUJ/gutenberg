@@ -28,14 +28,16 @@
 
     <template #content>
       <app-content class="space-y-4">
-        <h1>
+        <h1 class="text-header">
           Welcome to Gutenberg
         </h1>
         <p class="my-4">
           A <span class="text-primary">reliable</span> office printing gateway
         </p>
 
-        <h1>Print directly from your device</h1>
+        <h1 class="text-header">
+          Print directly from your device
+        </h1>
         <p>
           Gutenberg supports printing using the <b class="text-emphasis-color">Internet Printing Protocol</b>
           <p-button

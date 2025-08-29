@@ -10,13 +10,6 @@
     --breakpoint-sm: 32rem;
 }
 
-@utility label-text {
-    @apply text-muted-color;
-    @apply text-xs;
-    @apply mb-1;
-    @apply inline-block;
-}
-
 @utility px-form {
     @apply px-2;
 }
@@ -33,7 +26,19 @@
     @apply sr-only;
 }
 
+@utility text-label {
+    @apply text-muted-color;
+    @apply text-xs;
+    @apply mb-1;
+    @apply inline-block;
+}
+
 @utility text-link {
     text-decoration: underline;
     cursor: pointer;
+}
+
+@utility text-header {
+    font-size: 1.1rem;
+    font-weight: bold;
 }
