@@ -1,11 +1,11 @@
 <template>
   <div :class="rootClass">
-    <div
+    <h1
       v-if="header"
-      class="px-5 py-3 text-header border-b border-surface shrink-0"
+      class="block px-5 py-3 text-header border-b border-surface shrink-0"
     >
-      <h1>{{ header }}</h1>
-    </div>
+      {{ header }}
+    </h1>
     <div class="px-5 py-5 shrink grow overflow-y-auto flex flex-col">
       <slot />
     </div>

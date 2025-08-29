@@ -7,7 +7,10 @@
     --color-warn: var(--color-yellow-600);
     --color-success: var(--color-green-600);
 
+    --breakpoint-*: initial;
     --breakpoint-sm: 32rem;
+    --breakpoint-md: 48rem;
+    --breakpoint-lg: 64rem;
 }
 
 @utility px-form {

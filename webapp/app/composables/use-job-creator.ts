@@ -40,6 +40,7 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
   const printLoading = ref(false);
   const printError = ref<unknown | null>(null);
   const showSerializationErrors = ref(false);
+  const optionsExpanded = ref(false);
 
   const selectedPrinter = computed(() => {
     if (selectedPrinterId.value === null) return null;
@@ -170,6 +171,7 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
         );
       },
     })));
+    optionsExpanded.value = true;
   };
 
   const tryCancel = async (jobId: number) => {
@@ -238,5 +240,6 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
     documents: readonly(documentQueue),
     print,
     printLoading,
+    optionsExpanded: readonly(optionsExpanded),
   });
 };

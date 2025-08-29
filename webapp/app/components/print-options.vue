@@ -20,8 +20,8 @@
     v-else
     header="Print online"
   >
-    <div class="space-y-4">
-      <div class="mb-0">
+    <div>
+      <div>
         <p-float-label variant="in">
           <p-select
             id="printer-select"
@@ -75,8 +75,16 @@
         </div>
       </p-fieldset>
 
-      <!--    <Button label="Refresh printer list" variant="text" @click="printers.refresh()" /> -->
-      <div class="space-y-4">
+      <div
+        class="space-y-4 mt-8"
+        :class="{
+          hidden: !jobCreator.optionsExpanded,
+        }"
+      >
+        <h2 class="text-header">
+          Printing options
+        </h2>
+
         <p-float-label variant="in">
           <p-input-number
             v-model="jobCreator.copyCount"
@@ -179,17 +187,21 @@
             The selected printer does not support color printing or you do not have permission to use it
           </input-hint>
         </div>
+
+        <p-message
+          v-for="error in jobCreator.errorMessageList"
+          :key="`${error.field ?? '-'}|${error.message}`"
+          severity="error"
+        >
+          {{ error.message }}
+        </p-message>
       </div>
-      <p-message
-        v-for="error in jobCreator.errorMessageList"
-        :key="`${error.field ?? '-'}|${error.message}`"
-        severity="error"
-      >
-        {{ error.message }}
-      </p-message>
     </div>
 
-    <template #actions>
+    <template
+      v-if="jobCreator.optionsExpanded"
+      #actions
+    >
       <p-button
         label="Print"
         severity="primary"
