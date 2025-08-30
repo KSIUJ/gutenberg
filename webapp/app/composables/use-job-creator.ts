@@ -1,5 +1,6 @@
 import type { NuxtError } from '#app';
 import type { _AsyncData } from '#app/composables/asyncData';
+import { error, type Result } from '~/utils/results';
 
 export type DuplexMode = 'disabled' | 'duplex-unspecified' | 'duplex-long-edge' | 'duplex-short-edge';
 export type ColorMode = 'monochrome' | 'color';
@@ -36,6 +37,8 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
   const copyCount = ref(1);
   const duplexMode = ref<DuplexMode>('disabled');
   const colorMode = ref<ColorMode>('monochrome');
+  const fitToPageEnabled = ref(false);
+  const pagesToPrint = ref<string>('');
 
   const printLoading = ref(false);
   const printError = ref<unknown | null>(null);
@@ -92,7 +95,54 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
     }
   });
 
-  const serializedSettings = computed(() => {
+  const serializePagesToPrint = (input: string): Result<string | undefined, JobCreationError> => {
+    if (input.trim() === '') {
+      return ok(undefined);
+    }
+    const { errors, value: parts } = collectResultArray(
+      input
+        .split(',')
+        .map(part => part.trim())
+        .map((part): Result<{ start: number; end: number }, JobCreationError> => {
+          if (part === '') return error({
+            field: 'pages_to_print',
+            message: 'Invalid empty page range',
+          });
+
+          const rangeRegex = /^(\d+)(?:\s*-\s*(\d+))?$/;
+          const match = rangeRegex.exec(part);
+          if (match === null) return error({
+            field: 'pages_to_print',
+            message: `Invalid page range: "${part}"`,
+          });
+          const start = parseInt(match[1]!);
+          const end = match[2] === undefined ? start : parseInt(match[2]);
+          if (isNaN(start) || isNaN(end) || start > end) return error({
+            field: 'pages_to_print',
+            message: `Invalid page range: "${part}"`,
+          });
+          return ok({ start, end });
+        }),
+    );
+
+    // Return only the first error
+    if (errors !== null) return error(...(errors.slice(0, 1)));
+
+    for (let i = 1; i < parts.length; i++) {
+      if (parts[i]!.start <= parts[i - 1]!.end) return error({
+        field: 'pages_to_print',
+        message: 'Page ranges must be sorted and non-overlapping',
+      });
+    }
+
+    return ok(
+      parts
+        .map(part => `${part.start}-${part.end}`)
+        .join(','),
+    );
+  };
+
+  const serializedSettings = computed<Result<CreatePrintJobRequest, JobCreationError>>(() => {
     const errors: JobCreationError[] = [];
 
     if (selectedPrinterId.value === null) {
@@ -120,25 +170,28 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
       });
     }
 
-    if (errors.length > 0 || two_sides === undefined || selectedPrinterId.value === null) {
-      return {
-        errors,
-        request: null,
-      };
+    const {
+      errors: pagesToPrintErrors,
+      value: serializedPagesToPrint,
+    } = serializePagesToPrint(pagesToPrint.value);
+
+    if (pagesToPrintErrors !== null) {
+      errors.push(...pagesToPrintErrors);
+    }
+
+    if (errors.length > 0 || two_sides === undefined || selectedPrinterId.value === null || pagesToPrintErrors !== null) {
+      return error(...errors);
     }
 
     const request = {
       printer: selectedPrinterId.value,
       copies: copyCount.value,
-      pages_to_print: undefined,
+      pages_to_print: serializedPagesToPrint,
       two_sides,
       color: colorMode.value === 'color',
-      fit_to_page: undefined,
+      fit_to_page: fitToPageEnabled.value,
     } satisfies CreatePrintJobRequest;
-    return {
-      errors,
-      request,
-    };
+    return ok(request);
   });
 
   const errorMessageList = computed<JobCreationError[]>(() => {
@@ -150,7 +203,7 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
       });
     }
     if (showSerializationErrors.value) {
-      list.push(...serializedSettings.value.errors);
+      list.push(...serializedSettings.value.errors ?? []);
     }
     if (printError.value !== null) {
       list.push({
@@ -214,7 +267,7 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
 
   const print = async () => {
     showSerializationErrors.value = true;
-    if (printLoading.value || serializedSettings.value.request === null) return;
+    if (printLoading.value || serializedSettings.value.value === null) return;
 
     try {
       printLoading.value = true;
@@ -222,7 +275,7 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
       documentQueue.value.forEach((document) => {
         document.state = 'pending';
       });
-      const job = await apiRepository.createPrintJob(serializedSettings.value.request);
+      const job = await apiRepository.createPrintJob(serializedSettings.value.value);
       await completePrintJob(job.id);
     } catch (error) {
       console.error('Failed to create print job', error);
@@ -239,6 +292,8 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
     copyCount,
     duplexMode,
     colorMode,
+    fitToPageEnabled,
+    pagesToPrint,
     errorMessageList,
     addFiles,
     documents: readonly(documentQueue),

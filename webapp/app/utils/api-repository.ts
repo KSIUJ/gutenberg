@@ -25,7 +25,7 @@ export type ApiDuplexMode = 'OS' | 'TL' | 'TS';
 export type CreatePrintJobRequest = {
   printer: number;
   copies: number;
-  pages_to_print?: string;
+  pages_to_print?: string | undefined;
   two_sides: ApiDuplexMode;
   color?: boolean;
   fit_to_page?: boolean;

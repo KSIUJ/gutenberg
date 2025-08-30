@@ -83,12 +83,50 @@
       </p-fieldset>
 
       <div
-        class="mt-8 space-y-4"
+        class="space-y-4"
         :class="{
           hidden: !jobCreator.optionsExpanded,
         }"
       >
-        <h2 class="text-header">
+        <h2 class="mt-8 text-header">
+          Processing options
+        </h2>
+
+        <!--      <label id="page-filter-select" class="text-label px-form">Filter printed pages</label> -->
+        <!--      <SelectButton -->
+        <!--        :options="pageFilterOptions" -->
+        <!--        option-value="value" -->
+        <!--        data-key="value" -->
+        <!--        option-label="label" -->
+        <!--        :allow-empty="false" -->
+        <!--        fluid -->
+        <!--        aria-labelledby="page-filter-select" -->
+        <!--      /> -->
+
+        <div>
+          <p-float-label variant="in">
+            <p-input-text
+              v-model="jobCreator.pagesToPrint"
+              fluid
+              input-id="page-filter-input"
+              aria-describedby="page-filter-input-description"
+              placeholder="Print all pages"
+            />
+            <label for="page-filter-input">Input page filter</label>
+          </p-float-label>
+          <input-hint id="page-filter-input-description">
+            You can use comma-separated pages or page ranges, for example: <i class="text-nowrap">13-20, 25, 30-31</i>.
+            The page filter is applied to each file separately.
+          </input-hint>
+        </div>
+
+        <labeled-toggle
+          v-model="jobCreator.fitToPageEnabled"
+          label="Fit to page"
+          input-id="fit-to-page-enabled"
+        />
+
+        <h2 class="mt-8 text-header ">
           Printing options
         </h2>
 
@@ -136,25 +174,6 @@
             </p-select-button>
           </template>
         </template>
-
-        <!--      <label id="page-filter-select" class="text-label px-form">Filter printed pages</label> -->
-        <!--      <SelectButton -->
-        <!--        :options="pageFilterOptions" -->
-        <!--        option-value="value" -->
-        <!--        data-key="value" -->
-        <!--        option-label="label" -->
-        <!--        :allow-empty="false" -->
-        <!--        fluid -->
-        <!--        aria-labelledby="page-filter-select" -->
-        <!--      /> -->
-
-        <!--      <FloatLabel variant="in"> -->
-        <!--        <InputText -->
-        <!--          fluid -->
-        <!--          input-id="page-filter-input" -->
-        <!--        /> -->
-        <!--        <label for="page-filter-input">Page filter</label> -->
-        <!--      </FloatLabel> -->
 
         <div>
           <label

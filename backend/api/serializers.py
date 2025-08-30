@@ -22,7 +22,7 @@ class PrinterSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'color_allowed', 'duplex_supported', 'supported_extensions']
 
 
-class PrintRequestSerializer(serializers.Serializer):
+class  PrintRequestSerializer(serializers.Serializer):
     printer = serializers.IntegerField(required=True)
     file = serializers.FileField(allow_empty_file=False, required=True)
     copies = serializers.IntegerField(required=True)
