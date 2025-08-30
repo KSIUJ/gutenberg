@@ -1,6 +1,5 @@
 import logging
 from secrets import token_urlsafe
-from typing import Optional
 
 from django.contrib.auth import authenticate, login
 from django.middleware.csrf import rotate_token
@@ -55,6 +54,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             status=JobStatus.CANCELED)
         GutenbergJob.objects.filter(id=job.id).exclude(status__in=GutenbergJob.COMPLETED_STATUSES).update(
             status=JobStatus.CANCELING)
+        job.refresh_from_db()
         return Response(self.get_serializer(job).data)
 
     @action(detail=False, methods=['post'], name='Submit new job')
@@ -73,6 +73,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             self._upload_artefact(job, **serializer.validated_data)
             self._run_job(job)
         except UnsupportedDocumentError as ex:
+            # FIXME: Use a common error message format
             return Response("Error: {}".format(ex), status=status.HTTP_400_BAD_REQUEST)
         return Response(self.get_serializer(job).data)
 
@@ -90,6 +91,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             if serializer.validated_data['last'] == True:
                 self._run_job(job)
         except UnsupportedDocumentError as ex:
+            # FIXME: Use a common error message format
             return Response("Error: {}".format(ex), status=status.HTTP_400_BAD_REQUEST)
         return Response(self.get_serializer(job).data)
 
@@ -99,7 +101,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         if job.status != JobStatus.INCOMING:
             return Response("Error: invalid job status for this request", status=status.HTTP_400_BAD_REQUEST)
         self._run_job(job)
-        return job
+        return Response(self.get_serializer(job).data)
 
     @action(detail=False, methods=['post'], name='Create new job')
     def create_job(self, request):
@@ -137,7 +139,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         job.status = JobStatus.PENDING
         job.save()
         print_file.delay(job.id)
-        logger.info('User %s submitted job: "%s"', self.request.user.username)
+        logger.info('User %s submitted job: %s', self.request.user.username, job.id)
         return job
 
 
@@ -173,7 +175,7 @@ class ResetApiTokenView(APIView):
     def post(self, request, *args, **kwargs):
         self.request.user.api_key = _generate_token()
         self.request.user.save()
-        return Response()
+        return Response(status=204)
 
 
 class LoginApiView(APIView):
@@ -204,8 +206,12 @@ class LoginApiView(APIView):
         if not user.is_active:
             return Response(data={'message': 'Account is not active'}, status=403)
         login(request, user)
-        return Response(status=200)
+        return Response(status=204)
 
     def get(self, request, *args, **kwargs):
+        """
+        Rotate the CSRF token. According to the `rotate_token` function documentation,
+        it should always be called on login.
+        """
         rotate_token(request)
-        return Response(status=200)
+        return Response(status=204)

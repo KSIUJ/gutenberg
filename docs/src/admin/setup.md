@@ -12,7 +12,7 @@
     - Debian/Ubuntu: `sudo apt install imagemagick unoconv ghostscript bubblewrap pdftk`
     - Arch Linux: `sudo pacman -S imagemagick unoconv ghostscript bubblewrap pdftk`
 - Gutenberg uses `uv` as the Python project manager.
-  See https://docs.astral.sh/uv/getting-started/installation/ for install instructions.
+  See https://docs.astral.sh/uv/getting-started/installation/ for installation instructions.
 - You will also need to have `yarn` or `npm` to build the web interface.
 
 ## Setting up the app
@@ -49,8 +49,11 @@ cp ${GUTENBERG_ENV}_settings.py.example ${GUTENBERG_ENV}_settings.py
 $EDITOR ${GUTENBERG_ENV}_settings.py # edit the values appropriately
 cd ../
 
-yarn install
-yarn build
+# Build the webapp
+cd webapp
+pnpm install
+pnpm run build
+cd ../
 
 # Execute all Python commands through uv
 cd backend
@@ -60,6 +63,16 @@ cd ../
 
 # visit localhost:11111 and check if everything works
 ```
+
+While developing the webapp, you can start the Nuxt development server after
+starting the Django development server:
+```sh
+export GUTENBERG_DEV_DJANGO_URL=http://localhost:11111/
+cd webapp
+pnpm run dev
+```
+You can now access the webapp at http://localhost:3000/.
+API endpoints are proxied by the Nuxt dev server (based on the `GUTENBERG_DEV_DJANGO_URL` env variable).
 
 You will also need to start at least one worker. In the main directory after activating the virtual environment:
 
