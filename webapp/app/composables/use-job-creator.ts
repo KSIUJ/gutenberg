@@ -1,6 +1,6 @@
 import type { NuxtError } from '#app';
 import type { _AsyncData } from '#app/composables/asyncData';
-import { error, type Result } from '~/utils/results';
+import { collectResultsObject, error, type Result } from '~/utils/results';
 
 export type DuplexMode = 'disabled' | 'duplex-unspecified' | 'duplex-long-edge' | 'duplex-short-edge';
 export type ColorMode = 'monochrome' | 'color';
@@ -17,6 +17,8 @@ export type JobCreationError = {
   field: keyof CreatePrintJobRequest | (string & {}) | null;
   message: string;
 };
+
+export type JobResult<T> = Result<T, JobCreationError>;
 
 const twoSidesMapping = {
   'disabled': 'OS',
@@ -95,15 +97,35 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
     }
   });
 
-  const serializePagesToPrint = (input: string): Result<string | undefined, JobCreationError> => {
-    if (input.trim() === '') {
+  const serializePrinterId = (): JobResult<number> => {
+    if (selectedPrinterId.value === null) {
+      return error({
+        field: 'printer',
+        message: 'No printer selected',
+      });
+    }
+    return ok(selectedPrinterId.value);
+  };
+
+  const serializeDuplexMode = (): JobResult<ApiDuplexMode> => {
+    if (duplexMode.value === 'duplex-unspecified') {
+      return error({
+        field: 'two_sides',
+        message: 'Two-side printing mode not selected',
+      });
+    }
+    return ok(twoSidesMapping[duplexMode.value]);
+  };
+
+  const serializePagesToPrint = (): JobResult<string | undefined> => {
+    if (pagesToPrint.value.trim() === '') {
       return ok(undefined);
     }
     const { errors, value: parts } = collectResultArray(
-      input
+      pagesToPrint.value
         .split(',')
         .map(part => part.trim())
-        .map((part): Result<{ start: number; end: number }, JobCreationError> => {
+        .map((part): JobResult<{ start: number; end: number }> => {
           if (part === '') return error({
             field: 'pages_to_print',
             message: 'Invalid empty page range',
@@ -135,59 +157,41 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
       });
     }
 
-    return ok(
-      parts
-        .map(part => `${part.start}-${part.end}`)
-        .join(','),
+    return ok(parts
+      .map(part => `${part.start}-${part.end}`)
+      .join(','),
     );
   };
 
   const serializedSettings = computed<Result<CreatePrintJobRequest, JobCreationError>>(() => {
-    const errors: JobCreationError[] = [];
+    // These fields cannot be serialized if their values are not valid.
+    // The serializeX functions do not throw, but return a custom `Result` type instead,
+    // so all errors can be collected.
+    const result = collectResultsObject({
+      printer: serializePrinterId(),
+      two_sides: serializeDuplexMode(),
+      pages_to_print: serializePagesToPrint(),
+    });
 
-    if (selectedPrinterId.value === null) {
-      errors.push({
-        field: 'printer',
-        message: 'No printer selected',
-      });
-    }
-
-    let two_sides: ApiDuplexMode | undefined;
-    if (duplexMode.value === 'duplex-unspecified') {
-      errors.push({
-        field: 'two_sides',
-        message: 'Two-side printing mode not selected',
-      });
-      two_sides = undefined;
-    } else {
-      two_sides = twoSidesMapping[duplexMode.value];
-    }
-
+    // The serialization will also fail if this list is not empty
+    const validationErrors: JobCreationError[] = [];
     if (documentQueue.value.length === 0) {
-      errors.push({
+      validationErrors.push({
         field: null,
         message: 'No documents selected',
       });
     }
 
-    const {
-      errors: pagesToPrintErrors,
-      value: serializedPagesToPrint,
-    } = serializePagesToPrint(pagesToPrint.value);
-
-    if (pagesToPrintErrors !== null) {
-      errors.push(...pagesToPrintErrors);
-    }
-
-    if (errors.length > 0 || two_sides === undefined || selectedPrinterId.value === null || pagesToPrintErrors !== null) {
-      return error(...errors);
+    if (result.errors !== null || validationErrors.length > 0) {
+      return error(
+        ...result.errors ?? [],
+        ...validationErrors,
+      );
     }
 
     const request = {
-      printer: selectedPrinterId.value,
+      ...result.value,
       copies: copyCount.value,
-      pages_to_print: serializedPagesToPrint,
-      two_sides,
       color: colorMode.value === 'color',
       fit_to_page: fitToPageEnabled.value,
     } satisfies CreatePrintJobRequest;
