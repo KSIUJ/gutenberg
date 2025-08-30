@@ -1,13 +1,13 @@
 <template>
   <a
     :href="href"
-    class="flex flex-row p-4 gap-4 items-center border rounded-border border-surface bg-surface-50 hover:bg-surface-0 transition-colors focus-ring"
+    class="focus-ring flex flex-row items-center gap-4 rounded-border border border-surface bg-surface-50 p-4 transition-colors hover:bg-surface-0"
   >
     <img
       v-if="imgSrc"
       :src="imgSrc"
       :alt="imgAlt"
-      class="w-10 h-auto shrink-0"
+      class="h-auto w-10 shrink-0"
     >
 
     <div

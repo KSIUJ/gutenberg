@@ -1,11 +1,11 @@
 <template>
-  <header class="fixed top-0 left-0 right-0 block h-(--header-height) bg-surface-50 border-b border-surface z-10 shadow-xs">
-    <div class="px-4 h-full mx-auto max-w-5xl flex flex-row items-center justify-between">
+  <header class="fixed top-0 right-0 left-0 z-10 block h-(--header-height) border-b border-surface bg-surface-50 shadow-xs">
+    <div class="mx-auto flex h-full max-w-5xl flex-row items-center justify-between px-4">
       <NuxtLink
         to="/"
-        class="flex flex-row items-center h-full gap-2"
+        class="flex h-full flex-row items-center gap-2"
       >
-        <div class="py-2 h-full">
+        <div class="h-full py-2">
           <img
             alt=""
             src="~/assets/img/gutenberg-logo-120.png"

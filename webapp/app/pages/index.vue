@@ -6,7 +6,7 @@
         ghost
         class="grow"
       >
-        <div class="grow flex flex-col items-center justify-center text-center space-y-4">
+        <div class="flex grow flex-col items-center justify-center space-y-4 text-center">
           <div>
             Sign in to print documents online
           </div>
@@ -16,7 +16,7 @@
 
       <div
         v-else
-        class="space-y-4 flex flex-col grow"
+        class="flex grow flex-col space-y-4"
       >
         <print-options />
 
@@ -39,7 +39,7 @@
           Print directly from your device
         </h1>
         <p>
-          Gutenberg supports printing using the <b class="text-emphasis-color">Internet Printing Protocol</b>
+          Gutenberg supports printing using the <b class="text-color-emphasis">Internet Printing Protocol</b>
           <p-button
             v-slot="slotProps"
             variant="outlined"

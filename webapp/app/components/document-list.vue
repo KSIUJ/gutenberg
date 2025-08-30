@@ -3,10 +3,10 @@
     <li
       v-for="document in documents"
       :key="document.localId"
-      class="pl-1 py-2 flex flex-row space-x-2 group"
+      class="group flex flex-row space-x-2 py-2 pl-1"
     >
-      <div class="grow shrink w-0">
-        <div class="overflow-hidden whitespace-nowrap text-ellipsis text-sm">
+      <div class="w-0 shrink grow">
+        <div class="truncate text-sm">
           {{ document.filename }}
         </div>
         <div

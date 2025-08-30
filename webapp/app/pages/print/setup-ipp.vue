@@ -61,7 +61,7 @@
               using this endpoint.
             </input-hint>
 
-            <div class="flex flex-col lg:flex-row gap-4">
+            <div class="flex flex-col gap-4 lg:flex-row">
               <div class="grow">
                 <p-ifta-label>
                   <p-input-text
@@ -122,8 +122,8 @@
           </p-fieldset>
 
           <p-fieldset legend="Reset IPP token/password">
-            <div class="flex flex-col lg:flex-row lg:items-center gap-4">
-              <p class="text-sm grow">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center">
+              <p class="grow text-sm">
                 You can re-generate your IPP token/password if accidentally shared it with others.<br>
                 Please remember that you will have to update it in any device you have set up
                 Gutenberg IPP with.
@@ -134,7 +134,7 @@
                 label="Reset IPP token"
                 severity="danger"
                 variant="outlined"
-                class="self-end lg:self-auto shrink-0"
+                class="shrink-0 self-end lg:self-auto"
                 @click="resetToken"
               />
             </div>

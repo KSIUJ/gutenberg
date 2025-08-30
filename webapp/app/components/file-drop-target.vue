@@ -3,7 +3,7 @@
     v-if="overlayVisible"
     to="body"
   >
-    <div class="pointer-events-none overlay z-50 fixed inset-0 bg-primary-800 opacity-90 text-white text-center flex items-center justify-center p-8">
+    <div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-primary-800 p-8 text-center text-white opacity-90">
       <div class="text-3xl">
         Drop files to add them
       </div>

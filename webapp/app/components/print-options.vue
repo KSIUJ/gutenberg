@@ -47,7 +47,7 @@
           <p-divider />
         </template>
         <div>
-          <div class="flex flex-row gap-2 items-center">
+          <div class="flex flex-row items-center gap-2">
             <p-file-upload
               mode="basic"
               auto
@@ -64,7 +64,7 @@
               }"
               @select="onFileSelect"
             />
-            <div class="hidden sm:block text-muted-color text-sm">
+            <div class="hidden text-sm text-muted-color sm:block">
               or drop them anywhere
             </div>
           </div>
@@ -83,7 +83,7 @@
       </p-fieldset>
 
       <div
-        class="space-y-4 mt-8"
+        class="mt-8 space-y-4"
         :class="{
           hidden: !jobCreator.optionsExpanded,
         }"
@@ -106,7 +106,7 @@
         </p-float-label>
 
         <template v-if="jobCreator.selectedPrinter?.duplex_supported">
-          <div class="w-full flex flex-row items-center">
+          <div class="flex w-full flex-row items-center">
             <label
               id="duplex-enabled"
               class="grow pl-form"
@@ -180,7 +180,7 @@
             <template #option="{ option }">
               <div class="w-full">
                 {{ option.label }}<br>
-                <div class="w-1/4 flex flex-row mx-auto mt-2 mb-1 rounded-xs overflow-hidden">
+                <div class="mx-auto mt-2 mb-1 flex w-1/4 flex-row overflow-hidden rounded-xs">
                   <div
                     v-for="(color, i) in option.colors"
                     :key="i"

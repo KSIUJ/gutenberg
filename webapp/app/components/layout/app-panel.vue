@@ -2,9 +2,9 @@
   <div :class="rootClass">
     <div
       v-if="header"
-      class="p-2 border-b border-surface shrink-0 group transition-colors"
+      class="group shrink-0 border-b border-surface p-2 transition-colors"
       :class="{
-        'cursor-pointer hover:bg-primary-50 outline-none select-none': headerClickable,
+        'cursor-pointer outline-none select-none hover:bg-primary-50': headerClickable,
       }"
       :tabindex="headerClickable ? 0 : undefined"
       :role="headerClickable ? 'button' : undefined"
@@ -12,16 +12,16 @@
       @keydown.enter.prevent="onHeaderClick"
       @keyup.space.prevent="onHeaderClick"
     >
-      <h1 class="px-3 py-1 text-header rounded-xs outline-primary outline-offset-4 group-focus-visible:outline">
+      <h1 class="rounded-xs px-3 py-1 text-header outline-offset-4 outline-primary group-focus-visible:outline">
         {{ header }}
       </h1>
     </div>
-    <div class="px-5 py-5 shrink grow overflow-y-auto flex flex-col">
+    <div class="flex shrink grow flex-col overflow-y-auto px-5 py-5">
       <slot />
     </div>
     <div
       v-if="$slots.actions"
-      class="px-5 pb-5 flex flex-row-reverse gap-2 shrink-0"
+      class="flex shrink-0 flex-row-reverse gap-2 px-5 pb-5"
     >
       <slot name="actions" />
     </div>
