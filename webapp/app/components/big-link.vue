@@ -1,7 +1,7 @@
 <template>
   <a
     :href="href"
-    class="focus-ring flex flex-row items-center gap-4 rounded-border border border-surface bg-surface-50 p-4 transition-colors hover:bg-surface-0"
+    class="flex flex-row items-center gap-4 rounded-border border border-surface bg-surface-50 p-4 focus-ring transition-colors hover:bg-surface-0"
   >
     <img
       v-if="imgSrc"
