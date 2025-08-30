@@ -1,8 +1,21 @@
 <template>
   <header class="fixed top-0 left-0 right-0 block h-(--header-height) bg-surface-50 border-b border-surface z-10 shadow-xs">
     <div class="px-4 h-full mx-auto max-w-5xl flex flex-row items-center justify-between">
-      <NuxtLink to="/">
-        Gutenberg
+      <NuxtLink
+        to="/"
+        class="flex flex-row items-center h-full gap-2"
+      >
+        <div class="py-2 h-full">
+          <img
+            alt=""
+            src="~/assets/img/gutenberg-logo-120.png"
+            class="h-full w-auto"
+          >
+        </div>
+
+        <div class="text-lg font-semibold">
+          Gutenberg
+        </div>
       </NuxtLink>
 
       <template v-if="$auth.me.value === Unauthenticated">
