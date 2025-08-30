@@ -43,7 +43,7 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-  headerClick: [event: MouseEvent];
+  headerClick: [event: MouseEvent | KeyboardEvent];
 }>();
 
 const rootClass = computed(() => {
@@ -54,7 +54,7 @@ const rootClass = computed(() => {
   return `${commonClasses} bg-surface-0`;
 });
 
-const onHeaderClick = (event: MouseEvent) => {
+const onHeaderClick = (event: MouseEvent | KeyboardEvent) => {
   emit('headerClick', event);
 };
 </script>

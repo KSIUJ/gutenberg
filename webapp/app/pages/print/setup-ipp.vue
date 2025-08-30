@@ -47,7 +47,7 @@
                 :value="details.ippBasicAuthUrl"
                 fluid
                 aria-labelledby="ipp-basic-auth-url-description"
-                @click="$event.target.select()"
+                @click="handleFieldClick"
               />
               <label for="ipp-basic-auth-url">
                 IPP endpoint with HTTP-basic authentication for this printer
@@ -69,7 +69,7 @@
                     readonly
                     :value="details.ippUsername"
                     fluid
-                    @click="$event.target.select()"
+                    @click="handleFieldClick"
                   />
                   <label for="ipp-username">Your username</label>
                 </p-ifta-label>
@@ -83,7 +83,7 @@
                     :value="details.ippPassword"
                     fluid
                     aria-labelledby="ipp-password-description"
-                    @click="$event.target.select()"
+                    @click="handleFieldClick"
                   />
                   <label for="ipp-password">Your IPP token/password</label>
                 </p-ifta-label>
@@ -108,7 +108,7 @@
                 :value="details.ippTokenUrl"
                 fluid
                 aria-labelledby="ipp-token-url-description"
-                @click="$event.target.select()"
+                @click="handleFieldClick"
               />
               <label for="ipp-token-url">Your personal IPP endpoint for this printer</label>
             </p-ifta-label>
@@ -219,6 +219,10 @@ const resetToken = () => {
       }
     },
   });
+};
+
+const handleFieldClick = (event: MouseEvent) => {
+  if (event.target instanceof HTMLInputElement) event.target.select();
 };
 
 definePageMeta({
