@@ -28,6 +28,11 @@ export default defineNuxtConfig({
       strict: true,
     },
   },
+  runtimeConfig: {
+    public: {
+      buildDate: new Date().toISOString(),
+    },
+  },
   compatibilityDate: '2025-07-15',
   nitro: {
     preset: 'static',

@@ -32,32 +32,40 @@
           Welcome to Gutenberg
         </h1>
         <p class="my-4">
-          A <span class="text-primary">reliable</span> office printing gateway
+          A <b class="text-primary">reliable</b> office printing gateway.
         </p>
 
-        <h1 class="text-header">
+        <h1 class="mt-8 text-header">
           Print directly from your device
         </h1>
         <p>
-          Gutenberg supports printing using the <b class="text-color-emphasis">Internet Printing Protocol</b>
-          <p-button
-            v-slot="slotProps"
-            variant="outlined"
-            severity="primary"
-            as-child
-          >
-            <NuxtLink
-              v-bind="slotProps"
-              to="/print/setup-ipp/"
-            >
-              Learn more
-            </NuxtLink>
-          </p-button>
+          Gutenberg supports the <b class="text-primary">Internet Printing Protocol</b>.
+          You can connect to this printer in your device settings
+          <b class="text-primary">without having to install dedicated printer drivers</b>
+          and start print jobs from apps on your device,
+          <b class="text-primary">from any network</b> with internet access.
         </p>
 
+        <p-button
+          v-slot="slotProps"
+          severity="primary"
+          as-child
+          fluid
+        >
+          <NuxtLink
+            v-bind="slotProps"
+            to="/print/setup-ipp/"
+          >
+            Setup native printing
+          </NuxtLink>
+        </p-button>
+
+        <h1 class="mt-8 text-header">
+          About the Gutenberg project
+        </h1>
         <p>
           Gutenberg is an <b class="text-primary">open-source</b>
-          project created and maintained by
+          project created and maintained by the people at
           <b class="text-primary">KSI&nbsp;UJ</b>:
         </p>
         <big-link
@@ -86,6 +94,20 @@
           label="Online documentation"
           href="https://ksiuj.github.io/gutenberg/"
         />
+
+        <p class="mt-8 text-center text-xs text-balance">
+          &copy; 2015&ndash;{{ buildYear }}
+          <a
+            class="text-link"
+            href="https://ksi.ii.uj.edu.pl/"
+          >KSI&nbsp;UJ</a><br>
+
+          Gutenberg is released under the
+          <a
+            class="text-link"
+            href="https://github.com/KSIUJ/gutenberg/blob/master/LICENSE"
+          >GNU Affero General Public License v3.0</a>
+        </p>
       </app-content>
     </template>
   </sidebar-layout>
@@ -96,4 +118,7 @@ import ksiPoweredByLogo from '~/assets/img/powered-by-ksi.svg';
 import githubLogo from '~/assets/img/github-mark.svg';
 
 const { $auth } = useNuxtApp();
+const runtimeConfig = useRuntimeConfig();
+
+const buildYear = new Date(runtimeConfig.public.buildDate).getFullYear();
 </script>
