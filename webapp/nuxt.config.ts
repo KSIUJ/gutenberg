@@ -145,7 +145,6 @@ export default defineNuxtConfig({
         'InputText',
         'Menu',
         'Message',
-        'Panel',
         'Password',
         'Select',
         'SelectButton',
