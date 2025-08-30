@@ -71,6 +71,10 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
 AUTH_USER_MODEL = 'common.User'
 
+REST_FRAMEWORK = {
+    'EXCEPTION_HANDLER': 'api.exceptions.auth_exception_handler'
+}
+
 ROOT_URLCONF = 'gutenberg.urls'
 
 TEMPLATES = [
@@ -116,8 +120,10 @@ STATICFILES_FINDERS = [
 ]
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, '../dist'),
+    os.path.join(BASE_DIR, '../webapp/.output/public'),
 ]
+
+GUTENBERG_SPA_HTML_DIR = os.path.join(BASE_DIR, '../webapp/.output/html')
 
 # This is a custom setting which controls how the index.html file is served for the SPA webapp.
 # All webapp routes are handled by the Django server to handle authentication.

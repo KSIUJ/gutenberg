@@ -1,10 +1,9 @@
 from django.urls import path, re_path
 
-from printing.views import webapp, service_worker, login
+from printing.views import login, webapp_public, webapp_require_auth
 
 urlpatterns = [
-    path('', webapp, name='print'),
+    path('', webapp_public, name='print'),
     path('login/', login, name='print'),
-    re_path('^job/.*', webapp, name='print'),
-    path('service-worker.js', service_worker)
+    re_path('^print/.*', webapp_require_auth, name='print'),
 ]

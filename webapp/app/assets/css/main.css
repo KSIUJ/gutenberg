@@ -1,0 +1,64 @@
+@import "tailwindcss";
+@import "tailwindcss-primeui";
+
+@theme {
+    --header-height: 4rem;
+    --color-error: var(--color-red-600);
+    --color-warn: var(--color-yellow-600);
+    --color-success: var(--color-green-600);
+
+    --breakpoint-*: initial;
+    --breakpoint-sm: 32rem;
+    --breakpoint-md: 48rem;
+    --breakpoint-lg: 64rem;
+}
+
+@custom-variant y-md {
+    @media (min-height: 36rem) {
+        & {
+            @slot;
+        }
+    }
+}
+
+@utility px-form {
+    @apply px-2;
+}
+
+@utility pl-form {
+    @apply pl-2;
+}
+
+@utility pr-form {
+    @apply pr-2;
+}
+
+.group:not(:hover):not(:focus):not(:focus-within) .hide-unless-group-hovered {
+    @apply sr-only;
+}
+
+@utility text-label {
+    @apply text-muted-color;
+    @apply text-xs;
+    @apply mb-1;
+    @apply inline-block;
+}
+
+@utility text-link {
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+@utility text-header {
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+@utility focus-ring {
+    outline: 1px solid var(--color-primary-500);
+    outline-offset: 2px;
+
+    &:not(:focus-within) {
+        outline-width: 0;
+    }
+}
