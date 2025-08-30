@@ -45,3 +45,12 @@
     font-size: 1.1rem;
     font-weight: bold;
 }
+
+.focus-ring {
+    outline: 1px solid var(--color-primary-500);
+    outline-offset: 2px;
+}
+
+.focus-ring:not(:focus-within) {
+    outline-width: 0;
+}

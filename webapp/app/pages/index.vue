@@ -60,56 +60,40 @@
           project created and maintained by
           <b class="text-primary">KSI&nbsp;UJ</b>:
         </p>
-        <a
+        <big-link
           href="https://ksi.ii.uj.edu.pl/"
-          class="border rounded-border border-surface bg-surface-50 hover:bg-surface-0 transition-colors flex flex-row p-4 gap-4 items-center"
+          :img-src="ksiPoweredByLogo"
+          alt="&quot;Powered by KSI&quot; logo"
         >
-          <img
-            src="~/assets/img/powered-by-ksi.svg"
-            alt="Powered by KSI logo"
-            class="h-16 w-auto shrink-0"
-          >
-
-          <div class="grow text-center">
-            <b class="text-primary">Computer Science Students' Association</b><br>
-            at <b class="text-primary">Jagiellonian University</b>, Krakow, Poland
-          </div>
-        </a>
+          <b class="text-primary">Computer Science Students' Association</b><br>
+          at <b class="text-primary">Jagiellonian University</b>, Krakow, Poland
+        </big-link>
         <p>
           The project's source&nbsp;code is hosted on GitHub.
           The&nbsp;GitHub repository is also the place to report issues and submit feature requests.
         </p>
-        <a
+        <big-link
+          label="KSIUJ/gutenberg"
           href="https://github.com/KSIUJ/gutenberg/"
-          class="border rounded-border border-surface bg-surface-50 hover:bg-surface-0 transition-colors flex flex-row p-4 gap-4 items-center"
-        >
-          <img
-            src="~/assets/img/github-mark.svg"
-            alt="GitHub logo"
-            class="h-8 w-auto shrink-0"
-          >
-
-          <div class="grow text-center text-primary font-semibold">
-            KSIUJ/gutenberg
-          </div>
-        </a>
+          :img-src="githubLogo"
+          img-alt="GitHub logo"
+        />
         <p>
           Gutenberg is <b class="text-primary">self-hosted</b>, you can deploy it in your organization.
           Check out Gutenberg's documentation for more information.
         </p>
-        <a
+        <big-link
+          label="Online documentation"
           href="https://ksiuj.github.io/gutenberg/"
-          class="border rounded-border border-surface bg-surface-50 hover:bg-surface-0 transition-colors flex flex-row p-4 gap-4 items-center"
-        >
-          <div class="grow text-center text-primary font-semibold">
-            Online documentation
-          </div>
-        </a>
+        />
       </app-content>
     </template>
   </sidebar-layout>
 </template>
 
 <script setup lang="ts">
+import ksiPoweredByLogo from '~/assets/img/powered-by-ksi.svg';
+import githubLogo from '~/assets/img/github-mark.svg';
+
 const { $auth } = useNuxtApp();
 </script>
