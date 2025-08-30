@@ -44,7 +44,7 @@ the `/static/` endpoint.
 The `html` is not included in the static files, because they should not be accessed under the `/static/` endpoint.
 Django will serve them directly from the `.output/html` directory (specified in the custom `GUTENBERG_SPA_HTML_DIR`
 Django setting).
-See the file [backend/printing/urls.py](../../../backend/printing/urls.py) (included from 
+See the file [backend/printing/urls.py](../../../backend/printing/urls.py) (included from
 [backend/gutenberg/urls.py](../../../backend/gutenberg/urls.py)) for the details on how Django serves these files.
 Django will serve the `200.html` file for any webapp request.
 
@@ -53,7 +53,7 @@ which moves the responsibility of serving the HTML files also to NGINX.
 
 The generation of the `html` files is altered in the `prerender:generate` Nitro hook in
 [webapp/nuxt.config.js](../../../webapp/nuxt.config.ts). It disables the rendering of `index.html`
-and changes the output directory for HTML files to `.output/html`. 
+and changes the output directory for HTML files to `.output/html`.
 
 ## Routing
 The web app uses Vue Router for navigation. Since the same `200.html` file is served for all routes
@@ -61,7 +61,7 @@ The web app uses Vue Router for navigation. Since the same `200.html` file is se
 `window.location.pathname` and determines which page to render based on that.
 Navigation between different web app routes is done internally by Vue Router using the History API,
 which modifies the URL in the browser's address bar but does not reload the page.
- 
+
 > [!IMPORTANT]
 > An exception to that is the `/login/` route. Depending on the configuration, Django might either serve
 > the `200.html` file to render the web app login form or redirect to an Open ID Connect authentication URL.
@@ -78,7 +78,7 @@ the route matching logic to only handle routes with a trailing slash.
 Due to this, internal navigation to `yoursite.example.com/print/setup-ipp` will show a Vue Router "404" page,
 so care must be taken to append trailing slashes in Vue Router links.
 If a user tried to access `yoursite.example.com/print/setup-ipp` from the address bar, Django will redirect
-them to the correct URL (with a trailing slash) before serving the web app. 
+them to the correct URL (with a trailing slash) before serving the web app.
 
 ## Authentication
 Some web app routes are publicly accessible, while others require authentication.
@@ -141,7 +141,7 @@ or `http://localhost:11111/` if unspecified).
 The proxied endpoints are specified in [webapp/nuxt.config.js](../../../webapp/nuxt.config.ts).
 
 > [!WARNING]
-> This proxying has some issues — for example, the redirect to the logout page makes Nuxt display a 404 page
+> This dev proxy has some issues — for example, the redirect to the logout page makes Nuxt display a 404 page
 > until the site is reloaded.
 
 The Nuxt server also watches for changes in the code and generates type definitions in the `.nuxt` directory.
