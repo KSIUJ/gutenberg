@@ -93,6 +93,20 @@
             {{ job.data.value.status_reason }}
           </code>
         </p-message>
+        <p-message
+          v-if="job.data.value.status === 'UNKNOWN'"
+          severity="warn"
+        >
+          <p>
+            This status of this print job is unknown.
+          </p>
+          <code
+            v-if="job.data.value.status_reason"
+            class="mt-3 block text-sm"
+          >
+            {{ job.data.value.status_reason }}
+          </code>
+        </p-message>
       </div>
 
       <template
@@ -116,6 +130,18 @@
 import { useIntervalFn } from '@vueuse/core';
 
 const COMPLETED_STATUES: JobStatus[] = ['COMPLETED', 'ERROR', 'CANCELED', 'UNKNOWN'];
+const STATUS_TO_STEP_MAP: Record<JobStatus, number | null> = {
+  INCOMING: 1,
+  PENDING: 2,
+  PROCESSING: 3,
+  PRINTING: 4,
+  COMPLETED: 5,
+  // For these statuses the stepper is not displayed
+  ERROR: null,
+  CANCELED: null,
+  CANCELING: null,
+  UNKNOWN: null,
+};
 
 const apiRepository = useApiRepository();
 const route = useRoute();
@@ -167,21 +193,9 @@ const cancelJob = async () => {
   }
 };
 
-const stepNumber = computed(() => {
+const stepNumber = computed<number | null>(() => {
   if (!job.data.value) return null;
-  switch (job.data.value.status) {
-    case 'INCOMING':
-      return 1;
-    case 'PENDING':
-      return 2;
-    case 'PROCESSING':
-      return 3;
-    case 'PRINTING':
-      return 4;
-    case 'COMPLETED':
-      return 5;
-  }
-  return null;
+  return STATUS_TO_STEP_MAP[job.data.value.status];
 });
 
 definePageMeta({

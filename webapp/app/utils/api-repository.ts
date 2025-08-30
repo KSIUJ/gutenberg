@@ -31,7 +31,8 @@ export type CreatePrintJobRequest = {
   fit_to_page?: boolean;
 };
 
-export type JobStatus = 'UNKNOWN' | 'INCOMING' | 'PENDING' | 'PROCESSING' | 'PRINTING' | 'SCANNING' | 'WAITING_PAGE' | 'COMPLETED' | 'CANCELED' | 'CANCELING' | 'ERROR';
+// TODO: Add the 'SCANNING' and 'WAITING_PAGE' statuses when scanning is implemented
+export type JobStatus = 'UNKNOWN' | 'INCOMING' | 'PENDING' | 'PROCESSING' | 'PRINTING' | 'COMPLETED' | 'CANCELED' | 'CANCELING' | 'ERROR';
 
 export type PrintJob = {
   id: number;
