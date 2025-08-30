@@ -5,7 +5,7 @@
     <p-confirm-dialog />
 
     <app-header />
-    <div class="mt-(--header-height)">
+    <div class="y-md:mt-(--header-height)">
       <NuxtPage />
     </div>
   </div>

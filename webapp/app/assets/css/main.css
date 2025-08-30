@@ -13,6 +13,14 @@
     --breakpoint-lg: 64rem;
 }
 
+@custom-variant y-md {
+    @media (min-height: 36rem) {
+        & {
+            @slot;
+        }
+    }
+}
+
 @utility px-form {
     @apply px-2;
 }
@@ -46,11 +54,11 @@
     font-weight: bold;
 }
 
-.focus-ring {
+@utility focus-ring {
     outline: 1px solid var(--color-primary-500);
     outline-offset: 2px;
-}
 
-.focus-ring:not(:focus-within) {
-    outline-width: 0;
+    &:not(:focus-within) {
+        outline-width: 0;
+    }
 }

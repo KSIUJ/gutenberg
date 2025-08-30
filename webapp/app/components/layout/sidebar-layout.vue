@@ -8,9 +8,13 @@
         the bottom edge of the screen.
       This way the left column is always in view, but if it doesn't fit on the screen global
       scroll is used to avoid nested scrolling.
+
+      The sticky positioning is disabled when either:
+       1. the layout is single-column,
+       2. the device height is less than "y-md".
     -->
-    <div class="w-full md:sticky md:bottom-0 md:w-sm md:shrink-0 md:self-end lg:w-md">
-      <div class="flex flex-col md:sticky md:top-(--header-height) md:min-h-[calc(100vh-var(--header-height))] md:py-4">
+    <div class="w-full md:w-sm md:shrink-0 lg:w-md y-md:md:sticky y-md:md:bottom-0 y-md:md:self-end">
+      <div class="flex flex-col md:py-4 y-md:md:sticky y-md:md:top-(--header-height) y-md:md:min-h-[calc(100vh-var(--header-height))]">
         <slot name="sidebar" />
       </div>
     </div>

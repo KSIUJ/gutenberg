@@ -1,5 +1,5 @@
 <template>
-  <header class="fixed top-0 right-0 left-0 z-10 block h-(--header-height) border-b border-surface bg-surface-50 shadow-xs">
+  <header class="block h-(--header-height) border-b border-surface bg-surface-50 shadow-xs y-md:fixed y-md:top-0 y-md:right-0 y-md:left-0 y-md:z-10">
     <div class="mx-auto flex h-full max-w-5xl flex-row items-center justify-between px-4">
       <NuxtLink
         to="/"
