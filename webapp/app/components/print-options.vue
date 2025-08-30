@@ -106,16 +106,11 @@
         </p-float-label>
 
         <template v-if="jobCreator.selectedPrinter?.duplex_supported">
-          <div class="flex w-full flex-row items-center">
-            <label
-              id="duplex-enabled"
-              class="grow pl-form"
-            >Enable two&dash;side printing</label>
-            <p-toggle-switch
-              v-model="duplexEnabled"
-              aria-labelledby="duplex-enabled"
-            />
-          </div>
+          <labeled-toggle
+            v-model="duplexEnabled"
+            label="Enable two&dash;sided printing"
+            input-id="duplex-enabled"
+          />
 
           <template v-if="jobCreator.duplexMode !== 'disabled'">
             <label
