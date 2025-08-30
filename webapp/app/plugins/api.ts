@@ -15,7 +15,7 @@ export default defineNuxtPlugin({
     if (import.meta.server) throw new Error('api-plugin does not support server-side rendering');
 
     const api = $fetch.create({
-      baseURL: '/api/',
+      baseURL: '/',
       // Avoid leaking the X-CSRFToken, recommended by the Django docs (see the link below).
       mode: 'same-origin',
       credentials: 'same-origin',
