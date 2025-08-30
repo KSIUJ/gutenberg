@@ -26,8 +26,9 @@ flowchart TD
     setup_base --> run_celery([run_celery])
     setup_django -. copy /app/backend .-> run_celery
 
-    build_webapp -. copy /app/dist .-> collect_static
-    nginx --> run_nginx([run_nginx])
+    build_webapp -. "copy /app/webapp/.output/html" .-> run_nginx([run_nginx])
+    build_webapp -. "copy /app/webapp/.output/public" .-> collect_static
+    nginx --> run_nginx
     collect_static -. copy /app/staticroot .-> run_nginx([run_nginx])
 ```
 

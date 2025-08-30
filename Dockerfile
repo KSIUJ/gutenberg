@@ -2,18 +2,22 @@
 #   Builds the static files for the web app
 #
 #   outputs:
-#   - /app/dist - the generated static files for the SPA
-FROM node:16-alpine AS build_webapp
+#   - /app/webapp/.output/html - the generated HTML files for the SPA
+#   - /app/webapp/.output/public - the generated static files for the SPA
+FROM node:22-alpine AS build_webapp
 
-WORKDIR /app
+# https://pnpm.io/docker
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable pnpm
 
-COPY package.json yarn.lock /app/
-RUN yarn install
+WORKDIR /app/webapp
 
-# TODO: When https://github.com/KSIUJ/gutenberg/pull/86 is merged, copy only the webapp directory
-COPY vue.config.js babel.config.js .eslintrc.js .browserslistrc /app/
+COPY webapp/package.json webapp/pnpm-workspace.yaml webapp/pnpm-lock.yaml /app/webapp/
+RUN pnpm install --frozen-lockfile
+
 COPY ./webapp /app/webapp/
-RUN yarn build
+RUN pnpm run build
 
 
 # setup_base target
@@ -48,14 +52,14 @@ COPY ./backend /app/backend/
 #
 #   extends: setup_django
 #   build inputs:
-#   - /app/dist from build_webapp
+#   - /app/webapp/.output/public from build_webapp
 #   build outputs:
 #   - /app/staticroot - collected static files
 FROM setup_django AS collect_static
 
 ENV DJANGO_SETTINGS_MODULE=gutenberg.settings.docker_base
 RUN mkdir /var/log/gutenberg
-COPY --from=build_webapp /app/dist /app/webapp_dist/
+COPY --from=build_webapp /app/webapp/.output/public /app/webapp_public/
 # collectstatic puts the collected static files into STATIC_ROOT,
 # configured in docker_base_settings.py as /app/staticroot
 RUN uv run python manage.py collectstatic --noinput
@@ -130,6 +134,7 @@ VOLUME ["/var/log/gutenberg"]
 #   Runs the NGINX proxy.
 #
 #   build inputs:
+#   - /app/webapp/.output/html from build_webapp
 #   - /app/staticroot from collect_static
 #   depends on run_backend for server on port 8000
 #   exposes port 80 for public access
@@ -137,7 +142,8 @@ VOLUME ["/var/log/gutenberg"]
 #       create additional route handlers or customize the proxy for their setup.
 FROM nginx:alpine AS run_nginx
 
+COPY --from=build_webapp /app/webapp/.output/html /usr/share/nginx/gutenberg/webapp_html
 # /app/staticroot is the value of STATIC_ROOT in docker_base_settings.py
-COPY --from=collect_static /app/staticroot /usr/share/nginx/html/static
+COPY --from=collect_static /app/staticroot /usr/share/nginx/gutenberg/static
 COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80

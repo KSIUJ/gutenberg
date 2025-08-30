@@ -4,11 +4,11 @@ from .docker_base import *
 SECRET_KEY = ''
 
 # https://docs.djangoproject.com/en/5.2/ref/settings/#allowed-hosts
-# Example value: [yoursite.example.com]
+# Example value: ['yoursite.example.com']
 ALLOWED_HOSTS = []
 
 # https://docs.djangoproject.com/en/5.2/ref/settings/#std-setting-CSRF_TRUSTED_ORIGINS
-# Example value: [https://yoursite.example.com]
+# Example value: ['https://yoursite.example.com']
 CSRF_TRUSTED_ORIGINS = []
 
 # Admin e-mail addresses to send messages to when errors occur

@@ -13,8 +13,10 @@
 /backend/print/
 
 # Webapp
-/node_modules
-/dist
+/webapp/node_modules
+/webapp/dist
+/webapp/.nuxt
+/webapp/.output
 
 # local env files
 /.env.local
