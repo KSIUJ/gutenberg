@@ -122,6 +122,8 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, '../webapp/.output/public'),
 ]
 
+GUTENBERG_SPA_HTML_DIR = os.path.join(BASE_DIR, '../webapp/.output/html')
+
 # Logging
 LOGGING = {
     'version': 1,

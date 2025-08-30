@@ -1,6 +1,7 @@
 import tailwindcss from '@tailwindcss/vite';
 import type { NuxtPage } from '@nuxt/schema';
 import { GutenbergPreset } from './app/style/gutenberg-preset';
+import * as path from 'node:path';
 
 const isDev = process.env.NODE_ENV === 'development';
 let devDjangoUrl = process.env['GUTENBERG_DEV_DJANGO_URL'] || 'http://localhost:11111/';
@@ -63,6 +64,17 @@ export default defineNuxtConfig({
           },
         }
       : {},
+    hooks: {
+      'prerender:generate'(route) {
+        const routesToSkip = ['/index.html'];
+        if (routesToSkip.includes(route.route)) {
+          route.skip = true;
+        }
+        // Output the HTML files served by Django separately from static files,
+        // to prevent accessing them directly by visiting https://example.com/static/200.html
+        if (route.fileName) route.fileName = path.join('../html/', route.fileName);
+      },
+    },
   },
   vite: {
     plugins: [
