@@ -38,6 +38,16 @@ export const getSingleQueryParam = (
   return undefined;
 };
 
+export const getIntQueryParam = (
+  value: undefined | LocationQueryValue | LocationQueryValue[],
+): number | undefined => {
+  const stringValue = getSingleQueryParam(value);
+  if (stringValue === undefined) return undefined;
+  const parsed = parseInt(stringValue, 10);
+  if (isNaN(parsed)) return undefined;
+  return parsed;
+};
+
 /**
  * Returns the value of the `next` query parameter normalized as a relative path.
  * If the path is not a valid relative path returns `undefined`.

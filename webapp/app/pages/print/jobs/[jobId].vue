@@ -115,7 +115,7 @@ const apiRepository = useApiRepository();
 const route = useRoute();
 const toast = useToast();
 
-const jobId = computed(() => parseInt(route.params.jobId as string));
+const jobId = computed(() => parseInt(route.params.jobId as string, 10));
 const job = await useAsyncData(
   () => apiRepository.getJob(jobId.value),
   { watch: [jobId] },

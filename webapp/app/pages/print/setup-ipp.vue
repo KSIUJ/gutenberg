@@ -146,10 +146,14 @@
 </template>
 
 <script setup lang="ts">
+import { getIntQueryParam } from '~/utils/routing';
+
 const apiRepository = useApiRepository();
 const { $auth } = useNuxtApp();
 const confirm = useConfirm();
 const toast = useToast();
+const route = useRoute();
+const router = useRouter();
 
 const printers = await usePrinters();
 
@@ -158,12 +162,27 @@ const printersErrorMessage = computed(() => {
   return getErrorMessage(printers.error.value) ?? 'Failed to load printer list';
 });
 
-// TODO: Extract the printer picker as a common component/composable
-const getFirstPrinterId = () => {
-  return printers.data.value?.at(0)?.id ?? null;
-};
+const selectedPrinterId = computed<number | null>({
+  get: () => getIntQueryParam(route.query.printer_id) ?? null,
+  set: (value) => {
+    router.replace({
+      params: route.params,
+      query: { ...route.query, printer_id: value ?? undefined },
+      hash: route.hash,
+    }).catch((error) => {
+      console.error('Failed to update printer_id in route', error);
+    });
+  },
+});
 
-const selectedPrinterId = ref(getFirstPrinterId());
+// Select the first printer if none is selected
+watchEffect(() => {
+  if (!printers.data.value) return;
+  if (selectedPrinterId.value !== null) return;
+  const firstPrinter = printers.data.value.at(0);
+  if (!firstPrinter) return;
+  selectedPrinterId.value = firstPrinter.id;
+});
 
 const details = computed(() => {
   if ($auth.me.value === Unauthenticated) return null;

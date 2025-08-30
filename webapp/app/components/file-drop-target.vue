@@ -5,7 +5,7 @@
   >
     <div class="pointer-events-none overlay z-50 fixed inset-0 bg-primary-800 opacity-90 text-white text-center flex items-center justify-center p-8">
       <div class="text-3xl">
-        Drop files to print
+        Drop files to add them
       </div>
     </div>
   </teleport>
