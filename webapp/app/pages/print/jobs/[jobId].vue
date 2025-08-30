@@ -62,6 +62,12 @@
           <p>
             This print job has been cancelled.
           </p>
+          <p
+            v-if="job.data.value.status_reason"
+            class="mt-3 text-sm"
+          >
+            {{ job.data.value.status_reason }}
+          </p>
           <p class="mt-3 text-sm">
             Some pages might still get printed if the printer has already started processing the request.
           </p>
