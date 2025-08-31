@@ -6,7 +6,7 @@ Made by [KSI UJ](http://ksi.ii.uj.edu.pl). Powered by Django, Celery and VueJS.
 
 ## Features
 
-- Upload a file and print via webapp (installable as a PWA)
+- Upload a file and print via webapp
 - Submit print requests via driverless IPP, compatible with Windows (generic postscript), Linux (cups ipp everywhere),
   Android (ipp everywhere), macOSX (cups ipp everywhere) and IOS (separate bonjour server required for AirPrint
   compatibility).
