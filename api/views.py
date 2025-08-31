@@ -27,8 +27,13 @@ from printing.printing import print_file
 
 logger = logging.getLogger('gutenberg.api.printing')
 
-def Error(error, message):
-    return {"error": error, "message": message}
+def Error(error:str, message:str):
+    return {error: message}
+
+def Error(errors:dict):
+    for k in errors:
+        errors[k] = str(errors[k][0])
+    return errors
 
 
 class LargeResultsSetPagination(PageNumberPagination):
@@ -65,7 +70,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
     def submit(self, request):
         serializer = PrintRequestSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors,
+            return Response(Error(serializer.errors),
                             status=status.HTTP_400_BAD_REQUEST)
         printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
                                                           printer_id=serializer.validated_data['printer'])
@@ -87,7 +92,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             return Response(Error("status","JobStatus must be incoming"), status=status.HTTP_400_BAD_REQUEST)
         serializer = UploadJobArtefactRequestSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors,
+            return Response(Error(serializer.errors),
                             status=status.HTTP_400_BAD_REQUEST)
         try:
             self._upload_artefact(job, **serializer.validated_data)
@@ -102,7 +107,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         job = self.get_object()
         #if job.status != JobStatus.INCOMING:
         #    return Response("Error: invalid job status for this request", status=status.HTTP_400_BAD_REQUEST)
-        error = self._validate_properties(job, job.properties)
+        error = self._check_errors(job, job.properties)
         if error:
             return Response(error, status=status.HTTP_400_BAD_REQUEST)
         else:  
@@ -114,7 +119,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
     def create_job(self, request):
         serializer = CreatePrintJobRequestSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors,
+            return Response(Error(serializer.errors),
                             status=status.HTTP_400_BAD_REQUEST)
         printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
                                                           printer_id=serializer.validated_data['printer'])
@@ -130,7 +135,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             return Response(Error("status","JobStatus must be incoming"), status=status.HTTP_400_BAD_REQUEST)
         serializer = ChangeArtefactOrderRequestSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(Error(serializer.errors), status=status.HTTP_400_BAD_REQUEST)
         try:
             self._change_order(job, **serializer.validated_data)
         except Exception as ex:
@@ -202,9 +207,9 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         job = self.get_object()
         serializer = DeleteJobArtefactRequestSerializer(data=request.query_params)
         if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(Error(serializer.errors), status=status.HTTP_400_BAD_REQUEST)
 
-        artefact_id = serializer.validated_data['file_id']
+        artefact_id = serializer.validated_data['artefact_id']
         try:
             artefact = job.artefacts.get(id=artefact_id)
             artefact.delete()
@@ -237,9 +242,9 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         
         serializer = CreatePrintJobRequestSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(Error(serializer.errors), status=status.HTTP_400_BAD_REQUEST)
         
-        error = self._validate_properties(job, serializer.validated_data["printer"], PrintingProperties(
+        error = self._check_errors(job, serializer.validated_data["printer"], PrintingProperties(
             color=serializer.validated_data['color'],
             copies=serializer.validated_data['copies'],
             two_sides=serializer.validated_data['two_sides'],
@@ -265,30 +270,31 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=['get'], name='Validate job')
     def validate_job(self, request, pk=None):
         job = self.get_object()
-        error = self._validate_properties(job, job.printer, job.properties)
+        error = self._check_errors(job, job.printer, job.properties)
         
         return Response(error if error else {"error": None, "message": "Job is valid"}, 
                         status=status.HTTP_400_BAD_REQUEST if error else status.HTTP_200_OK)
         
     
     
-    def _validate_properties(self, job: GutenbergJob, printer, properties:PrintingProperties):
+    def _check_errors(self, job: GutenbergJob, printer, properties:PrintingProperties):
+        errors={}
         
         if job.status != JobStatus.INCOMING:
-            return Error("status", "Job status must be INCOMING to validate")
+            errors["status"] = "Job status must be INCOMING to validate"
 
         printer = Printer.get_printer_for_user(user=self.request.user, printer_id=job.printer.id)
         if not properties:
-            return Error("properties", "Job properties not found")
+            errors["properties"] = "Job properties not found"
 
         if not printer:
-            return Error("printer", "Printer not found or not available for this user")
+            errors["printer"] = "Printer does not exist or you don't have permission to use it"
         if properties.color and not printer.color_allowed:
-            return Error("color", "Color printing is not allowed for this printer")
+            errors["color"] = "Color printing is not allowed on this printer"
         if properties.two_sides != TwoSidedPrinting.ONE_SIDED and not printer.duplex_supported:
-            return Error("duplex", "Duplex printing is not supported by this printer")
+            errors["two_sides"] = "Two sided printing is not supported on this printer"
             
-        return None
+        return errors
         
         
 
@@ -346,7 +352,7 @@ class LoginApiView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = LoginSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors,
+            return Response(Error(serializer.errors),
                             status=status.HTTP_400_BAD_REQUEST)
 
         username = serializer.validated_data['username']
