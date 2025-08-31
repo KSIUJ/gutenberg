@@ -25,6 +25,14 @@ from printing.printing import print_file
 
 logger = logging.getLogger('gutenberg.api.printing')
 
+def Error(error:str, message:str):
+    return {error: message}
+
+def Error(errors:dict):
+    for k in errors:
+        errors[k] = str(errors[k][0])
+    return errors
+
 
 class LargeResultsSetPagination(PageNumberPagination):
     page_size = 1000
@@ -61,45 +69,43 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
     def submit(self, request):
         serializer = PrintRequestSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors,
+            return Response(Error(serializer.errors),
                             status=status.HTTP_400_BAD_REQUEST)
         printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
                                                           printer_id=serializer.validated_data['printer'])
         if not printer_with_perms:
-            return Response("Printer does not exist", status=status.HTTP_400_BAD_REQUEST)
+            return Response(Error("printer","printer does not exist"), status=status.HTTP_400_BAD_REQUEST)
 
         try:
             job = self._create_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
             self._upload_artefact(job, **serializer.validated_data)
             self._run_job(job)
         except UnsupportedDocumentError as ex:
-            # FIXME: Use a common error message format
-            return Response("Error: {}".format(ex), status=status.HTTP_400_BAD_REQUEST)
+            return Response(Error("file type",str(ex)), status=status.HTTP_400_BAD_REQUEST)
         return Response(self.get_serializer(job).data)
 
     @action(detail=True, methods=['post'], name='Upload artefact')
     def upload_artefact(self, request, pk=None):
         job = self.get_object()
         if job.status != JobStatus.INCOMING:
-            return Response("Error: invalid job status for this request", status=status.HTTP_400_BAD_REQUEST)
+            return Response(Error("job status","invalid job status for this request"), status=status.HTTP_400_BAD_REQUEST)
         serializer = UploadJobArtefactRequestSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors,
+            return Response(Error(serializer.errors),
                             status=status.HTTP_400_BAD_REQUEST)
         try:
             self._upload_artefact(job, **serializer.validated_data)
             if serializer.validated_data['last'] == True:
                 self._run_job(job)
         except UnsupportedDocumentError as ex:
-            # FIXME: Use a common error message format
-            return Response("Error: {}".format(ex), status=status.HTTP_400_BAD_REQUEST)
+            return Response(Error("file type",str(ex)), status=status.HTTP_400_BAD_REQUEST)
         return Response(self.get_serializer(job).data)
 
     @action(detail=True, methods=['post'], name='Run job')
     def run_job(self, request, pk=None):
         job = self.get_object()
         if job.status != JobStatus.INCOMING:
-            return Response("Error: invalid job status for this request", status=status.HTTP_400_BAD_REQUEST)
+            return Response(Error("job status","invalid job status for this request"), status=status.HTTP_400_BAD_REQUEST)
         self._run_job(job)
         return Response(self.get_serializer(job).data)
 
@@ -107,12 +113,12 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
     def create_job(self, request):
         serializer = CreatePrintJobRequestSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors,
+            return Response(Error(serializer.errors),
                             status=status.HTTP_400_BAD_REQUEST)
         printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
                                                           printer_id=serializer.validated_data['printer'])
         if not printer_with_perms:
-            return Response("Printer does not exist", status=status.HTTP_400_BAD_REQUEST)
+            return Response(Error("printer","printer does not exist"), status=status.HTTP_400_BAD_REQUEST)
         job = self._create_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
         return Response(self.get_serializer(job).data)
 
@@ -195,7 +201,7 @@ class LoginApiView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = LoginSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(serializer.errors,
+            return Response(Error(serializer.errors),
                             status=status.HTTP_400_BAD_REQUEST)
 
         username = serializer.validated_data['username']
