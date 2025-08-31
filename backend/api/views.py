@@ -175,7 +175,7 @@ class ResetApiTokenView(APIView):
     def post(self, request, *args, **kwargs):
         self.request.user.api_key = _generate_token()
         self.request.user.save()
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class LoginApiView(APIView):
@@ -202,11 +202,11 @@ class LoginApiView(APIView):
         password = serializer.validated_data['password']
         user = authenticate(username=username, password=password)
         if not user:
-            return Response(data={'message': 'Username or password incorrect'}, status=403)
+            return Response(data={'message': 'Username or password incorrect'}, status=status.HTTP_403_FORBIDDEN)
         if not user.is_active:
-            return Response(data={'message': 'Account is not active'}, status=403)
+            return Response(data={'message': 'Account is not active'}, status=status.HTTP_403_FORBIDDEN)
         login(request, user)
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get(self, request, *args, **kwargs):
         """
@@ -214,4 +214,4 @@ class LoginApiView(APIView):
         it should always be called on login.
         """
         rotate_token(request)
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
