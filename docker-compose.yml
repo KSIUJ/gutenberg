@@ -80,8 +80,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-#      target: run_nginx
-      target: run_nginx_test
+      target: run_nginx
     container_name: gutenberg-proxy
     ports:
       - "3000:80"
