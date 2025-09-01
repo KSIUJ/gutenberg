@@ -71,7 +71,8 @@ RUN uv run python manage.py collectstatic --noinput
 #   extends: setup_django
 #   mounts:
 #   - /var/log/gutenberg - the logs volume
-#   - /etc/gutenberg/docker_settings.py
+#   - /var/lib/gutenberg - the data volume
+#   - /etc/gutenberg/docker_settings.py (readonly)
 #   exposes port 8000 for proxying by NGINX
 FROM setup_django AS run_backend
 
@@ -89,7 +90,8 @@ VOLUME ["/var/log/gutenberg"]
 #   - /app/backend from setup_django
 #   mounts:
 #   - /var/log/gutenberg - the logs volume
-#   - /etc/gutenberg/docker_settings.py
+#   - /var/lib/gutenberg - the data volume
+#   - /etc/gutenberg/docker_settings.py (readonly)
 FROM setup_base AS run_celery
 
 # These apt-get install commands are time and space consuming, so they are run early in the build chain for `run_celery`.

@@ -22,8 +22,7 @@ LOGGING['handlers']['django_file']['filename'] = '/var/log/gutenberg/django.log'
 
 # Printing
 # Directory to store the printed files in
-# TODO: Why is MEDIA_ROOT modified in Docker? Should MEDIA_ROOT be mounted as a volume?
-MEDIA_ROOT = '/srv/printing/'
+MEDIA_ROOT = '/var/lib/gutenberg/media_root/'
 
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
