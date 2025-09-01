@@ -1,5 +1,12 @@
 from .base import *
 
+
+# https://docs.docker.com/compose/how-tos/use-secrets/
+def read_docker_secret(secret_name):
+    from pathlib import Path
+    return Path('/run/secrets/' + secret_name).read_text().strip()
+
+
 STATIC_ROOT = '/app/staticroot'
 
 STATICFILES_DIRS = [

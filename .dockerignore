@@ -30,3 +30,8 @@
 *.njsproj
 *.sln
 *.sw?
+
+# Docker Compose secrets
+# SECURITY: Never remove this entry from .dockerignore, even if it is no longer used,
+#           to avoid accidentally exposing secrets previously stored in the repo.
+/secrets

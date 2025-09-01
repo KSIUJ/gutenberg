@@ -1,15 +1,22 @@
 services:
-  # TODO: Allow password and optionally db and username configuration.
   db:
     image: postgres:17.6-alpine
     container_name: gutenberg-db
     environment:
-      POSTGRES_DB: gutenbergdb
-      POSTGRES_USER: gutenberguser
-      POSTGRES_PASSWORD: gutenbergpass
+      POSTGRES_USER: gutenberg
+      POSTGRES_DB: gutenberg
+      POSTGRES_PASSWORD_FILE: /run/secrets/gutenberg_postgres_password
     volumes:
       - gutenberg_postgres_data:/var/lib/postgresql/data
     restart: always
+    healthcheck:
+      # Replace the values of -U and -d with the name of the user and database if changed.
+      test: [ "CMD-SHELL", "pg_isready -U gutenberg -d gutenberg" ]
+      interval: 1s
+      retries: 10
+      timeout: 5s
+    secrets:
+      - gutenberg_postgres_password
 
   # TODO: Add a password for an extra security.
   redis:
@@ -42,9 +49,15 @@ services:
         target: /etc/gutenberg/docker_settings.py
         read_only: true
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
     restart: always
+    secrets:
+      - gutenberg_postgres_password
+#      - gutenberg_redis_password
+      - gutenberg_django_secret_key
 
   celery:
     build:
@@ -53,9 +66,12 @@ services:
       target: run_celery
     container_name: gutenberg-celery
     depends_on:
-      - redis
-      - db
-      - cups
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      cups:
+        condition: service_started
     volumes:
       - gutenberg_backend_logs:/var/log/gutenberg
       - gutenberg_backend_data:/var/lib/gutenberg
@@ -64,6 +80,10 @@ services:
         target: /etc/gutenberg/docker_settings.py
         read_only: true
     restart: always
+    secrets:
+      - gutenberg_postgres_password
+#      - gutenberg_redis_password
+      - gutenberg_django_secret_key
 
     # The cap_add SYS_ADMIN and privileged settings allow bubblewrap to run inside the container.
     # The security implications of these changes have not been properly reviewed.
@@ -92,3 +112,15 @@ volumes:
   gutenberg_postgres_data:
   gutenberg_backend_logs:
   gutenberg_backend_data:
+
+# Docker Compose only supports loading secrets from files or environment variables
+# https://docs.docker.com/reference/compose-file/secrets/
+# These secrets should be randomly generated, for example, using commands like:
+#   openssl rand -base64 32 > ./secrets/postgres_password.txt
+secrets:
+  gutenberg_postgres_password:
+    file: ./secrets/postgres_password.txt
+#  gutenberg_redis_password:
+#    file: ./secrets/redis_password.txt
+  gutenberg_django_secret_key:
+    file: ./secrets/django_secret_key.txt
