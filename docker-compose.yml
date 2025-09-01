@@ -64,6 +64,17 @@ services:
         read_only: true
     restart: always
 
+    # The cap_add SYS_ADMIN and privileged settings allow bubblewrap to run inside the container.
+    # The security implications of these changes have not been properly reviewed.
+    # FIXME: These settings should probably me more restrictive.
+    #
+    # Some relevant links:
+    # - https://docs.docker.com/engine/security/apparmor/
+    # - https://docs.docker.com/engine/security/seccomp/
+    cap_add:
+      - SYS_ADMIN
+    privileged: true
+
   proxy:
     build:
       context: .
