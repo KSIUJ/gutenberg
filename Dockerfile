@@ -140,8 +140,11 @@ VOLUME ["/var/log/gutenberg"]
 #   - /app/staticroot from collect_static
 #   depends on run_backend for server on port 8000
 #   exposes port 80 for public access
-# TODO: Make sure that this image can be extended with extra Nginx configuration files so the users of Gutenberg can
-#       create additional route handlers or customize the proxy for their setup.
+#
+#   This image can be extended by adding configuration files to these directories:
+#   - /etc/nginx/conf.d
+#   - /etc/nginx/gutenberg-locations.d
+#   As described in https://ksiuj.github.io/gutenberg/admin/docker.html
 FROM nginx:alpine AS run_nginx
 
 RUN rm /etc/nginx/conf.d/default.conf

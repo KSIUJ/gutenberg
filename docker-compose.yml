@@ -1,7 +1,7 @@
 services:
   # TODO: Allow password and optionally db and username configuration.
   db:
-    image: postgres:15
+    image: postgres:17.6-alpine
     container_name: gutenberg-db
     environment:
       POSTGRES_DB: gutenbergdb
@@ -13,7 +13,7 @@ services:
 
   # TODO: Add a password for an extra security.
   redis:
-    image: redis:7
+    image: redis:8.2-alpine
     container_name: gutenberg-redis
     restart: always
 
