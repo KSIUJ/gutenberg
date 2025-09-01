@@ -60,3 +60,51 @@ After starting all Docker containers, the command below can be used to create a 
 ```bash
 docker exec -it gutenberg-backend ./manage.py createsuperuser
 ```
+
+## NGINX config files
+The `run_nginx` target describes an NGINX Docker image with configuration required for running Gutenberg itself.
+The default configuration file for NGINX, `/etc/nginx/nginx.conf` contains
+an [include](https://nginx.org/en/docs/ngx_core_module.html#include) directive:
+```conf
+http {
+    # ...
+    include /etc/nginx/conf.d/*.conf```
+    #...
+}
+```
+Gutenberg adds a single file in the `conf.d` directory: `/etc/nginx/conf.d/gutenberg.conf`.
+It defines an HTTP server which contains another `include` directive:
+```conf
+server {
+    # ...
+    include /etc/nginx/gutenberg-locations.d/*.conf;
+    # ...
+}
+```
+The files in the `gutenberg-locations.d` define [`location`](https://nginx.org/en/docs/http/ngx_http_core_module.html#location)
+directives for different endpoints which will be available under the Gutenberg domain.
+
+Gutenberg adds a singe file to this folder, `gutenberg-app.conf` which define the handlers for the endpoints
+`/static/`, `/@webapp-html/` for internal use and a catch-all `location /` directive which proxies all requests to
+the Django application server.
+
+### Extending the NGINX configuration
+You can make use of the `include` directives described above to extend Gutenberg's default NGINX image with your own
+config.
+
+As an example, this is how you would add a custom `/myapp/` endpoint proxied to https://example.com/myapp/:
+
+Create a new file `myapp.conf` with the contents:
+```conf
+location /myapp/ {
+    proxy_pass https://example.com/myapp/;
+}
+```
+
+And your own `Dockerfile` with:
+```Dockerfile
+# Put the name Gutenberg's default NGINX image here:
+FROM run_nginx
+
+COPY path/to/myapp.conf /etc/nginx/gutenberg-locations.d/myapp.conf
+```

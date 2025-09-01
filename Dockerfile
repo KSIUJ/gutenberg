@@ -144,8 +144,10 @@ VOLUME ["/var/log/gutenberg"]
 #       create additional route handlers or customize the proxy for their setup.
 FROM nginx:alpine AS run_nginx
 
+RUN rm /etc/nginx/conf.d/default.conf
 COPY --from=build_webapp /app/webapp/.output/html /usr/share/nginx/gutenberg/webapp_html
 # /app/staticroot is the value of STATIC_ROOT in docker_base_settings.py
 COPY --from=collect_static /app/staticroot /usr/share/nginx/gutenberg/static
-COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx/gutenberg.conf /etc/nginx/conf.d/gutenberg.conf
+COPY nginx/locations /etc/nginx/gutenberg-locations.d
 EXPOSE 80

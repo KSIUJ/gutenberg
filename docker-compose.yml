@@ -20,6 +20,7 @@ services:
   # TODO: Add a custom config which limits which ports and hosts CUPS can be accessed from.
   #       Use either a custom target or a mount.
   # TODO: Enable some authentication mechanism to prevent unauthorized access.
+  #       CUPS can currently be accessed from any host and with the default username and password.
   # TODO: Proxy the CUPS admin panel via Nginx.
   #       Other routes, like the CUPS IPP endpoint, probably should not be proxied.
   cups:
@@ -79,7 +80,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: run_nginx
+#      target: run_nginx
+      target: run_nginx_test
     container_name: gutenberg-proxy
     ports:
       - "3000:80"
