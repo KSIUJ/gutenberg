@@ -28,12 +28,6 @@ logger = logging.getLogger('gutenberg.api.printing')
 def Error(error:str, message:str):
     return {error: message}
 
-def Error(errors:dict):
-    for k in errors:
-        errors[k] = str(errors[k][0])
-    return errors
-
-
 class LargeResultsSetPagination(PageNumberPagination):
     page_size = 1000
     page_size_query_param = 'page_size'
@@ -68,9 +62,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=['post'], name='Submit new job')
     def submit(self, request):
         serializer = PrintRequestSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(Error(serializer.errors),
-                            status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
         printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
                                                           printer_id=serializer.validated_data['printer'])
         if not printer_with_perms:
@@ -90,9 +82,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         if job.status != JobStatus.INCOMING:
             return Response(Error("job status","invalid job status for this request"), status=status.HTTP_400_BAD_REQUEST)
         serializer = UploadJobArtefactRequestSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(Error(serializer.errors),
-                            status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
         try:
             self._upload_artefact(job, **serializer.validated_data)
             if serializer.validated_data['last'] == True:
@@ -112,9 +102,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=['post'], name='Create new job')
     def create_job(self, request):
         serializer = CreatePrintJobRequestSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(Error(serializer.errors),
-                            status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
         printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
                                                           printer_id=serializer.validated_data['printer'])
         if not printer_with_perms:
@@ -200,9 +188,7 @@ class LoginApiView(APIView):
 
     def post(self, request, *args, **kwargs):
         serializer = LoginSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(Error(serializer.errors),
-                            status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
 
         username = serializer.validated_data['username']
         password = serializer.validated_data['password']

@@ -1,5 +1,5 @@
 from rest_framework.views import exception_handler
-from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated, PermissionDenied
+from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated, PermissionDenied, ValidationError
 
 def auth_exception_handler(exc, context):
     """
@@ -29,5 +29,8 @@ def auth_exception_handler(exc, context):
             # More values for X-Reason might be added in the future,
             # clients should not depend on receiving X-Reason: Other
             response.headers['X-Reason'] = 'Other'
+        
+        if isinstance(exc, ValidationError):
+            response.data = {key: value[0] if isinstance(value, list) else value for key, value in response.data.items()}
 
     return response
