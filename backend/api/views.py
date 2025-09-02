@@ -13,6 +13,7 @@ from rest_framework.generics import RetrieveAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.exceptions import ParseError, PermissionDenied
 from rest_framework.views import APIView
 
 from api.serializers import GutenbergJobSerializer, PrinterSerializer, PrintRequestSerializer, UserInfoSerializer, \
@@ -24,9 +25,6 @@ from printing.converter import detect_file_format, SUPPORTED_FILE_FORMATS
 from printing.printing import print_file
 
 logger = logging.getLogger('gutenberg.api.printing')
-
-def Error(error:str, message:str):
-    return {error: message}
 
 class LargeResultsSetPagination(PageNumberPagination):
     page_size = 1000
@@ -66,21 +64,21 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
                                                           printer_id=serializer.validated_data['printer'])
         if not printer_with_perms:
-            return Response(Error("printer","printer does not exist"), status=status.HTTP_400_BAD_REQUEST)
+            raise ParseError("Selected printer does not exist")
 
         try:
             job = self._create_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
             self._upload_artefact(job, **serializer.validated_data)
             self._run_job(job)
         except UnsupportedDocumentError as ex:
-            return Response(Error("file type",str(ex)), status=status.HTTP_400_BAD_REQUEST)
+            raise ParseError(str(ex))
         return Response(self.get_serializer(job).data)
 
     @action(detail=True, methods=['post'], name='Upload artefact')
     def upload_artefact(self, request, pk=None):
         job = self.get_object()
         if job.status != JobStatus.INCOMING:
-            return Response(Error("job status","invalid job status for this request"), status=status.HTTP_400_BAD_REQUEST)
+            raise ParseError(["Invalid job status for this request"," current status: {}".format(job.status)])
         serializer = UploadJobArtefactRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
@@ -88,14 +86,14 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             if serializer.validated_data['last'] == True:
                 self._run_job(job)
         except UnsupportedDocumentError as ex:
-            return Response(Error("file type",str(ex)), status=status.HTTP_400_BAD_REQUEST)
+            raise ParseError(str(ex))
         return Response(self.get_serializer(job).data)
 
     @action(detail=True, methods=['post'], name='Run job')
     def run_job(self, request, pk=None):
         job = self.get_object()
         if job.status != JobStatus.INCOMING:
-            return Response(Error("job status","invalid job status for this request"), status=status.HTTP_400_BAD_REQUEST)
+            raise ParseError(["Invalid job status for this request"," current status: {}".format(job.status)])
         self._run_job(job)
         return Response(self.get_serializer(job).data)
 
@@ -106,7 +104,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
                                                           printer_id=serializer.validated_data['printer'])
         if not printer_with_perms:
-            return Response(Error("printer","printer does not exist"), status=status.HTTP_400_BAD_REQUEST)
+            raise ParseError("Selected printer does not exist")
         job = self._create_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
         return Response(self.get_serializer(job).data)
 
@@ -194,9 +192,9 @@ class LoginApiView(APIView):
         password = serializer.validated_data['password']
         user = authenticate(username=username, password=password)
         if not user:
-            return Response(data={'message': 'Username or password incorrect'}, status=status.HTTP_403_FORBIDDEN)
+            raise PermissionDenied("Invalid username or password")
         if not user.is_active:
-            return Response(data={'message': 'Account is not active'}, status=status.HTTP_403_FORBIDDEN)
+            raise PermissionDenied("Account is not active")
         login(request, user)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
