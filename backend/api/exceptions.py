@@ -1,36 +1,23 @@
 from rest_framework.views import exception_handler
-from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated, PermissionDenied, ValidationError
+from rest_framework.exceptions import ValidationError
 
-def auth_exception_handler(exc, context):
-    """
-    This custom Django REST Framework exception handler adds the
-    X-Reason header for error responses.
-    The header can be used to distinguish "not authenticated" errors
-    ana "permission denied" errors. It is necessary, because currently
-    unauthenticated requests return the 403 Forbidden status code,
-    not 401 Unauthorized. See:
-    https://www.django-rest-framework.org/api-guide/authentication/#sessionauthentication
-
-    Please note that setting the status code to 401 for all "not authenticated" errors
-    would, per https://datatracker.ietf.org/doc/html/rfc7235#section-3.1,
-    require setting the WWW-Authenticate header.
-    """
-
+def custom_exception_handler(exc, context):
+    #TODO add more comments
     response = exception_handler(exc, context)
 
     if response is not None:
-        if isinstance(exc, NotAuthenticated):
-            response.headers['X-Reason'] = 'NotAuthenticated'
-        elif isinstance(exc, AuthenticationFailed):
-            response.headers['X-Reason'] = 'AuthenticationFailed'
-        elif isinstance(exc, PermissionDenied):
-            response.headers['X-Reason'] = 'PermissionDenied'
-        else:
-            # More values for X-Reason might be added in the future,
-            # clients should not depend on receiving X-Reason: Other
-            response.headers['X-Reason'] = 'Other'
-        
-        if isinstance(exc, ValidationError):
-            response.data = {key: value[0] if isinstance(value, list) else value for key, value in response.data.items()}
-
+        if not isinstance(exc, ValidationError): #standard error format
+            response.data = {
+                'kind': type(exc).__name__, #type of error
+                'message': response.data['detail'],
+                'detail': None
+            }
+            if isinstance(response.data['message'], list):
+                response.data['message'] = response.data['message'][0]
+                response.data['detail'] = response.data['message'][1:]
+        else: #validation error format
+            response.data = {
+                'kind': type(exc).__name__,
+                'errors': response.data
+            }
     return response
