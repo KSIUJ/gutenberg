@@ -11,4 +11,7 @@ dependencies = [
     "mozilla-django-oidc==4.0.1",
     "python-magic==0.4.27",
     "redis==6.2.0",
+
+    # Dependencies for django_ksi_auth only
+    "oic>=1.7.0",
 ]

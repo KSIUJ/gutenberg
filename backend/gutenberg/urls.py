@@ -30,7 +30,7 @@ urlpatterns = [
     path('ipp/', include(ipp.urls)),
     path('api/', include(api.urls)),
 
-    path('oidc/', include('mozilla_django_oidc.urls')),
+    path('oidc/', include('django_ksi_auth.urls')),
     path('api-auth/', include('rest_framework.urls'))
 ]
 
