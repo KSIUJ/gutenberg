@@ -36,7 +36,7 @@ def custom_exception_handler(exc, context):
     return response
 
 class UnsupportedDocument(APIException):
-    status_code = 400
+    status_code = 422
     default_detail = 'The provided document is not supported.'
     default_code = 'unsupported_document'
     

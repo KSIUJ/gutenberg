@@ -13,7 +13,7 @@ from rest_framework.generics import RetrieveAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.exceptions import ParseError, PermissionDenied
+from rest_framework.exceptions import ParseError, PermissionDenied, NotFound
 from backend.api.exceptions import UnsupportedDocument, InvalidStatus
 from rest_framework.views import APIView
 
@@ -65,21 +65,21 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
                                                           printer_id=serializer.validated_data['printer'])
         if not printer_with_perms:
-            raise ParseError("Selected printer does not exist")
+            raise NotFound("Selected printer does not exist")
 
         try:
             job = self._create_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
             self._upload_artefact(job, **serializer.validated_data)
             self._run_job(job)
         except UnsupportedDocumentError as ex:
-            raise ParseError(str(ex))
+            raise UnsupportedDocument(str(ex))
         return Response(self.get_serializer(job).data)
 
     @action(detail=True, methods=['post'], name='Upload artefact')
     def upload_artefact(self, request, pk=None):
         job = self.get_object()
         if job.status != JobStatus.INCOMING:
-            raise ParseError(["Invalid job status for this request"," current status: {}".format(job.status)])
+            raise InvalidStatus("Invalid job status for this request", additional_info="current status: {}".format(job.status))
         serializer = UploadJobArtefactRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
@@ -87,14 +87,14 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             if serializer.validated_data['last'] == True:
                 self._run_job(job)
         except UnsupportedDocumentError as ex:
-            raise ParseError(str(ex))
+            raise UnsupportedDocument(str(ex))
         return Response(self.get_serializer(job).data)
 
     @action(detail=True, methods=['post'], name='Run job')
     def run_job(self, request, pk=None):
         job = self.get_object()
         if job.status != JobStatus.INCOMING:
-            raise ParseError(["Invalid job status for this request"," current status: {}".format(job.status)])
+            raise InvalidStatus("Invalid job status for this request", additional_info="current status: {}".format(job.status))
         self._run_job(job)
         return Response(self.get_serializer(job).data)
 
@@ -105,7 +105,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
                                                           printer_id=serializer.validated_data['printer'])
         if not printer_with_perms:
-            raise ParseError("Selected printer does not exist")
+            raise NotFound("Selected printer does not exist")
         job = self._create_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
         return Response(self.get_serializer(job).data)
 
