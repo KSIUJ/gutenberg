@@ -13,8 +13,10 @@ def webapp_require_auth(request):
     # Serve webpack-built SPA.
     return serve(request, "200.html", settings.GUTENBERG_SPA_HTML_DIR)
 
-# TODO: Redirect to the ?next route if the user is already logged in
-#       See the middleware in /webapp/app/pages/login.vue
-def login(request):
+
+# This method does not redirect to / or the ?next route if the user is already
+# signed in, it is the job of the GutenbergLoginView, a subclass of
+# BaseLoginView from the docker_ksi_auth package.
+def webapp_login(request):
     # Serve webpack-built SPA.
     return serve(request, "200.html", settings.GUTENBERG_SPA_HTML_DIR)

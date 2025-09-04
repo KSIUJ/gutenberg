@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib.auth.views import redirect_to_login
 from django.shortcuts import redirect
 from django.urls.base import reverse
 from django.utils.crypto import get_random_string
@@ -16,8 +17,7 @@ OIDC_SCOPE = "openid email"
 def _get_client(request):
     # Based on
     # https://github.com/CZ-NIC/pyoidc/blob/a4cff6dbee32f246c8ffd3375091e53ab212f3a2/oidc_example/rp2/oidc.py#L87-L109
-    # and
-    # https://pyoidc.readthedocs.io/en/latest/examples/rp.html
+    # and https://pyoidc.readthedocs.io/en/latest/examples/rp.html
 
     client = Client(
         client_authn_method=CLIENT_AUTHN_METHOD,
@@ -34,7 +34,22 @@ def _get_client(request):
 
 
 # @sensitive_variables
-def authenticate_redirect(request, prompt_none: bool = False):
+def redirect_to_oidc_login(request, next_url: str, prompt_none: bool = False):
+    """
+    Redirects to the OIDC login page if the `KsiAuthBackend` is enabled or to the `LOGIN_URL` otherwise.
+    """
+
+    # TODO: Check if the backend is enabled
+    ksi_auth_enabled = True
+    # If the `KsiAuthBackend` is not enabled, redirect to `LOGIN_URL` instead of redirecting to the OIDC provider.
+    #
+    # Note: This could result in an infinite loop if the view at `LOGIN_URL` uses `redirect_to_oidc_login`
+    #       when the `KsiAuthBackend` is not enabled.
+    #       The default `BaseLoginView` calls `redirect_to_oidc_login` only if the `KsiAuthBackend` is enabled,
+    #       so this is not a problem when the `LOGIN_URL` is (a subclass of) `KsiAuthBackend`.
+    if not ksi_auth_enabled:
+        redirect_to_login(next_url)
+
     client = _get_client(request)
 
     state = get_random_string(32)

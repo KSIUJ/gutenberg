@@ -1,11 +1,12 @@
 import logging
-from datetime import datetime
+from datetime import datetime, UTC, timedelta
 
 from django.contrib.auth import get_user_model, login, authenticate
 from django.contrib.auth.backends import BaseBackend
 from django.contrib.auth.models import Group
 from django.core.exceptions import SuspiciousOperation
 from django.db import transaction
+from oic.oic.message import AccessTokenResponse
 
 from .apps import KsiAuthConfig
 from .consts import SESSION_TOKENS_SESSION_KEY
@@ -114,9 +115,16 @@ class KsiAuthBackend(BaseBackend):
             return None
 
     @staticmethod
-    def login(request, access_token, refresh_token, id_token_claims, refresh_token_expires_at: datetime):
-        if not isinstance(refresh_token_expires_at, datetime):
-            raise ValueError("refresh_token_expires_at must be a datetime object")
+    def login(request, response: AccessTokenResponse):
+        if response["refresh_expires_in"] is None:
+            raise Exception("Missing refresh_expires_in in access token response")
+
+        refresh_expires_at = datetime.now(UTC) + timedelta(seconds = response["refresh_expires_in"])
+
+        access_token = response["access_token"]
+        refresh_token = response["refresh_token"]
+        id_token = response["id_token_jwt"]
+        id_token_claims = response["id_token"]
 
         user = authenticate(request, oidc_id_token_claims = id_token_claims, oidc_access_token = access_token)
         if user is None:
@@ -124,9 +132,9 @@ class KsiAuthBackend(BaseBackend):
             raise Exception("Failed to authenticate user")
 
         login(request, user)
-        request.user = user
         request.session[SESSION_TOKENS_SESSION_KEY] = {
-            access_token: access_token,
-            refresh_token: refresh_token,
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "id_token": id_token,
         }
-        request.session.set_expiry(refresh_token_expires_at)
+        request.session.set_expiry(refresh_expires_at)
