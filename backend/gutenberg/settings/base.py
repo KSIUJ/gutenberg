@@ -33,8 +33,8 @@ DJANGO_INSTALLED_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
-    'mozilla_django_oidc',
     'rest_framework',
+    'django_ksi_auth',
 ]
 
 # Apps overriding templates in defined by THIRD_PARTY_APPS.
@@ -58,7 +58,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    # 'mozilla_django_oidc.middleware.SessionRefresh',
+    'django_ksi_auth.middleware.KsiAuthMiddleware',
 ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
