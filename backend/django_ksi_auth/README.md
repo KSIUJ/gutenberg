@@ -94,7 +94,7 @@ you want the user to be redirected to after logging out.
 In the settings of your OIDC provider you will need to add the `/oidc/callback/` URL as a valid redirect URL
 and the [`LOGOUT_REDIRECT_URL`] URL as a valid post logout redirect URL.
 
-`BaseLoginView` redirect the user to the OIDC provider's login page if the `KsiAuthBackend` is enabled.
+`BaseLoginView` redirects the user to the OIDC provider's login page if the `KsiAuthBackend` is enabled.
 If it's not, it uses the view specified in `BaseLoginView.fallback_view` to render the login page.
 It uses [`DjangoLoginView`] by default. You can use a different view for this by subclassing `BaseLoginView`
 and overriding the `fallback_view` property.
