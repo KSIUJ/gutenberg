@@ -22,7 +22,7 @@ from django.urls import path
 import api.urls
 import ipp.urls
 import printing.urls
-from .views import GutenbergLoginView
+from django_ksi_auth.views import BaseLoginView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -31,7 +31,8 @@ urlpatterns = [
     path('ipp/', include(ipp.urls)),
     path('api/', include(api.urls)),
 
-    path('login/', GutenbergLoginView.as_view(), name='login'),
+    # TODO: Revert to using GutenbergLoginView here
+    path('login/', BaseLoginView.as_view(), name='login'),
     path('oidc/', include('django_ksi_auth.urls')),
     path('api-auth/', include('rest_framework.urls')),
 ]
