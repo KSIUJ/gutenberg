@@ -6,6 +6,7 @@ from django.contrib.auth import logout
 from django.contrib.auth.views import LoginView as DjangoLoginView
 from django.core.exceptions import SuspiciousOperation
 from django.shortcuts import redirect
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic.base import View
 from oic.oic import AuthorizationResponse
 
@@ -16,15 +17,37 @@ from django_ksi_auth.utils import redirect_to_oidc_login, is_ksi_auth_backend_en
 
 logger = logging.getLogger('django_ksi_auth')
 
-# TODO: Add a note in the docs that this view should be set as LOGIN_URL
-#       A warning could also be added here if it's not?
-# TODO: Document this!
+
 class BaseLoginView(View):
+    """
+    The django-ksi-auth login view.
+
+    If the user is authenticated, redirects the URL specified in the next query param
+    or to `LOGIN_REDIRECT_URL`.
+
+    If `KsiAuthBackend` is not enabled, renders the view specified as `fallback_view`,
+    which can be changed in subclasses of `BaseLoginView`.
+    If `KsiAuthBackend` is enabled, redirects the user directly to the OIDC login page.
+
+    The path to this view should be set as the value of the `LOGIN_URL` setting.
+    """
+    
     fallback_view = DjangoLoginView.as_view()
 
     def get(self, request):
-        # TODO: Sanitize the redirect URL from next
-        next_url = request.GET.get("next") or settings.LOGIN_REDIRECT_URL
+        next_url = settings.LOGIN_REDIRECT_URL
+
+        if 'next' in request.GET:
+            next_url_is_valid = url_has_allowed_host_and_scheme(
+                request.GET['next'],
+                allowed_hosts=request.get_host(),
+                require_https=request.is_secure(),
+            )
+            if next_url_is_valid:
+                next_url = request.GET['next']
+            else:
+                logger.warning(f"Received an invalid next URL in the login request: {next_url}")
+
         if request.user.is_authenticated:
             return redirect(next_url)
 

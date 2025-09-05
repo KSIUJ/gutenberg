@@ -50,11 +50,12 @@ def is_user_authenticated_with_ksi_auth(request: HttpRequest) -> bool:
 def redirect_to_oidc_login(request: HttpRequest, next_url: str, prompt_none: bool = False) -> HttpResponse:
     """
     Redirects to the OIDC login page if the `KsiAuthBackend` is enabled or to the `LOGIN_URL` otherwise.
+
+    The caller must ensure that the `next_url` is safe.
     """
 
     if next_url is None:
         raise ValueError("next_url must be provided")
-    # TODO: Validate next url here or in the calling code (and document this)
 
     # If the `KsiAuthBackend` is not enabled, redirect to `LOGIN_URL` instead of redirecting to the OIDC provider.
     #

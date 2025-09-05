@@ -130,7 +130,7 @@ class OidcClient:
 
 
     def load(self):
-        logger.warning("Loading OIDC Provider configuration")
+        logger.debug("Loading OIDC Provider configuration")
 
         config_url = settings.KSI_AUTH_PROVIDER['issuer']
         if not config_url.endswith("/"):
@@ -176,8 +176,6 @@ class OidcClient:
     def get_logout_url(self, request: HttpRequest, id_token_hint: Optional[str]):
         request_args = {
             "id_token_hint": id_token_hint,
-            # TODO: Document the need to set logout LOGOUT_REDIRECT_URL to a value specified in
-            #       the OIDC provider's configuration.
             "post_logout_redirect_uri": request.build_absolute_uri(settings.LOGOUT_REDIRECT_URL),
         }
         return self._create_redirect_url(
