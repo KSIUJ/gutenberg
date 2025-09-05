@@ -97,10 +97,8 @@ class KsiAuthBackend(BaseBackend):
 
 
     def authenticate(self, request, oidc_id_token_claims = None, oidc_access_token = None):
-        print("KsiAuthBackend.authenticated called")
         if oidc_id_token_claims is None or oidc_access_token is None:
             return None
-        print("KsiAuthBackend.authenticated running")
 
         user = self._find_existing_user(oidc_id_token_claims)
         if user is None:

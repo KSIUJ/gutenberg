@@ -36,7 +36,7 @@ class CallbackView(View):
     def get(self, request):
         client = get_oidc_client()
 
-        authorization_response = client.parse_authorization_response(request)
+        authorization_response = client.parse_authorization_callback_response(request)
         state = authorization_response['state']
 
         try:

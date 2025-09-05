@@ -10,7 +10,7 @@ from django.utils.module_loading import import_string
 from oic.oic.message import AccessTokenResponse
 
 from .auth_backend import KsiAuthBackend
-from .client import get_oidc_client
+from .client import get_oidc_client, OidcProviderError
 from .consts import STATES_SESSION_KEY, SESSION_TOKENS_SESSION_KEY
 
 logger = logging.getLogger('django_ksi_auth')
@@ -128,16 +128,11 @@ def ksi_auth_login(request, response: AccessTokenResponse):
     _update_session(request, response, tokens_expiry)
 
 
-def _refresh_access_token(request, refresh_token: str, access_token: str):
-    # TODO: Implement
-    raise NotImplementedError()
-    # client = _get_client(request)
-    # request_args = {
-    #     "refresh_token": refresh_token,
-    # }
-    #
-    # _update_session(request, access_token_refresh_response, TokensExpiry(access_token_refresh_response))
-    # # TODO: Update user's groups
+def _refresh_access_token(request, refresh_token: str):
+    client = get_oidc_client()
+    access_token_response = client.refresh_access_token(refresh_token)
+    _update_session(request, access_token_response, TokensExpiry(access_token_response))
+    # TODO: Update user's groups
 
 
 def refresh_ksi_auth_session(request):
@@ -153,17 +148,21 @@ def refresh_ksi_auth_session(request):
 
     if datetime.fromisoformat(session_tokens["access_expires_at"]) > datetime.now(UTC):
         # The access token is still valid
-        logger.debug("The access token is still valid")
         return
 
     logger.debug("The access token has expired, refreshing")
-
     try:
-        _refresh_access_token(request, session_tokens["refresh_token"], session_tokens["access_token"])
+        _refresh_access_token(request, session_tokens["refresh_token"])
         logger.debug("Refreshed access token")
-    except:
-        # If anything went wrong here, the user should be signed out,
+    except Exception as error:
+        if isinstance(error, OidcProviderError) and error.response["error"] == "invalid_grant":
+            # This is an expected case, there is no need to raise an error here
+            logger.debug("Refresh token has expired, signing the user out")
+            logout(request)
+            return
+
+        # If anything went wrong, the user should be signed out,
         # since they no longer have a valid access token.
-        logger.debug("Failed to refresh access token, signing the user out", exc_info=True)
+        logger.error("Failed to refresh access token, signing the user out", exc_info=True)
         logout(request)
         raise

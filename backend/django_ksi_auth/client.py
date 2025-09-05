@@ -1,19 +1,31 @@
 import logging
+from json import JSONDecodeError
 from typing import Type, TypeVar, Optional
 
 import requests
 from django.conf import settings
-from django.core.exceptions import SuspiciousOperation, ImproperlyConfigured
+from django.core.exceptions import SuspiciousOperation, ImproperlyConfigured, BadRequest
 from django.http import HttpRequest
 from django.urls import reverse
-from oic.oauth2.message import SchemeError
+from oic.exception import MessageException
+from oic.oauth2 import AuthorizationErrorResponse
+from oic.oauth2.message import SchemeError, ErrorResponse
 from oic.oic import EndSessionRequest
 from oic.oic.message import Message, ProviderConfigurationResponse, AuthorizationRequest, AuthorizationResponse, \
-    AccessTokenResponse, AccessTokenRequest
+    AccessTokenResponse, AccessTokenRequest, TokenErrorResponse
 from oic.utils.keyio import KeyJar
 
 logger = logging.getLogger('django_ksi_auth')
 TMessage = TypeVar('TMessage', bound=Message)
+
+
+class OidcProviderError(Exception):
+    def __init__(self, response: ErrorResponse):
+        super().__init__(
+            f"Received an error response of type \"{response["error"]}\" from OIDC Provider:\n"
+            f"{response.get('error_description', '')}",
+        )
+        self.response = response
 
 
 # TODO: Try to remove any Django dependencies from this file,
@@ -32,16 +44,26 @@ class OidcClient:
     def _handle_response(
         self,
         response: requests.Response,
-        response_type: Type[TMessage],
+        success_response_type: Type[TMessage],
+        error_response_type: Optional[Type[ErrorResponse]],
         ignore_scheme_error: bool = False,
     ) -> TMessage:
-        print(response.json())
+        if not response.ok and error_response_type is not None:
+            try:
+                message = error_response_type()
+                message.from_dict(response.json())
+                message.verify(keyjar=self.keyjar)
+                raise OidcProviderError(message)
+            except (MessageException, JSONDecodeError):
+                response.raise_for_status()
+
         response.raise_for_status()
-        message = response_type()
+
+        message = success_response_type()
         message.from_dict(response.json())
 
         if ignore_scheme_error:
-            try :
+            try:
                 message.verify(keyjar=self.keyjar)
             except SchemeError:
                 logger.error("Got SchemeError when verifying response from OIDC Provider", exc_info=True)
@@ -52,14 +74,49 @@ class OidcClient:
         return message
 
 
-    def _get_request(self, response_type: Type[TMessage], url, ignore_scheme_error: bool = False) -> TMessage:
+    def _handle_callback_response(
+        self,
+        request: HttpRequest,
+        success_response_type: Type[TMessage],
+        error_response_type: Optional[Type[ErrorResponse]],
+    ) -> TMessage:
+        try:
+            response = success_response_type()
+            response.from_dict(request.GET)
+            response.verify(keyjar=self.keyjar)
+            return response
+        except MessageException:
+            try:
+                error_response = error_response_type()
+                error_response.from_dict(request.GET)
+                error_response.verify(keyjar=self.keyjar)
+                raise OidcProviderError(error_response)
+            except MessageException:
+                pass
+
+        raise BadRequest("Received an invalid response from the OIDC Provider")
+
+
+    def _get_request(
+        self,
+        success_response_type: Type[TMessage],
+        error_response_type: Optional[Type[ErrorResponse]],
+        url,
+        ignore_scheme_error: bool = False,
+    ) -> TMessage:
         response = requests.get(url)
-        return OidcClient._handle_response(self, response, response_type, ignore_scheme_error)
+        return OidcClient._handle_response(self, response, success_response_type, error_response_type, ignore_scheme_error)
 
 
-    def _authenticated_post_request(self, response_type: Type[TMessage], url: str, request_body: Message) -> TMessage:
+    def _authenticated_post_request(
+        self,
+        success_response_type: Type[TMessage],
+        error_response_type: Optional[Type[ErrorResponse]],
+        url: str,
+        request_body: Message,
+    ) -> TMessage:
         response = requests.post(url, data=request_body.to_dict(), auth=(self.client_id, self.client_secret))
-        return self._handle_response(response, response_type)
+        return self._handle_response(response, success_response_type, error_response_type)
 
 
     def _create_redirect_url(self, base_url: str, message: TMessage) -> str:
@@ -79,7 +136,12 @@ class OidcClient:
         config_url += ".well-known/openid-configuration"
 
         # TODO: ignore_scheme_error
-        configuration = self._get_request(ProviderConfigurationResponse, config_url, ignore_scheme_error=True)
+        configuration = self._get_request(
+            ProviderConfigurationResponse,
+            None,
+            config_url,
+            ignore_scheme_error=True,
+        )
         if configuration.get("issuer") != settings.KSI_AUTH_PROVIDER['issuer']:
             raise ImproperlyConfigured("The issuer returned by the OIDC Provider does not match the one configured")
         self.provider_configuration = configuration
@@ -122,11 +184,8 @@ class OidcClient:
         )
 
 
-    def parse_authorization_response(self, request: HttpRequest) -> AuthorizationResponse:
-        response = AuthorizationResponse()
-        response.from_dict(request.GET)
-        response.verify(keyjar=self.keyjar)
-        return response
+    def parse_authorization_callback_response(self, request: HttpRequest) -> AuthorizationResponse:
+        return self._handle_callback_response(request, AuthorizationResponse, AuthorizationErrorResponse)
 
 
     def exchange_code_for_access_token(self, request: HttpRequest, code: str, expected_nonce: str) -> AccessTokenResponse:
@@ -142,6 +201,7 @@ class OidcClient:
         }
         response = self._authenticated_post_request(
             AccessTokenResponse,
+            TokenErrorResponse,
             self.provider_configuration['token_endpoint'],
             AccessTokenRequest(**request_args),
         )
@@ -150,6 +210,21 @@ class OidcClient:
             raise SuspiciousOperation("The authentication request has been tampered with, cannot continue")
 
         return response
+
+
+    def refresh_access_token(self, refresh_token: str) -> AccessTokenResponse:
+        # TODO: Add PKCE verification (if it is even used here)
+
+        request_args = {
+            'grant_type': 'refresh_token',
+            'refresh_token': refresh_token,
+        }
+        return self._authenticated_post_request(
+            AccessTokenResponse,
+            TokenErrorResponse,
+            self.provider_configuration['token_endpoint'],
+            AccessTokenRequest(**request_args),
+        )
 
 
 def get_oidc_client() -> OidcClient:
