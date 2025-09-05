@@ -60,7 +60,7 @@ def redirect_to_oidc_login(request, next_url: str, prompt_none: bool = False):
     nonce = get_random_string(32)
     if not STATES_SESSION_KEY in request.session:
         request.session[STATES_SESSION_KEY] = {}
-    # TODO: mozilla-django-auth limits the number of stored states, we could do it too
+    # TODO: mozilla-django-oidc limits the number of stored states, we could do it too
     request.session[STATES_SESSION_KEY][state] = {
         'nonce': nonce,
         'next_url': next_url,

@@ -258,7 +258,6 @@ dependencies = [
     { name = "celery" },
     { name = "django" },
     { name = "djangorestframework" },
-    { name = "mozilla-django-oidc" },
     { name = "oic" },
     { name = "python-magic" },
     { name = "redis" },
@@ -269,7 +268,6 @@ requires-dist = [
     { name = "celery", specifier = "==5.5.3" },
     { name = "django", specifier = "==5.2.4" },
     { name = "djangorestframework", specifier = "==3.16.0" },
-    { name = "mozilla-django-oidc", specifier = "==4.0.1" },
     { name = "oic", specifier = ">=1.7.0" },
     { name = "python-magic", specifier = "==0.4.27" },
     { name = "redis", specifier = "==6.2.0" },
@@ -282,18 +280,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f1/70/7703c29685631f5a7590aa73f1f1d3fa9a380e654b86af429e0934a32f7d/idna-3.10.tar.gz", hash = "sha256:12f65c9b470abda6dc35cf8e63cc574b1c52b11df2c86030af0ac09b01b13ea9", size = 190490, upload-time = "2024-09-15T18:07:39.745Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/76/c6/c88e154df9c4e1a2a66ccf0005a88dfb2650c1dffb6f5ce603dfbd452ce3/idna-3.10-py3-none-any.whl", hash = "sha256:946d195a0d259cbba61165e88e65941f16e9b36ea6ddb97f00452bae8b1287d3", size = 70442, upload-time = "2024-09-15T18:07:37.964Z" },
-]
-
-[[package]]
-name = "josepy"
-version = "2.1.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "cryptography" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/9d/19/4ebe24c42c341c5868dff072b78d503fc1b0725d88ea619d2db68f5624a9/josepy-2.1.0.tar.gz", hash = "sha256:9beafbaa107ec7128e6c21d86b2bc2aea2f590158e50aca972dca3753046091f", size = 56189, upload-time = "2025-07-08T17:20:54.98Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/47/0e/e248f059986e376b87e546cd840d244370b9f7ef2b336456f0c2cfb2fef0/josepy-2.1.0-py3-none-any.whl", hash = "sha256:0eadf09b96821bdae9a8b14145425cb9fe0bbee64c6fdfce3ccd4ceb7d7efbbd", size = 29065, upload-time = "2025-07-08T17:20:53.504Z" },
 ]
 
 [[package]]
@@ -349,21 +335,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/0d/80/0985960e4b89922cb5a0bac0ed39c5b96cbc1a536a99f30e8c220a996ed9/MarkupSafe-3.0.2-cp313-cp313t-musllinux_1_2_x86_64.whl", hash = "sha256:131a3c7689c85f5ad20f9f6fb1b866f402c445b220c19fe4308c0b147ccd2ad9", size = 24098, upload-time = "2024-10-18T15:21:40.813Z" },
     { url = "https://files.pythonhosted.org/packages/82/78/fedb03c7d5380df2427038ec8d973587e90561b2d90cd472ce9254cf348b/MarkupSafe-3.0.2-cp313-cp313t-win32.whl", hash = "sha256:ba8062ed2cf21c07a9e295d5b8a2a5ce678b913b45fdf68c32d95d6c1291e0b6", size = 15208, upload-time = "2024-10-18T15:21:41.814Z" },
     { url = "https://files.pythonhosted.org/packages/4f/65/6079a46068dfceaeabb5dcad6d674f5f5c61a6fa5673746f42a9f4c233b3/MarkupSafe-3.0.2-cp313-cp313t-win_amd64.whl", hash = "sha256:e444a31f8db13eb18ada366ab3cf45fd4b31e4db1236a4448f68778c1d1a5a2f", size = 15739, upload-time = "2024-10-18T15:21:42.784Z" },
-]
-
-[[package]]
-name = "mozilla-django-oidc"
-version = "4.0.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "cryptography" },
-    { name = "django" },
-    { name = "josepy" },
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/90/f9/1ca554a62bf8a4fd31b68209df8603075c2b7436400ea3f7ddd597f204a5/mozilla-django-oidc-4.0.1.tar.gz", hash = "sha256:4ff8c64069e3e05c539cecf9345e73225a99641a25e13b7a5f933ec897b58918", size = 49027, upload-time = "2024-03-12T12:29:26.866Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ce/d6/2b75bf4e742c54028ae07a1fb5a2624e5a73e9cfd2185c2df0e22cbfe14e/mozilla_django_oidc-4.0.1-py2.py3-none-any.whl", hash = "sha256:04ef58759be69f22cdc402d082480aaebf193466cad385dc9e4f8df2a0b187ca", size = 29059, upload-time = "2024-03-12T12:29:24.978Z" },
 ]
 
 [[package]]
