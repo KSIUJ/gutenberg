@@ -1,48 +1,19 @@
 import logging
 from datetime import datetime, timedelta, UTC
 
-from django.conf import settings
 from django.contrib.auth import get_backends, BACKEND_SESSION_KEY, logout, authenticate, login
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import ImproperlyConfigured
 from django.shortcuts import redirect
-from django.urls.base import reverse
 from django.utils.crypto import get_random_string
 from django.utils.module_loading import import_string
-from oic.oic import Client
-from oic.oic.message import RegistrationResponse, AccessTokenResponse, TokenErrorResponse
-from oic.utils.authn.client import CLIENT_AUTHN_METHOD
+from oic.oic.message import AccessTokenResponse
 
 from .auth_backend import KsiAuthBackend
+from .client import get_oidc_client
 from .consts import STATES_SESSION_KEY, SESSION_TOKENS_SESSION_KEY
 
-OIDC_SCOPE = "openid email"
-
 logger = logging.getLogger('django_ksi_auth')
-
-# TODO: Right now every time a call to this function is made,
-#       the client info is requested from the OIDC provider.
-# @sensitive_variables
-def _get_client(request):
-    # Based on
-    # https://github.com/CZ-NIC/pyoidc/blob/a4cff6dbee32f246c8ffd3375091e53ab212f3a2/oidc_example/rp2/oidc.py#L87-L109
-    # and https://pyoidc.readthedocs.io/en/latest/examples/rp.html
-
-    client = Client(
-        client_authn_method=CLIENT_AUTHN_METHOD,
-    )
-    client.redirect_uris = [
-        request.build_absolute_uri(reverse("ksi_auth_callback")),
-    ]
-    client.post_logout_redirect_uris = [
-        request.build_absolute_uri(settings.LOGOUT_REDIRECT_URL),
-    ]
-    client.provider_config(settings.KSI_AUTH_PROVIDER['issuer'])
-    client.store_registration_info(RegistrationResponse(
-        client_id=settings.KSI_AUTH_PROVIDER['client_id'],
-        client_secret=settings.KSI_AUTH_PROVIDER['client_secret'],
-    ))
-    return client
 
 
 def is_ksi_auth_backend_enabled():
@@ -92,8 +63,6 @@ def redirect_to_oidc_login(request, next_url: str, prompt_none: bool = False):
     if not is_ksi_auth_backend_enabled():
         redirect_to_login(next_url)
 
-    client = _get_client(request)
-
     state = get_random_string(32)
     nonce = get_random_string(32)
 
@@ -110,21 +79,8 @@ def redirect_to_oidc_login(request, next_url: str, prompt_none: bool = False):
     # See https://docs.djangoproject.com/en/5.2/topics/http/sessions/#when-sessions-are-saved
     request.session.modified = True
 
-    request_args = {
-        'client_id': settings.KSI_AUTH_PROVIDER['client_id'],
-        'response_type': "code",
-        'scope': OIDC_SCOPE,
-        'nonce': nonce,
-        "redirect_uri": client.redirect_uris[0],
-        "state": state,
-    }
-    if prompt_none:
-        request_args['prompt'] = 'none'
-
-    auth_req = client.construct_AuthorizationRequest(request_args=request_args)
-    login_url = auth_req.request(client.authorization_endpoint)
-
-    return redirect(login_url)
+    authentication_url = get_oidc_client().get_authentication_url(request, nonce, state, prompt_none)
+    return redirect(authentication_url)
 
 
 class TokensExpiry:
@@ -173,22 +129,15 @@ def ksi_auth_login(request, response: AccessTokenResponse):
 
 
 def _refresh_access_token(request, refresh_token: str, access_token: str):
-    client = _get_client(request)
-    request_args = {
-        "refresh_token": refresh_token,
-    }
-    # FIXME: This does not currently work, the Client is stateful and requires passing the state parameter.
-    #        The solution for this would be to not use Client at all
-    access_token_refresh_response = client.do_access_token_refresh(request_args=request_args, token=access_token)
-    if isinstance(access_token_refresh_response, TokenErrorResponse):
-        # TODO: Replace this exception
-        raise Exception("Refreshing the access token failed")
-    if not isinstance(access_token_refresh_response, AccessTokenResponse):
-        # TODO: Replace this exception
-        raise Exception("Unexpected access token refresh response type")
-
-    _update_session(request, access_token_refresh_response, TokensExpiry(access_token_refresh_response))
-    # TODO: Update user's groups
+    # TODO: Implement
+    raise NotImplementedError()
+    # client = _get_client(request)
+    # request_args = {
+    #     "refresh_token": refresh_token,
+    # }
+    #
+    # _update_session(request, access_token_refresh_response, TokensExpiry(access_token_refresh_response))
+    # # TODO: Update user's groups
 
 
 def refresh_ksi_auth_session(request):

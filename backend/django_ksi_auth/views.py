@@ -4,10 +4,10 @@ from django.contrib.auth.views import LoginView as DjangoLoginView
 from django.core.exceptions import SuspiciousOperation
 from django.shortcuts import redirect
 from django.views.generic.base import View
-from oic.oic.message import AuthorizationResponse, TokenErrorResponse, AccessTokenResponse, AuthorizationErrorResponse
 
+from django_ksi_auth.client import get_oidc_client
 from django_ksi_auth.consts import SESSION_TOKENS_SESSION_KEY, STATES_SESSION_KEY
-from django_ksi_auth.utils import redirect_to_oidc_login, _get_client, OIDC_SCOPE, is_ksi_auth_backend_enabled, \
+from django_ksi_auth.utils import redirect_to_oidc_login, is_ksi_auth_backend_enabled, \
     is_user_authenticated_with_ksi_auth, ksi_auth_login
 
 
@@ -34,15 +34,9 @@ class BaseLoginView(View):
 class CallbackView(View):
     # @sensitive_variables
     def get(self, request):
-        client = _get_client(request)
+        client = get_oidc_client()
 
-        authorization_response = client.parse_response(AuthorizationResponse, info=request.GET, sformat="dict")
-        if isinstance(authorization_response, AuthorizationErrorResponse):
-            # TODO: Replace this exception
-            raise Exception("Authentication failed")
-        if not isinstance(authorization_response, AuthorizationResponse):
-            # TODO: Replace this exception
-            raise Exception("Unexpected authentication response type")
+        authorization_response = client.parse_authorization_response(request)
         state = authorization_response['state']
 
         try:
@@ -52,22 +46,11 @@ class CallbackView(View):
             # an indication of an attack by itself.
             raise SuspiciousOperation("Failed to find info necessary to complete authentication in the session")
 
-        request_args = {
-            "code": authorization_response["code"],
-        }
-
-        # TODO: PKCE?
-
-        response = client.do_access_token_request(scope=OIDC_SCOPE, state=state, request_args=request_args)
-        if isinstance(response, TokenErrorResponse):
-            # TODO: Replace this exception
-            raise Exception("Failed to get access token")
-        if not isinstance(response, AccessTokenResponse):
-            # TODO: Replace this exception
-            raise Exception("Unexpected token response type")
-
-        if state_entry['nonce'] != response["id_token"]["nonce"]:
-            raise SuspiciousOperation("The authentication request has been tampered with, cannot continue")
+        response = client.exchange_code_for_access_token(
+            request,
+            code=authorization_response["code"],
+            expected_nonce=state_entry["nonce"],
+        )
 
         ksi_auth_login(request, response)
         if STATES_SESSION_KEY in request.session:
@@ -78,6 +61,7 @@ class CallbackView(View):
             request.session.modified = True
 
         return redirect(state_entry['next_url'])
+
 
 class LogoutView(View):
     # Only POST is allowed and CSRF protection is not disabled to avoid CSRF redirects
@@ -96,15 +80,5 @@ class LogoutView(View):
         if not django_ksi_auth_used:
             return redirect(settings.LOGOUT_REDIRECT_URL)
 
-        client = _get_client(request)
-
-        request_args = {
-            "id_token_hint": id_token_hint,
-            # TODO: Document the need to set logout LOGOUT_REDIRECT_URL to a value specified in
-            #       the OIDC provider's configuration.
-            "post_logout_redirect_uri": request.build_absolute_uri(settings.LOGOUT_REDIRECT_URL),
-        }
-        logout_req = client.construct_EndSessionRequest(request_args=request_args)
-        logout_url = logout_req.request(client.end_session_endpoint)
-
+        logout_url = get_oidc_client().get_logout_url(request, id_token_hint)
         return redirect(logout_url)
