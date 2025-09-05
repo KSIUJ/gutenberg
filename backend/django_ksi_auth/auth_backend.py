@@ -1,17 +1,15 @@
 import logging
-from datetime import datetime, UTC, timedelta
 
-from django.contrib.auth import get_user_model, login, authenticate
+from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import BaseBackend
 from django.contrib.auth.models import Group
 from django.core.exceptions import SuspiciousOperation
 from django.db import transaction
-from oic.oic.message import AccessTokenResponse
 
 from .apps import KsiAuthConfig
-from .consts import SESSION_TOKENS_SESSION_KEY
 
 logger = logging.getLogger('django_ksi_auth')
+
 
 class KsiAuthBackend(BaseBackend):
     """
@@ -24,6 +22,7 @@ class KsiAuthBackend(BaseBackend):
 
         super().__init__()
         self.user_model = get_user_model()
+
 
     def _find_existing_user(self, oidc_id_token_claims):
         """
@@ -63,6 +62,7 @@ class KsiAuthBackend(BaseBackend):
         user = self.user_model.objects.create_user(username, email=email)
         return user
 
+
     def _update_user(self, user, id_token_claims, access_token):
         user.first_name = id_token_claims.get('given_name', '')
         user.last_name = id_token_claims.get('family_name', '')
@@ -72,6 +72,7 @@ class KsiAuthBackend(BaseBackend):
         # TODO: Store the value of the sub claim as an OIDC id.
         user.save()
         self._update_groups(user, id_token_claims)
+
 
     def _update_groups(self, user, access_token):
         """
@@ -94,6 +95,7 @@ class KsiAuthBackend(BaseBackend):
                 group, _ = Group.objects.get_or_create(name=role)
                 group.user_set.add(user)
 
+
     def authenticate(self, request, oidc_id_token_claims = None, oidc_access_token = None):
         print("KsiAuthBackend.authenticated called")
         if oidc_id_token_claims is None or oidc_access_token is None:
@@ -107,34 +109,10 @@ class KsiAuthBackend(BaseBackend):
         self._update_user(user, oidc_id_token_claims, oidc_access_token)
         return user
 
+
     def get_user(self, user_id):
         # TODO: Check if the user is active? Or should it not apply to this backend?
         try:
             return self.user_model.objects.get(pk=user_id)
         except self.user_model.DoesNotExist:
             return None
-
-    @staticmethod
-    def login(request, response: AccessTokenResponse):
-        if response["refresh_expires_in"] is None:
-            raise Exception("Missing refresh_expires_in in access token response")
-
-        refresh_expires_at = datetime.now(UTC) + timedelta(seconds = response["refresh_expires_in"])
-
-        access_token = response["access_token"]
-        refresh_token = response["refresh_token"]
-        id_token = response["id_token_jwt"]
-        id_token_claims = response["id_token"]
-
-        user = authenticate(request, oidc_id_token_claims = id_token_claims, oidc_access_token = access_token)
-        if user is None:
-            # TODO: Replace this exception?
-            raise Exception("Failed to authenticate user")
-
-        login(request, user)
-        request.session[SESSION_TOKENS_SESSION_KEY] = {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "id_token": id_token,
-        }
-        request.session.set_expiry(refresh_expires_at)

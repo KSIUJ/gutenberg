@@ -1,18 +1,20 @@
 import logging
+from datetime import datetime, timedelta, UTC
 
 from django.conf import settings
-from django.contrib.auth import get_backends, BACKEND_SESSION_KEY, logout
+from django.contrib.auth import get_backends, BACKEND_SESSION_KEY, logout, authenticate, login
 from django.contrib.auth.views import redirect_to_login
+from django.core.exceptions import ImproperlyConfigured
 from django.shortcuts import redirect
 from django.urls.base import reverse
 from django.utils.crypto import get_random_string
 from django.utils.module_loading import import_string
 from oic.oic import Client
-from oic.oic.message import RegistrationResponse
+from oic.oic.message import RegistrationResponse, AccessTokenResponse, TokenErrorResponse
 from oic.utils.authn.client import CLIENT_AUTHN_METHOD
 
 from .auth_backend import KsiAuthBackend
-from .consts import STATES_SESSION_KEY
+from .consts import STATES_SESSION_KEY, SESSION_TOKENS_SESSION_KEY
 
 OIDC_SCOPE = "openid email"
 
@@ -32,6 +34,9 @@ def _get_client(request):
     client.redirect_uris = [
         request.build_absolute_uri(reverse("ksi_auth_callback")),
     ]
+    client.post_logout_redirect_uris = [
+        request.build_absolute_uri(settings.LOGOUT_REDIRECT_URL),
+    ]
     client.provider_config(settings.KSI_AUTH_PROVIDER['issuer'])
     client.store_registration_info(RegistrationResponse(
         client_id=settings.KSI_AUTH_PROVIDER['client_id'],
@@ -48,6 +53,9 @@ def is_ksi_auth_backend_enabled():
 def is_user_authenticated_with_ksi_auth(request):
     # This function is based on mozilla-django-oidc:
     # https://github.com/mozilla/mozilla-django-oidc/blob/774b140b9311c6c874c199bfdb266e51f36740a7/mozilla_django_oidc/middleware.py#L104C9-L109C82
+
+    if not request.user.is_authenticated:
+        return False
 
     try:
         backend_session = request.session[BACKEND_SESSION_KEY]
@@ -117,3 +125,96 @@ def redirect_to_oidc_login(request, next_url: str, prompt_none: bool = False):
     login_url = auth_req.request(client.authorization_endpoint)
 
     return redirect(login_url)
+
+
+class TokensExpiry:
+    def __init__(self, response: AccessTokenResponse):
+        refresh_expires_in = response.get("refresh_expires_in", None)
+        access_expires_in = response.get("expires_in", None)
+        if refresh_expires_in is None:
+            raise ValueError("Missing refresh_expires_in in access token response")
+        if access_expires_in is None:
+            raise ValueError("Missing expires_in in access token response")
+
+        self.refresh_expires_at = datetime.now(UTC) + timedelta(seconds = refresh_expires_in)
+        self.access_expires_at = datetime.now(UTC) + timedelta(seconds = access_expires_in)
+
+
+def _update_session(request, response: AccessTokenResponse, tokens_expiry: TokensExpiry):
+    # TODO: Verify that the id token is for the signed user
+    # TODO: Verify sid when back-channel logout is implemented
+
+    # The "refresh_expires_in" is the remaining length of the OIDC client session.
+    # When a refresh token is used to get a new access token, a new refresh token is usually granted too,
+    # possibly with a different expiration time, so the session expiry should also be updated then.
+    request.session.set_expiry(tokens_expiry.refresh_expires_at)
+
+    request.session[SESSION_TOKENS_SESSION_KEY] = {
+        "access_token": response["access_token"],
+        "access_expires_at": tokens_expiry.access_expires_at.isoformat(),
+        "refresh_token": response["refresh_token"],
+        "id_token": response["id_token_jwt"],
+    }
+
+
+def ksi_auth_login(request, response: AccessTokenResponse):
+    # This constructor is throwing, the initialization should happen before calling `login`
+    # to avoid failing to update the session after signing in
+    tokens_expiry = TokensExpiry(response)
+
+    # Note that in the response from Keycloak response["id_token"] is a JSON object,
+    # but response["access_token"] is a JWT.
+    user = authenticate(request, oidc_id_token_claims = response["id_token"], oidc_access_token = response["access_token"])
+    if user is None:
+        raise ImproperlyConfigured("Failed to authenticate user. Is the KsiAuthBackend enabled?")
+
+    login(request, user)
+    _update_session(request, response, tokens_expiry)
+
+
+def _refresh_access_token(request, refresh_token: str, access_token: str):
+    client = _get_client(request)
+    request_args = {
+        "refresh_token": refresh_token,
+    }
+    # FIXME: This does not currently work, the Client is stateful and requires passing the state parameter.
+    #        The solution for this would be to not use Client at all
+    access_token_refresh_response = client.do_access_token_refresh(request_args=request_args, token=access_token)
+    if isinstance(access_token_refresh_response, TokenErrorResponse):
+        # TODO: Replace this exception
+        raise Exception("Refreshing the access token failed")
+    if not isinstance(access_token_refresh_response, AccessTokenResponse):
+        # TODO: Replace this exception
+        raise Exception("Unexpected access token refresh response type")
+
+    _update_session(request, access_token_refresh_response, TokensExpiry(access_token_refresh_response))
+    # TODO: Update user's groups
+
+
+def refresh_ksi_auth_session(request):
+    if not is_user_authenticated_with_ksi_auth(request):
+        return
+
+    try:
+        session_tokens = request.session[SESSION_TOKENS_SESSION_KEY]
+    except KeyError:
+        logger.error("Failed to access SESSION_TOKENS_SESSION_KEY for a user. Signing the user out.")
+        logout(request)
+        return
+
+    if datetime.fromisoformat(session_tokens["access_expires_at"]) > datetime.now(UTC):
+        # The access token is still valid
+        logger.debug("The access token is still valid")
+        return
+
+    logger.debug("The access token has expired, refreshing")
+
+    try:
+        _refresh_access_token(request, session_tokens["refresh_token"], session_tokens["access_token"])
+        logger.debug("Refreshed access token")
+    except:
+        # If anything went wrong here, the user should be signed out,
+        # since they no longer have a valid access token.
+        logger.debug("Failed to refresh access token, signing the user out", exc_info=True)
+        logout(request)
+        raise

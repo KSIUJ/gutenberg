@@ -184,6 +184,11 @@ LOGGING = {
             'handlers': ['console', 'print_file'],
             'level': 'INFO',
             'propagate': True,
+        },
+        'django_ksi_auth': {
+            'handlers': ['console', 'print_file'],
+            'level': 'DEBUG',
+            'propagate': True,
         }
     }
 }

@@ -3,7 +3,7 @@ import logging
 from django.core.exceptions import MiddlewareNotUsed
 
 from django_ksi_auth.apps import KsiAuthConfig
-from django_ksi_auth.utils import is_ksi_auth_backend_enabled
+from django_ksi_auth.utils import is_ksi_auth_backend_enabled, refresh_ksi_auth_session
 
 logger = logging.getLogger('django_ksi_auth')
 
@@ -19,10 +19,6 @@ class KsiAuthMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        # TODO: If the signed in user is using the the KSI auth provider:
-        #       - refresh the access token if it has expired
-        #           - also update the user's groups here
-        #       - if the refresh token has expired too, logout the user and clear the session (calling logout does this)
-        #       - handle back channel redirection if necessary
+        refresh_ksi_auth_session(request)
 
         return self.get_response(request)

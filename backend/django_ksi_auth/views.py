@@ -4,12 +4,11 @@ from django.contrib.auth.views import LoginView as DjangoLoginView
 from django.core.exceptions import SuspiciousOperation
 from django.shortcuts import redirect
 from django.views.generic.base import View
-from oic.oic.message import AuthorizationResponse, TokenErrorResponse, AccessTokenResponse
+from oic.oic.message import AuthorizationResponse, TokenErrorResponse, AccessTokenResponse, AuthorizationErrorResponse
 
-from django_ksi_auth.auth_backend import KsiAuthBackend
 from django_ksi_auth.consts import SESSION_TOKENS_SESSION_KEY, STATES_SESSION_KEY
 from django_ksi_auth.utils import redirect_to_oidc_login, _get_client, OIDC_SCOPE, is_ksi_auth_backend_enabled, \
-    is_user_authenticated_with_ksi_auth
+    is_user_authenticated_with_ksi_auth, ksi_auth_login
 
 
 # TODO: Add a note in the docs that this view should be set as LOGIN_URL
@@ -38,11 +37,15 @@ class CallbackView(View):
         client = _get_client(request)
 
         authorization_response = client.parse_response(AuthorizationResponse, info=request.GET, sformat="dict")
+        if isinstance(authorization_response, AuthorizationErrorResponse):
+            # TODO: Replace this exception
+            raise Exception("Authentication failed")
+        if not isinstance(authorization_response, AuthorizationResponse):
+            # TODO: Replace this exception
+            raise Exception("Unexpected authentication response type")
         state = authorization_response['state']
 
         try:
-            print(request.session.get(STATES_SESSION_KEY, 'sus'))
-            print(request.session.get(STATES_SESSION_KEY, {})[state])
             state_entry = request.session.get(STATES_SESSION_KEY, {})[state]
         except KeyError:
             # This message is intended to be shown to the user, the missing session information is not
@@ -57,7 +60,6 @@ class CallbackView(View):
 
         response = client.do_access_token_request(scope=OIDC_SCOPE, state=state, request_args=request_args)
         if isinstance(response, TokenErrorResponse):
-            print(response)
             # TODO: Replace this exception
             raise Exception("Failed to get access token")
         if not isinstance(response, AccessTokenResponse):
@@ -67,7 +69,7 @@ class CallbackView(View):
         if state_entry['nonce'] != response["id_token"]["nonce"]:
             raise SuspiciousOperation("The authentication request has been tampered with, cannot continue")
 
-        KsiAuthBackend.login(request, response)
+        ksi_auth_login(request, response)
         if STATES_SESSION_KEY in request.session:
             del request.session[STATES_SESSION_KEY][state]
             # Modifying an inner dict does not trigger the session save automatically,
@@ -96,9 +98,11 @@ class LogoutView(View):
 
         client = _get_client(request)
 
-        # TODO: Return to the LOGOUT_REDIRECT_URL after logout. Document this.
         request_args = {
             "id_token_hint": id_token_hint,
+            # TODO: Document the need to set logout LOGOUT_REDIRECT_URL to a value specified in
+            #       the OIDC provider's configuration.
+            "post_logout_redirect_uri": request.build_absolute_uri(settings.LOGOUT_REDIRECT_URL),
         }
         logout_req = client.construct_EndSessionRequest(request_args=request_args)
         logout_url = logout_req.request(client.end_session_endpoint)
