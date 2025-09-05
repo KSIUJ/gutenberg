@@ -41,6 +41,8 @@ class CallbackView(View):
         state = authorization_response['state']
 
         try:
+            print(request.session.get(STATES_SESSION_KEY, 'sus'))
+            print(request.session.get(STATES_SESSION_KEY, {})[state])
             state_entry = request.session.get(STATES_SESSION_KEY, {})[state]
         except KeyError:
             # This message is intended to be shown to the user, the missing session information is not
@@ -68,6 +70,10 @@ class CallbackView(View):
         KsiAuthBackend.login(request, response)
         if STATES_SESSION_KEY in request.session:
             del request.session[STATES_SESSION_KEY][state]
+            # Modifying an inner dict does not trigger the session save automatically,
+            # setting `request.session.modified` makes sure that the session is saved.
+            # See https://docs.djangoproject.com/en/5.2/topics/http/sessions/#when-sessions-are-saved
+            request.session.modified = True
 
         return redirect(state_entry['next_url'])
 

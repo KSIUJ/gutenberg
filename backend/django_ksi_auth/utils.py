@@ -88,13 +88,20 @@ def redirect_to_oidc_login(request, next_url: str, prompt_none: bool = False):
 
     state = get_random_string(32)
     nonce = get_random_string(32)
-    if not STATES_SESSION_KEY in request.session:
-        request.session[STATES_SESSION_KEY] = {}
+
+    states = request.session.get(STATES_SESSION_KEY, {})
     # TODO: mozilla-django-oidc limits the number of stored states, we could do it too
-    request.session[STATES_SESSION_KEY][state] = {
+    states[state] = {
         'nonce': nonce,
         'next_url': next_url,
     }
+    request.session[STATES_SESSION_KEY] = states
+    # Previously, the session was not saved when modifying nested dicts in the session object.
+    # This should no longer be a problem, because now the key STATES_SESSION_KEY always gets reassigned,
+    # but explicitly marking the session as modified doesn't hurt:
+    # See https://docs.djangoproject.com/en/5.2/topics/http/sessions/#when-sessions-are-saved
+    request.session.modified = True
+
     request_args = {
         'client_id': settings.KSI_AUTH_PROVIDER['client_id'],
         'response_type': "code",
