@@ -1,5 +1,21 @@
 # django-ksi-auth
 
+## About this package
+This package adds OpenID Connect authentication functionality for Django projects.
+
+### Features:
+- Autoconfiguration via the /.well-known/openid-configuration endpoint
+- Support for refresh tokens
+    - The session duration is limited by the expiration time of the refresh token
+    - The authentication middleware that the user always has a valid access token and refreshes it when it has expired
+- SSO sessions:
+  - Checking for an active SSO session using a redirection to the authentication endpoint with `prompt=none`
+  - Endpoint for ending the SSO session and logging out from Django
+  - (*Planned*) Back-channel logout
+- Support for disabling the `KsiAuthBackend` in the settings file without requiring other changes to the views
+- Syncing of user groups and staff/superuser status based on the `realm_access.roles` claim in the access token
+- Custom `@ksi_auth_login_required` and `@ksi_auth_check_sso` view decorators
+
 ## Notice
 The source code of this library incorporates modified source code from the [mozilla-django-oidc] library.
 The fragments based on [mozilla-django-oidc] are appropriately marked in comments in the source code.
@@ -78,7 +94,7 @@ In the appropriate Django setting files:
         # This is the standard Django backend, you can remove it if you only use
         # OpenID Connect for authentication.
         'django.contrib.auth.backends.ModelBackend',
-        'django_ksi_auth.auth_backend.KsiAuthBackend',
+        'django_ksi_auth.backends.KsiAuthBackend',
     )
     ```
    

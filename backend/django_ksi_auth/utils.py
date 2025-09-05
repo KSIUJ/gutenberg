@@ -10,7 +10,7 @@ from django.utils.crypto import get_random_string
 from django.utils.module_loading import import_string
 from oic.oic.message import AccessTokenResponse
 
-from .auth_backend import KsiAuthBackend
+from .backends import KsiAuthBackend
 from .client import get_oidc_client, OidcProviderError
 from .consts import STATES_SESSION_KEY, SESSION_TOKENS_SESSION_KEY
 from .user_sessions import TokensExpiry, update_session, refresh_access_token

@@ -31,7 +31,7 @@ class BaseLoginView(View):
 
     The path to this view should be set as the value of the `LOGIN_URL` setting.
     """
-    
+
     fallback_view = DjangoLoginView.as_view()
 
     def get(self, request):
@@ -62,6 +62,11 @@ class BaseLoginView(View):
 class CallbackView(View):
     # @sensitive_variables
     def get(self, request):
+        if not is_ksi_auth_backend_enabled():
+            # It's not this package that triggered the authentication,
+            # and authenticating wouldn't be possible anyway without the backend.
+            raise SuspiciousOperation("KsiAuthBackend is not enabled")
+
         client = get_oidc_client()
 
         authorization_response: Optional[AuthorizationResponse] = None
