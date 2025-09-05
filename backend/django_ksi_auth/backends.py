@@ -13,6 +13,8 @@ logger = logging.getLogger('django_ksi_auth')
 class KsiAuthBackend(BaseBackend):
     """
     This backend is loosely based on the one from mozilla-django-oidc.
+
+    This backend allows inactive users to authenticate with OIDC as well.
     """
 
     def __init__(self):
@@ -87,7 +89,6 @@ class KsiAuthBackend(BaseBackend):
 
 
     def get_user(self, user_id):
-        # TODO: Check if the user is active? Or should it not apply to this backend?
         try:
             return self.user_model.objects.get(pk=user_id)
         except self.user_model.DoesNotExist:

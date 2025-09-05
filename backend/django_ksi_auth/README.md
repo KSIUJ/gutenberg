@@ -4,7 +4,7 @@
 This package adds OpenID Connect authentication functionality for Django projects.
 
 ### Features:
-- Autoconfiguration via the /.well-known/openid-configuration endpoint
+- Autoconfiguration via the `/.well-known/openid-configuration` endpoint
 - Support for refresh tokens
     - The session duration is limited by the expiration time of the refresh token
     - The authentication middleware that the user always has a valid access token and refreshes it when it has expired
