@@ -8,7 +8,8 @@ from oic.oic.message import AuthorizationResponse, TokenErrorResponse, AccessTok
 
 from django_ksi_auth.auth_backend import KsiAuthBackend
 from django_ksi_auth.consts import SESSION_TOKENS_SESSION_KEY, STATES_SESSION_KEY
-from django_ksi_auth.utils import redirect_to_oidc_login, _get_client, OIDC_SCOPE
+from django_ksi_auth.utils import redirect_to_oidc_login, _get_client, OIDC_SCOPE, is_ksi_auth_backend_enabled, \
+    is_user_authenticated_with_ksi_auth
 
 
 # TODO: Add a note in the docs that this view should be set as LOGIN_URL
@@ -23,10 +24,10 @@ class BaseLoginView(View):
             # TODO: Sanitize the redirect URL
             return redirect(next_url)
 
-        # TODO: Check if the backend is enabled
-        ksi_auth_enabled = True
-        if not ksi_auth_enabled:
-            return self.fallback_view(request)
+        if not is_ksi_auth_backend_enabled():
+            # type(self) returns `BaseLoginView` or a subclass of it.
+            # Calling `fallback_view` in this way avoids passing `self` as an argument to `fallback_view`.
+            return type(self).fallback_view(request)
 
         return redirect_to_oidc_login(request, next_url)
 
@@ -78,12 +79,14 @@ class LogoutView(View):
             id_token_hint = request.session[SESSION_TOKENS_SESSION_KEY]["id_token"]
         except KeyError:
             id_token_hint = None
+        django_ksi_auth_used = is_user_authenticated_with_ksi_auth(request)
 
-        # TODO: Check if KsiAuthBackend was used to sign the current user in.
-        #       The redirect to the Identity Provider should only happen if it was.
-
-        # `logout` also clears the session
+        # `logout` also clears the session, so the session is read before calling `logout`.
         logout(request)
+
+        # Skip the OIDC logout if the user didn't use the KSI auth backend to sign in
+        if not django_ksi_auth_used:
+            return redirect(settings.LOGOUT_REDIRECT_URL)
 
         client = _get_client(request)
 

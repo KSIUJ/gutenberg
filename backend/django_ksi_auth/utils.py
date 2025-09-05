@@ -1,15 +1,22 @@
+import logging
+
 from django.conf import settings
+from django.contrib.auth import get_backends, BACKEND_SESSION_KEY, logout
 from django.contrib.auth.views import redirect_to_login
 from django.shortcuts import redirect
 from django.urls.base import reverse
 from django.utils.crypto import get_random_string
+from django.utils.module_loading import import_string
 from oic.oic import Client
 from oic.oic.message import RegistrationResponse
 from oic.utils.authn.client import CLIENT_AUTHN_METHOD
 
+from .auth_backend import KsiAuthBackend
 from .consts import STATES_SESSION_KEY
 
 OIDC_SCOPE = "openid email"
+
+logger = logging.getLogger('django_ksi_auth')
 
 # TODO: Right now every time a call to this function is made,
 #       the client info is requested from the OIDC provider.
@@ -33,6 +40,31 @@ def _get_client(request):
     return client
 
 
+def is_ksi_auth_backend_enabled():
+    # The list returned from `get_backends()` contains INSTANCES of the backends.
+    return any(isinstance(backend, KsiAuthBackend) for backend in get_backends())
+
+
+def is_user_authenticated_with_ksi_auth(request):
+    # This function is based on mozilla-django-oidc:
+    # https://github.com/mozilla/mozilla-django-oidc/blob/774b140b9311c6c874c199bfdb266e51f36740a7/mozilla_django_oidc/middleware.py#L104C9-L109C82
+
+    try:
+        backend_session = request.session[BACKEND_SESSION_KEY]
+    except KeyError:
+        return False
+
+    try:
+        auth_backend = import_string(backend_session)
+    except ImportError:
+        logger.warning("Failed to import auth backend specified in the session at BACKEND_SESSION_KEY. Signing the user out", exc_info=True)
+        logout(request)
+        return False
+
+    # The imported auth_backend is a CLASS TYPE, not an INSTANCE of it.
+    return issubclass(auth_backend, KsiAuthBackend)
+
+
 # @sensitive_variables
 def redirect_to_oidc_login(request, next_url: str, prompt_none: bool = False):
     """
@@ -43,15 +75,13 @@ def redirect_to_oidc_login(request, next_url: str, prompt_none: bool = False):
         raise ValueError("next_url must be provided")
     # TODO: Validate next url here or in the calling code (and document this)
 
-    # TODO: Check if the backend is enabled
-    ksi_auth_enabled = True
     # If the `KsiAuthBackend` is not enabled, redirect to `LOGIN_URL` instead of redirecting to the OIDC provider.
     #
     # Note: This could result in an infinite loop if the view at `LOGIN_URL` uses `redirect_to_oidc_login`
     #       when the `KsiAuthBackend` is not enabled.
     #       The default `BaseLoginView` calls `redirect_to_oidc_login` only if the `KsiAuthBackend` is enabled,
     #       so this is not a problem when the `LOGIN_URL` is (a subclass of) `KsiAuthBackend`.
-    if not ksi_auth_enabled:
+    if not is_ksi_auth_backend_enabled():
         redirect_to_login(next_url)
 
     client = _get_client(request)

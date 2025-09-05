@@ -1,10 +1,9 @@
 import logging
 
-from django.contrib.auth import get_backends
 from django.core.exceptions import MiddlewareNotUsed
 
 from django_ksi_auth.apps import KsiAuthConfig
-from django_ksi_auth.auth_backend import KsiAuthBackend
+from django_ksi_auth.utils import is_ksi_auth_backend_enabled
 
 logger = logging.getLogger('django_ksi_auth')
 
@@ -13,7 +12,7 @@ class KsiAuthMiddleware:
         # The app also calls this function, but only if it's in the INSTALLED_APPS list
         KsiAuthConfig.verify_correct_setup()
 
-        if not any(isinstance(backend, KsiAuthBackend) for backend in get_backends()):
+        if not is_ksi_auth_backend_enabled():
             logger.info("KsiAuthBackend is not enabled, KsiAuthMiddleware will not be used")
             raise MiddlewareNotUsed
 
