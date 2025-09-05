@@ -1,15 +1,20 @@
+import logging
+from typing import Optional
+
 from django.conf import settings
 from django.contrib.auth import logout
 from django.contrib.auth.views import LoginView as DjangoLoginView
 from django.core.exceptions import SuspiciousOperation
 from django.shortcuts import redirect
 from django.views.generic.base import View
+from oic.oic import AuthorizationResponse
 
-from django_ksi_auth.client import get_oidc_client
+from django_ksi_auth.client import get_oidc_client, OidcProviderError
 from django_ksi_auth.consts import SESSION_TOKENS_SESSION_KEY, STATES_SESSION_KEY
 from django_ksi_auth.utils import redirect_to_oidc_login, is_ksi_auth_backend_enabled, \
     is_user_authenticated_with_ksi_auth, ksi_auth_login
 
+logger = logging.getLogger('django_ksi_auth')
 
 # TODO: Add a note in the docs that this view should be set as LOGIN_URL
 #       A warning could also be added here if it's not?
@@ -18,9 +23,9 @@ class BaseLoginView(View):
     fallback_view = DjangoLoginView.as_view()
 
     def get(self, request):
+        # TODO: Sanitize the redirect URL from next
         next_url = request.GET.get("next") or settings.LOGIN_REDIRECT_URL
         if request.user.is_authenticated:
-            # TODO: Sanitize the redirect URL
             return redirect(next_url)
 
         if not is_ksi_auth_backend_enabled():
@@ -36,8 +41,19 @@ class CallbackView(View):
     def get(self, request):
         client = get_oidc_client()
 
-        authorization_response = client.parse_authorization_callback_response(request)
-        state = authorization_response['state']
+        authorization_response: Optional[AuthorizationResponse] = None
+        try:
+            authorization_response = client.parse_authorization_callback_response(request)
+            state = authorization_response['state']
+        except OidcProviderError as error:
+            state = error.response["state"]
+            if error.response["error"] in ("login_required", "interaction_required"):
+                logger.debug(f"Received error {error.response["error"]} in the CallbackView")
+            else:
+                logger.warning(
+                    f"Received error {error.response["error"]} in the CallbackView:\n"
+                    f"{error.response.get('error_description', '')}",
+               )
 
         try:
             state_entry = request.session.get(STATES_SESSION_KEY, {})[state]
@@ -46,13 +62,16 @@ class CallbackView(View):
             # an indication of an attack by itself.
             raise SuspiciousOperation("Failed to find info necessary to complete authentication in the session")
 
-        response = client.exchange_code_for_access_token(
-            request,
-            code=authorization_response["code"],
-            expected_nonce=state_entry["nonce"],
-        )
+        if authorization_response is not None:
+            # IntelliJ's type checker gets confused about the type of `authorization_response`
+            # noinspection PyTypeChecker
+            response = client.exchange_code_for_access_token(
+                request,
+                code=authorization_response["code"],
+                expected_nonce=state_entry["nonce"],
+            )
+            ksi_auth_login(request, response)
 
-        ksi_auth_login(request, response)
         if STATES_SESSION_KEY in request.session:
             del request.session[STATES_SESSION_KEY][state]
             # Modifying an inner dict does not trigger the session save automatically,

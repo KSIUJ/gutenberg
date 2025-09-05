@@ -1,14 +1,16 @@
 from django.conf import settings
-from django.contrib.auth.decorators import login_required
 from django.views.static import serve
 
+from django_ksi_auth.decorators import ksi_auth_check_sso, ksi_auth_login_required
 
+
+@ksi_auth_check_sso
 def webapp_public(request):
     # Serve webpack-built SPA.
     return serve(request, "200.html", settings.GUTENBERG_SPA_HTML_DIR)
 
 
-@login_required
+@ksi_auth_login_required
 def webapp_require_auth(request):
     # Serve webpack-built SPA.
     return serve(request, "200.html", settings.GUTENBERG_SPA_HTML_DIR)

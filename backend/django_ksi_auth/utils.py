@@ -61,6 +61,11 @@ def redirect_to_oidc_login(request, next_url: str, prompt_none: bool = False):
     #       The default `BaseLoginView` calls `redirect_to_oidc_login` only if the `KsiAuthBackend` is enabled,
     #       so this is not a problem when the `LOGIN_URL` is (a subclass of) `KsiAuthBackend`.
     if not is_ksi_auth_backend_enabled():
+        if prompt_none:
+            raise ImproperlyConfigured(
+                "`prompt_none = True` in `redirect_to_oidc_login` is not supported when the `KsiAuthBackend` is not enabled"
+            )
+
         redirect_to_login(next_url)
 
     state = get_random_string(32)

@@ -8,14 +8,14 @@ from django.core.exceptions import SuspiciousOperation, ImproperlyConfigured, Ba
 from django.http import HttpRequest
 from django.urls import reverse
 from oic.exception import MessageException
-from oic.oauth2 import AuthorizationErrorResponse
 from oic.oauth2.message import SchemeError, ErrorResponse
 from oic.oic import EndSessionRequest
 from oic.oic.message import Message, ProviderConfigurationResponse, AuthorizationRequest, AuthorizationResponse, \
-    AccessTokenResponse, AccessTokenRequest, TokenErrorResponse
+    AuthorizationErrorResponse, AccessTokenResponse, AccessTokenRequest, TokenErrorResponse
 from oic.utils.keyio import KeyJar
 
 logger = logging.getLogger('django_ksi_auth')
+
 TMessage = TypeVar('TMessage', bound=Message)
 
 
@@ -28,8 +28,6 @@ class OidcProviderError(Exception):
         self.response = response
 
 
-# TODO: Try to remove any Django dependencies from this file,
-#       to make it usable with FastAPI
 class OidcClient:
     OIDC_SCOPE = "openid email"
 
@@ -80,21 +78,22 @@ class OidcClient:
         success_response_type: Type[TMessage],
         error_response_type: Optional[Type[ErrorResponse]],
     ) -> TMessage:
-        try:
-            response = success_response_type()
-            response.from_dict(request.GET)
-            response.verify(keyjar=self.keyjar)
-            return response
-        except MessageException:
+        if 'error' in request.GET:
             try:
                 error_response = error_response_type()
                 error_response.from_dict(request.GET)
                 error_response.verify(keyjar=self.keyjar)
                 raise OidcProviderError(error_response)
-            except MessageException:
-                pass
+            except (MessageException, KeyError):
+                raise BadRequest("Received an invalid error response from the OIDC Provider")
 
-        raise BadRequest("Received an invalid response from the OIDC Provider")
+        try:
+            response = success_response_type()
+            response.from_dict(request.GET)
+            response.verify(keyjar=self.keyjar)
+            return response
+        except (MessageException, KeyError):
+            raise BadRequest("Received an invalid response from the OIDC Provider")
 
 
     def _get_request(
@@ -130,6 +129,8 @@ class OidcClient:
 
 
     def load(self):
+        logger.warning("Loading OIDC Provider configuration")
+
         config_url = settings.KSI_AUTH_PROVIDER['issuer']
         if not config_url.endswith("/"):
             config_url += "/"
