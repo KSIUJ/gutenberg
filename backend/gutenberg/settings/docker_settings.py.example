@@ -1,0 +1,50 @@
+from .docker_base import *
+
+SECRET_KEY = read_docker_secret('gutenberg_django_secret_key')
+
+# https://docs.djangoproject.com/en/5.2/ref/settings/#allowed-hosts
+# Example value: ['yoursite.example.com']
+ALLOWED_HOSTS = []
+
+# https://docs.djangoproject.com/en/5.2/ref/settings/#std-setting-CSRF_TRUSTED_ORIGINS
+# Example value: ['https://yoursite.example.com']
+CSRF_TRUSTED_ORIGINS = []
+
+# Admin e-mail addresses to send messages to when errors occur
+ADMINS = []
+
+# Database
+# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'gutenberg',
+        'USER': 'gutenberg',
+        'PASSWORD': read_secret('gutenberg_postgres_password'),
+        'HOST': 'db',
+        'PORT': '5432',
+    }
+}
+
+# Uncomment lines below to enable Open ID Connect auth
+# LOGIN_URL = 'oidc_authentication_init'
+# OIDC_ADMIN_ROLE = 'ksi'
+# OIDC_OP_AUTHORIZATION_ENDPOINT = ''
+# OIDC_OP_TOKEN_ENDPOINT = ''
+# OIDC_OP_USER_ENDPOINT = 'o'
+# OIDC_OP_JWKS_ENDPOINT = ''
+# OIDC_OP_LOGOUT_ENDPOINT = ''
+# OIDC_RP_CLIENT_ID = ''
+# OIDC_RP_CLIENT_SECRET = None
+# OIDC_OP_LOGOUT_URL_METHOD = 'gutenberg.auth.oidc_op_logout'
+# AUTHENTICATION_BACKENDS = (
+#     'django.contrib.auth.backends.ModelBackend',
+#     'gutenberg.auth.OIDCAuthenticationBackend',
+# )
+
+# Celery
+CELERY_BROKER_URL = 'redis://redis:6379'
+
+# The hostname of the CUPS server.
+# This value will be used as the value of the -f argument for cups-client commands (lp, cancel, etc.).
+CUPS_SERVERNAME = 'cups:631'
