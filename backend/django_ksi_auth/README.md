@@ -57,6 +57,16 @@ In the appropriate Django setting files:
        # SECURITY: Do not check these secrets into version control!
        'client_id': '######',
        'client_secret': '######',
+   
+       # Set user's Django groups to the roles from the access token claims.
+        # Note that this will also remove the user from the groups that are not present in the access token.
+        'sync_roles_as_groups': False,
+
+        # Sets or unsets the User.is_staff and User.is_superuser fields
+        # if the access token contains claims for these roles.
+        # Set to None to disable this feature.
+        'staff_role': 'ksi-admin',
+        'superuser_role': 'ksi-admin',
     }
     KSI_AUTH_SSO_CHECK_COOLDOWN_SECONDS = 300
     ```

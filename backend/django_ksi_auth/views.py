@@ -70,7 +70,8 @@ class CallbackView(View):
                 code=authorization_response["code"],
                 expected_nonce=state_entry["nonce"],
             )
-            ksi_auth_login(request, response)
+            roles = client.get_roles_from_access_token(response["access_token"])
+            ksi_auth_login(request, response, roles)
 
         if STATES_SESSION_KEY in request.session:
             del request.session[STATES_SESSION_KEY][state]

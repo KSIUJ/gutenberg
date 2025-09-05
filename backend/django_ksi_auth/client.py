@@ -8,6 +8,7 @@ from django.core.exceptions import SuspiciousOperation, ImproperlyConfigured, Ba
 from django.http import HttpRequest
 from django.urls import reverse
 from oic.exception import MessageException
+from oic.extension.token import JWTToken
 from oic.oauth2.message import SchemeError, ErrorResponse
 from oic.oic import EndSessionRequest
 from oic.oic.message import Message, ProviderConfigurationResponse, AuthorizationRequest, AuthorizationResponse, \
@@ -226,6 +227,15 @@ class OidcClient:
             self.provider_configuration['token_endpoint'],
             AccessTokenRequest(**request_args),
         )
+
+
+    def get_roles_from_access_token(self, access_token: str) -> list[str]:
+        jwt = JWTToken(
+            typ='A', # Access token
+            keyjar=self.keyjar,
+        )
+        result = jwt.unpack(access_token)
+        return result.get("realm_access", {}).get("roles", [])
 
 
 def get_oidc_client() -> OidcClient:

@@ -2,11 +2,10 @@ import logging
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import BaseBackend
-from django.contrib.auth.models import Group
 from django.core.exceptions import SuspiciousOperation
-from django.db import transaction
 
 from .apps import KsiAuthConfig
+from .user_sessions import sync_roles
 
 logger = logging.getLogger('django_ksi_auth')
 
@@ -63,48 +62,27 @@ class KsiAuthBackend(BaseBackend):
         return user
 
 
-    def _update_user(self, user, id_token_claims, access_token):
+    @staticmethod
+    def _update_user(user, id_token_claims, roles):
         user.first_name = id_token_claims.get('given_name', '')
         user.last_name = id_token_claims.get('family_name', '')
         user.email = id_token_claims.get('email')
-        # TODO: Replace with own settings
-        # user.is_staff = user.is_superuser = settings.OIDC_ADMIN_ROLE in claims.get('roles')
-        # TODO: Store the value of the sub claim as an OIDC id.
         user.save()
-        self._update_groups(user, id_token_claims)
+
+        # TODO: Store the value of the sub claim as an OIDC id.
+
+        sync_roles(user, roles)
 
 
-    def _update_groups(self, user, access_token):
-        """
-        Transform roles obtained from keycloak into Django Groups and
-        add them to the user. Note that any role not passed via Keycloak
-        will be removed from the user.
-        """
-        # TODO: Parse and verify claims from access_token
-        access_token_claims = {}
-        try:
-            roles = access_token_claims['roles']
-        except KeyError:
-            logger.warning("roles claim not present in access token")
-            roles = []
-
-        # TODO: Maybe only some roles should be synced?
-        with transaction.atomic():
-            user.groups.clear()
-            for role in roles:
-                group, _ = Group.objects.get_or_create(name=role)
-                group.user_set.add(user)
-
-
-    def authenticate(self, request, oidc_id_token_claims = None, oidc_access_token = None):
-        if oidc_id_token_claims is None or oidc_access_token is None:
+    def authenticate(self, request, oidc_id_token_claims = None, oidc_roles = None):
+        if oidc_id_token_claims is None or oidc_roles is None:
             return None
 
         user = self._find_existing_user(oidc_id_token_claims)
         if user is None:
             user = self._create_user(oidc_id_token_claims)
 
-        self._update_user(user, oidc_id_token_claims, oidc_access_token)
+        self._update_user(user, oidc_id_token_claims, oidc_roles)
         return user
 
 
