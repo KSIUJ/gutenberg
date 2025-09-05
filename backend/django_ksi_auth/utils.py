@@ -7,7 +7,7 @@ from oic.oic import Client
 from oic.oic.message import RegistrationResponse
 from oic.utils.authn.client import CLIENT_AUTHN_METHOD
 
-from .consts import STATE_SESSION_KEY, NONCE_SESSION_KEY
+from .consts import STATES_SESSION_KEY
 
 OIDC_SCOPE = "openid email"
 
@@ -39,6 +39,10 @@ def redirect_to_oidc_login(request, next_url: str, prompt_none: bool = False):
     Redirects to the OIDC login page if the `KsiAuthBackend` is enabled or to the `LOGIN_URL` otherwise.
     """
 
+    if next_url is None:
+        raise ValueError("next_url must be provided")
+    # TODO: Validate next url here or in the calling code (and document this)
+
     # TODO: Check if the backend is enabled
     ksi_auth_enabled = True
     # If the `KsiAuthBackend` is not enabled, redirect to `LOGIN_URL` instead of redirecting to the OIDC provider.
@@ -54,14 +58,18 @@ def redirect_to_oidc_login(request, next_url: str, prompt_none: bool = False):
 
     state = get_random_string(32)
     nonce = get_random_string(32)
-    request.session[STATE_SESSION_KEY] = state
-    request.session[NONCE_SESSION_KEY] = nonce
+    if not STATES_SESSION_KEY in request.session:
+        request.session[STATES_SESSION_KEY] = {}
+    # TODO: mozilla-django-auth limits the number of stored states, we could do it too
+    request.session[STATES_SESSION_KEY][state] = {
+        'nonce': nonce,
+        'next_url': next_url,
+    }
     request_args = {
         'client_id': settings.KSI_AUTH_PROVIDER['client_id'],
         'response_type': "code",
         'scope': OIDC_SCOPE,
         'nonce': nonce,
-        # TODO: Maybe change, remove?
         "redirect_uri": client.redirect_uris[0],
         "state": state,
     }

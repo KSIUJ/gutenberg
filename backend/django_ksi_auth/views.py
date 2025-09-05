@@ -1,13 +1,13 @@
 from django.conf import settings
 from django.contrib.auth import logout
 from django.contrib.auth.views import LoginView as DjangoLoginView
-from django.http.response import HttpResponse
+from django.core.exceptions import SuspiciousOperation
 from django.shortcuts import redirect
 from django.views.generic.base import View
 from oic.oic.message import AuthorizationResponse, TokenErrorResponse, AccessTokenResponse
 
 from django_ksi_auth.auth_backend import KsiAuthBackend
-from django_ksi_auth.consts import STATE_SESSION_KEY, SESSION_TOKENS_SESSION_KEY
+from django_ksi_auth.consts import SESSION_TOKENS_SESSION_KEY, STATES_SESSION_KEY
 from django_ksi_auth.utils import redirect_to_oidc_login, _get_client, OIDC_SCOPE
 
 
@@ -37,24 +37,22 @@ class CallbackView(View):
         client = _get_client(request)
 
         authorization_response = client.parse_response(AuthorizationResponse, info=request.GET, sformat="dict")
+        state = authorization_response['state']
 
-        if not request.session.has_key(STATE_SESSION_KEY):
-            # TODO: Replace this exception
-            raise Exception("State not found in session")
-        if request.session[STATE_SESSION_KEY] != authorization_response["state"]:
-            # TODO: Replace this exception
-            raise Exception("State mismatch")
+        try:
+            state_entry = request.session.get(STATES_SESSION_KEY, {})[state]
+        except KeyError:
+            # This message is intended to be shown to the user, the missing session information is not
+            # an indication of an attack by itself.
+            raise SuspiciousOperation("Failed to find info necessary to complete authentication in the session")
 
         request_args = {
             "code": authorization_response["code"],
-            # TODO: Maybe change, remove?
-            "redirect_uri": client.redirect_uris[0],
         }
 
-        # TODO: Shouldn't nonce be compared here and removed from the session?
         # TODO: PKCE?
 
-        response = client.do_access_token_request(scope=OIDC_SCOPE, state=authorization_response["state"], request_args=request_args)
+        response = client.do_access_token_request(scope=OIDC_SCOPE, state=state, request_args=request_args)
         if isinstance(response, TokenErrorResponse):
             print(response)
             # TODO: Replace this exception
@@ -63,9 +61,14 @@ class CallbackView(View):
             # TODO: Replace this exception
             raise Exception("Unexpected token response type")
 
-        KsiAuthBackend.login(request, response)
+        if state_entry['nonce'] != response["id_token"]["nonce"]:
+            raise SuspiciousOperation("The authentication request has been tampered with, cannot continue")
 
-        return HttpResponse(str(response))
+        KsiAuthBackend.login(request, response)
+        if STATES_SESSION_KEY in request.session:
+            del request.session[STATES_SESSION_KEY][state]
+
+        return redirect(state_entry['next_url'])
 
 class LogoutView(View):
     # Only POST is allowed and CSRF protection is not disabled to avoid CSRF redirects
