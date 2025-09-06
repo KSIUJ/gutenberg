@@ -158,9 +158,12 @@ class BaseIppEverywhereService(BaseIppService, ABC):
                 printer_name="Gutenberg-{}".format(self.printer_name).replace(' ', '-'),
                 printer_info="Gutenberg - {}".format(self.printer_name),
                 printer_more_info=self.webpage_uri,
+                # TODO: this is fine?
                 printer_state=PrinterStateEnum.idle,
                 printer_state_message="idle",
+                # TODO: https://www.shutterstock.com/search/sisyphus
                 queued_job_count=1,
+                # TODO: WHAT?
                 printer_uuid='urn:uuid:12345678-9ABC-DEF0-1234-56789ABCDEF0',
                 device_uuid='urn:uuid:12345678-9ABC-DEF0-1234-56789ABCDEF0',
                 printer_icons=[self.printer_icon],

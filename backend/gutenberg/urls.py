@@ -22,6 +22,7 @@ from django.urls import path
 import api.urls
 import ipp.urls
 import printing.urls
+from gutenberg.views import GutenbergLoginView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -30,8 +31,9 @@ urlpatterns = [
     path('ipp/', include(ipp.urls)),
     path('api/', include(api.urls)),
 
-    path('oidc/', include('mozilla_django_oidc.urls')),
-    path('api-auth/', include('rest_framework.urls'))
+    path('login/', GutenbergLoginView.as_view(), name='login'),
+    path('oidc/', include('ksi_oidc_django.urls')),
+    path('api-auth/', include('rest_framework.urls')),
 ]
 
 if settings.DEBUG:
