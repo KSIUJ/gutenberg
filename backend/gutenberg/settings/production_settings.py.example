@@ -33,7 +33,7 @@ MEDIA_ROOT = '/srv/printing/'
 
 # Uncomment lines below to enable Open ID Connect auth:
 #
-# KSI_AUTH_PROVIDER = {
+# OIDC_AUTH_PROVIDER = {
 #     # For example https://auth.ksi.ii.uj.edu.pl/auth/realms/KSI
 #     # The auth plugin will reach https://auth.ksi.ii.uj.edu.pl/auth/realms/KSI/.well-known/openid-configuration
 #     # for configuration discovery
@@ -56,7 +56,7 @@ MEDIA_ROOT = '/srv/printing/'
 #
 # AUTHENTICATION_BACKENDS = (
 #     'django.contrib.auth.backends.ModelBackend',
-#     'ksi_oidc_django.backends.KsiAuthBackend',
+#     'ksi_oidc_django.backends.OidcAuthBackend',
 # )
 
 # Celery

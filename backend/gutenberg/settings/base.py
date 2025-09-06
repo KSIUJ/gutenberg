@@ -58,7 +58,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'ksi_oidc_django.middleware.KsiAuthMiddleware',
+    'ksi_oidc_django.middleware.OidcAuthMiddleware',
 ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
@@ -211,4 +211,4 @@ LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
-KSI_AUTH_SSO_CHECK_COOLDOWN_SECONDS = 300
+OIDC_AUTH_SSO_CHECK_COOLDOWN_SECONDS = 300

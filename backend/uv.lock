@@ -266,7 +266,7 @@ requires-dist = [
     { name = "celery", specifier = "==5.5.3" },
     { name = "django", specifier = ">=5.2.6" },
     { name = "djangorestframework", specifier = "==3.16.0" },
-    { name = "ksi-oidc-django", git = "https://github.com/KSIUJ/ksi-oidc-python?subdirectory=django" },
+    { name = "ksi-oidc-django", editable = "../../../python-projects/ksi-oidc-python/django" },
     { name = "python-magic", specifier = "==0.4.27" },
     { name = "redis", specifier = "==6.2.0" },
 ]
@@ -298,19 +298,31 @@ wheels = [
 [[package]]
 name = "ksi-oidc-common"
 version = "0.1.0"
-source = { git = "https://github.com/KSIUJ/ksi-oidc-python?subdirectory=common#e8902b8decb44fd0f63b1c2a6935648b55aef38e" }
+source = { editable = "../../../python-projects/ksi-oidc-python/common" }
 dependencies = [
     { name = "oic" },
     { name = "types-requests" },
 ]
 
+[package.metadata]
+requires-dist = [
+    { name = "oic", specifier = ">=1.7.0" },
+    { name = "types-requests", specifier = ">=2.32.4" },
+]
+
 [[package]]
 name = "ksi-oidc-django"
-version = "0.1.2"
-source = { git = "https://github.com/KSIUJ/ksi-oidc-python?subdirectory=django#e8902b8decb44fd0f63b1c2a6935648b55aef38e" }
+version = "0.3.0"
+source = { editable = "../../../python-projects/ksi-oidc-python/django" }
 dependencies = [
     { name = "django" },
     { name = "ksi-oidc-common" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "django", specifier = ">=5.2.6" },
+    { name = "ksi-oidc-common", editable = "../../../python-projects/ksi-oidc-python/common" },
 ]
 
 [[package]]
