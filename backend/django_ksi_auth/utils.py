@@ -103,19 +103,19 @@ def refresh_ksi_auth_session(request: HttpRequest):
         # The access token is still valid and will be valid for at least 5 more seconds
         return
 
-    logger.debug("The access token has expired, refreshing")
+    logger.debug("The access token for user %s has expired, refreshing", request.user.username)
     try:
         refresh_access_token(request, session_tokens["refresh_token"])
-        logger.debug("Refreshed access token")
+        logger.info("Refreshed expired access token for user %s", request.user.username)
     except Exception as error:
         if isinstance(error, OidcProviderError) and error.response["error"] == "invalid_grant":
             # This is an expected case, there is no need to raise an error here
-            logger.debug("Refresh token has expired, signing the user out")
+            logger.info("Refresh token for user %s has expired, signing them out")
             logout(request)
             return
 
         # If anything went wrong, the user should be signed out,
         # since they no longer have a valid access token.
-        logger.error("Failed to refresh access token, signing the user out", exc_info=True)
+        logger.error("Failed to refresh access token for user %s, signing them out", request.user.username, exc_info=True)
         logout(request)
         raise

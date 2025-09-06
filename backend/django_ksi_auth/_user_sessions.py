@@ -8,6 +8,7 @@ from django.db import transaction
 from django.http import HttpRequest
 from oic.oauth2 import AccessTokenResponse
 
+from ._common import oidc_client, logger
 from ._consts import SESSION_TOKENS_SESSION_KEY
 
 
@@ -82,3 +83,4 @@ def login_with_ksi_backend(request: HttpRequest, response: AccessTokenResponse, 
 
     login(request, user)
     update_session(request, response, tokens_expiry)
+    logger.info("User %s signed in using OIDC", user.get_username())
