@@ -1,4 +1,5 @@
-from django_ksi_auth.views import BaseLoginView
+from ksi_oidc_django.views import BaseLoginView
+
 from printing.views import webapp_login
 
 

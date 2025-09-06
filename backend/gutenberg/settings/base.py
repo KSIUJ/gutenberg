@@ -34,7 +34,7 @@ DJANGO_INSTALLED_APPS = [
 
 THIRD_PARTY_APPS = [
     'rest_framework',
-    'django_ksi_auth',
+    'ksi_oidc_django',
 ]
 
 # Apps overriding templates in defined by THIRD_PARTY_APPS.
@@ -58,7 +58,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django_ksi_auth.middleware.KsiAuthMiddleware',
+    'ksi_oidc_django.middleware.KsiAuthMiddleware',
 ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
@@ -185,11 +185,16 @@ LOGGING = {
             'level': 'INFO',
             'propagate': True,
         },
-        'ksi_auth': {
+        'ksi_oidc_django': {
             'handlers': ['console', 'print_file'],
             'level': 'DEBUG',
             'propagate': True,
-        }
+        },
+        'ksi_oidc_common': {
+            'handlers': ['console', 'print_file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
     }
 }
 

@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.views.static import serve
 
-from django_ksi_auth.decorators import ksi_auth_check_sso, ksi_auth_login_required
+from ksi_oidc_django.decorators import ksi_auth_check_sso, ksi_auth_login_required
 
 
 @ksi_auth_check_sso

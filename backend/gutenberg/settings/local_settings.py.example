@@ -40,7 +40,7 @@ DATABASES = {
 #
 # AUTHENTICATION_BACKENDS = (
 #     'django.contrib.auth.backends.ModelBackend',
-#     'django_ksi_auth.backends.KsiAuthBackend',
+#     'kdi_oidc_django.backends.KsiAuthBackend',
 # )
 
 # Celery

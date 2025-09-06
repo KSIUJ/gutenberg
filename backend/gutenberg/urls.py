@@ -32,7 +32,7 @@ urlpatterns = [
     path('api/', include(api.urls)),
 
     path('login/', GutenbergLoginView.as_view(), name='login'),
-    path('oidc/', include('django_ksi_auth.urls')),
+    path('oidc/', include('ksi_oidc_django.urls')),
     path('api-auth/', include('rest_framework.urls')),
 ]
 

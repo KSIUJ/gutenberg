@@ -56,7 +56,7 @@ MEDIA_ROOT = '/srv/printing/'
 #
 # AUTHENTICATION_BACKENDS = (
 #     'django.contrib.auth.backends.ModelBackend',
-#     'django_ksi_auth.backends.KsiAuthBackend',
+#     'ksi_oidc_django.backends.KsiAuthBackend',
 # )
 
 # Celery
