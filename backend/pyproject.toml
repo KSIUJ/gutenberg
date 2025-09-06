@@ -10,7 +10,7 @@ dependencies = [
     "djangorestframework==3.16.0",
     "python-magic==0.4.27",
     "redis==6.2.0",
-    "ksi-oidc-django>=0.1.0"
+    "ksi-oidc-django>=0.1.2"
 ]
 
 [tool.uv.sources]
