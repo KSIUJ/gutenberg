@@ -1,21 +1,18 @@
-import logging
 from datetime import datetime, timedelta, UTC
 
-from django.contrib.auth import get_backends, BACKEND_SESSION_KEY, logout, authenticate, login
+from django.contrib.auth import get_backends, BACKEND_SESSION_KEY, logout
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import ImproperlyConfigured
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect
 from django.utils.crypto import get_random_string
 from django.utils.module_loading import import_string
-from oic.oic.message import AccessTokenResponse
 
+from ._common import logger, get_login_redirect_uri, oidc_client
+from ._consts import STATES_SESSION_KEY, SESSION_TOKENS_SESSION_KEY
+from ._user_sessions import refresh_access_token
 from .backends import KsiAuthBackend
-from .client import get_oidc_client, OidcProviderError
-from .consts import STATES_SESSION_KEY, SESSION_TOKENS_SESSION_KEY
-from .user_sessions import TokensExpiry, update_session, refresh_access_token
-
-logger = logging.getLogger('django_ksi_auth')
+from .client import OidcProviderError
 
 
 def is_ksi_auth_backend_enabled() -> bool:
@@ -46,7 +43,6 @@ def is_user_authenticated_with_ksi_auth(request: HttpRequest) -> bool:
     return issubclass(auth_backend, KsiAuthBackend)
 
 
-# @sensitive_variables
 def redirect_to_oidc_login(request: HttpRequest, next_url: str, prompt_none: bool = False) -> HttpResponse:
     """
     Redirects to the OIDC login page if the `KsiAuthBackend` is enabled or to the `LOGIN_URL` otherwise.
@@ -87,23 +83,9 @@ def redirect_to_oidc_login(request: HttpRequest, next_url: str, prompt_none: boo
     # See https://docs.djangoproject.com/en/5.2/topics/http/sessions/#when-sessions-are-saved
     request.session.modified = True
 
-    authentication_url = get_oidc_client().get_authentication_url(request, nonce, state, prompt_none)
+    redirect_url = get_login_redirect_uri(request)
+    authentication_url = oidc_client.get_authentication_url(redirect_url, nonce, state, prompt_none)
     return redirect(authentication_url)
-
-
-def ksi_auth_login(request: HttpRequest, response: AccessTokenResponse, roles: list[str]):
-    # This constructor is throwing, the initialization should happen before calling `login`
-    # to avoid failing to update the session after signing in
-    tokens_expiry = TokensExpiry(response)
-
-    # Note that in the response from Keycloak response["id_token"] is a JSON object,
-    # but response["access_token"] is a JWT.
-    user = authenticate(request, oidc_id_token_claims = response["id_token"], oidc_roles = roles)
-    if user is None:
-        raise ImproperlyConfigured("Failed to authenticate user. Is the KsiAuthBackend enabled?")
-
-    login(request, user)
-    update_session(request, response, tokens_expiry)
 
 
 def refresh_ksi_auth_session(request: HttpRequest):

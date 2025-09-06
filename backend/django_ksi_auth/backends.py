@@ -1,13 +1,9 @@
-import logging
-
 from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import BaseBackend
 from django.core.exceptions import SuspiciousOperation
 
+from ._user_sessions import sync_roles
 from .apps import KsiAuthConfig
-from .user_sessions import sync_roles
-
-logger = logging.getLogger('django_ksi_auth')
 
 
 class KsiAuthBackend(BaseBackend):

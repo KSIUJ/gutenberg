@@ -1,16 +1,14 @@
-import logging
 from datetime import datetime, UTC, timedelta
 
 from django.conf import settings
+from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import Group, User
+from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.http import HttpRequest
 from oic.oauth2 import AccessTokenResponse
 
-from django_ksi_auth.client import get_oidc_client
-from django_ksi_auth.consts import SESSION_TOKENS_SESSION_KEY
-
-logger = logging.getLogger('django_ksi_auth')
+from ._consts import SESSION_TOKENS_SESSION_KEY
 
 
 class TokensExpiry:
@@ -65,8 +63,22 @@ def update_session(request: HttpRequest, response: AccessTokenResponse, tokens_e
 
 
 def refresh_access_token(request: HttpRequest, refresh_token: str):
-    client = get_oidc_client()
-    access_token_response = client.refresh_access_token(refresh_token)
+    access_token_response = oidc_client.refresh_access_token(refresh_token)
     update_session(request, access_token_response, TokensExpiry(access_token_response))
-    roles = client.get_roles_from_access_token(access_token_response["access_token"])
+    roles = oidc_client.get_roles_from_access_token(access_token_response["access_token"])
     sync_roles(request.user, roles)
+
+
+def login_with_ksi_backend(request: HttpRequest, response: AccessTokenResponse, roles: list[str]):
+    # This constructor is throwing, the initialization should happen before calling `login`
+    # to avoid failing to update the session after signing in
+    tokens_expiry = TokensExpiry(response)
+
+    # Note that in the response from Keycloak response["id_token"] is a JSON object,
+    # but response["access_token"] is a JWT.
+    user = authenticate(request, oidc_id_token_claims = response["id_token"], oidc_roles = roles)
+    if user is None:
+        raise ImproperlyConfigured("Failed to authenticate user. Is the KsiAuthBackend enabled?")
+
+    login(request, user)
+    update_session(request, response, tokens_expiry)

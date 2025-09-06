@@ -1,10 +1,8 @@
-import logging
-
 from django.apps import AppConfig
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
-logger = logging.getLogger('django_ksi_auth')
+from ._common import logger, fetch_oidc_client
 
 
 class KsiAuthConfig(AppConfig):
@@ -39,3 +37,6 @@ class KsiAuthConfig(AppConfig):
 
     def ready(self):
         self.verify_correct_setup()
+
+        # Load the OIDC client configuration
+        fetch_oidc_client()

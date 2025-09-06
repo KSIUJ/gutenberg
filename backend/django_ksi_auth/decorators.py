@@ -3,8 +3,8 @@ from functools import wraps
 
 from django.conf import settings
 
-from django_ksi_auth.consts import SKIP_SSO_CHECK_COOKIE
-from django_ksi_auth.utils import redirect_to_oidc_login, is_ksi_auth_backend_enabled
+from ._consts import SKIP_SSO_CHECK_COOKIE
+from .utils import redirect_to_oidc_login, is_ksi_auth_backend_enabled
 
 
 def ksi_auth_check_sso(function):

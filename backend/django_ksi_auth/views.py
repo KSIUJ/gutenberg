@@ -1,4 +1,3 @@
-import logging
 from typing import Optional
 
 from django.conf import settings
@@ -10,12 +9,11 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic.base import View
 from oic.oic import AuthorizationResponse
 
-from django_ksi_auth.client import get_oidc_client, OidcProviderError
-from django_ksi_auth.consts import SESSION_TOKENS_SESSION_KEY, STATES_SESSION_KEY
-from django_ksi_auth.utils import redirect_to_oidc_login, is_ksi_auth_backend_enabled, \
-    is_user_authenticated_with_ksi_auth, ksi_auth_login
-
-logger = logging.getLogger('django_ksi_auth')
+from ._common import logger, get_login_redirect_uri, get_logout_redirect_uri, oidc_client
+from ._consts import SESSION_TOKENS_SESSION_KEY, STATES_SESSION_KEY
+from ._user_sessions import login_with_ksi_backend
+from .client import OidcProviderError
+from .utils import redirect_to_oidc_login, is_ksi_auth_backend_enabled, is_user_authenticated_with_ksi_auth
 
 
 class BaseLoginView(View):
@@ -60,18 +58,15 @@ class BaseLoginView(View):
 
 
 class CallbackView(View):
-    # @sensitive_variables
     def get(self, request):
         if not is_ksi_auth_backend_enabled():
             # It's not this package that triggered the authentication,
             # and authenticating wouldn't be possible anyway without the backend.
             raise SuspiciousOperation("KsiAuthBackend is not enabled")
 
-        client = get_oidc_client()
-
         authorization_response: Optional[AuthorizationResponse] = None
         try:
-            authorization_response = client.parse_authorization_callback_response(request)
+            authorization_response = oidc_client.parse_authorization_callback_response(request.GET)
             state = authorization_response['state']
         except OidcProviderError as error:
             state = error.response["state"]
@@ -93,13 +88,13 @@ class CallbackView(View):
         if authorization_response is not None:
             # IntelliJ's type checker gets confused about the type of `authorization_response`
             # noinspection PyTypeChecker
-            response = client.exchange_code_for_access_token(
-                request,
+            response = oidc_client.exchange_code_for_access_token(
+                get_login_redirect_uri(request),
                 code=authorization_response["code"],
                 expected_nonce=state_entry["nonce"],
             )
-            roles = client.get_roles_from_access_token(response["access_token"])
-            ksi_auth_login(request, response, roles)
+            roles = oidc_client.get_roles_from_access_token(response["access_token"])
+            login_with_ksi_backend(request, response, roles)
 
         if STATES_SESSION_KEY in request.session:
             del request.session[STATES_SESSION_KEY][state]
@@ -119,14 +114,14 @@ class LogoutView(View):
             id_token_hint = request.session[SESSION_TOKENS_SESSION_KEY]["id_token"]
         except KeyError:
             id_token_hint = None
-        django_ksi_auth_used = is_user_authenticated_with_ksi_auth(request)
+        authenticated_with_ksi_auth = is_user_authenticated_with_ksi_auth(request)
 
         # `logout` also clears the session, so the session is read before calling `logout`.
         logout(request)
 
         # Skip the OIDC logout if the user didn't use the KSI auth backend to sign in
-        if not django_ksi_auth_used:
+        if not authenticated_with_ksi_auth:
             return redirect(settings.LOGOUT_REDIRECT_URL)
 
-        logout_url = get_oidc_client().get_logout_url(request, id_token_hint)
+        logout_url = oidc_client.get_logout_url(get_logout_redirect_uri(request), id_token_hint)
         return redirect(logout_url)

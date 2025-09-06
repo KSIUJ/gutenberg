@@ -1,11 +1,9 @@
-import logging
-
 from django.core.exceptions import MiddlewareNotUsed
 
-from django_ksi_auth.apps import KsiAuthConfig
-from django_ksi_auth.utils import is_ksi_auth_backend_enabled, refresh_ksi_auth_session
+from ._common import logger
+from .apps import KsiAuthConfig
+from .utils import is_ksi_auth_backend_enabled, refresh_ksi_auth_session
 
-logger = logging.getLogger('django_ksi_auth')
 
 class KsiAuthMiddleware:
     def __init__(self, get_response):
