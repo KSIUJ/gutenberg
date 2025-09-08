@@ -2,6 +2,8 @@ from rest_framework.exceptions import ValidationError, APIException, \
     NotAuthenticated, PermissionDenied, AuthenticationFailed
     
 from rest_framework.response import Response
+from rest_framework.views import exception_handler as drf_exception_handler
+
 
 def custom_exception_handler(exc, context):
     """
@@ -16,6 +18,8 @@ def custom_exception_handler(exc, context):
     would, per https://datatracker.ietf.org/doc/html/rfc7235#section-3.1,
     require setting the WWW-Authenticate header.
     """
+    if not isinstance(exc, APIException): # let DRF handle non-APIException errors
+        return drf_exception_handler(exc, context) 
     
     def kind_type(exc):
         if isinstance(exc, ValidationError):
@@ -64,4 +68,5 @@ class InvalidStatus(APIException):
     def __init__(self, detail=None, code=None, additional_info=None):
         if additional_info:
             self.additional_info = additional_info
+            
         super().__init__(detail, code)
