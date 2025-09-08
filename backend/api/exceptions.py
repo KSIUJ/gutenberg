@@ -4,9 +4,20 @@ from rest_framework.exceptions import ValidationError, APIException, \
 from rest_framework.response import Response
 
 def custom_exception_handler(exc, context):
-    #TODO add more comments
+    """
+    This custom Django REST Framework exception handler adds the
+    standardizes format for error responses.
+    The 'kind' field can be used to distinguish "not authenticated" errors
+    and "permission denied" errors. It is necessary, because currently
+    unauthenticated requests return the 403 Forbidden status code,
+    not 401 Unauthorized. See:
+    https://www.django-rest-framework.org/api-guide/authentication/#sessionauthentication
+    Please note that setting the status code to 401 for all "not authenticated" errors
+    would, per https://datatracker.ietf.org/doc/html/rfc7235#section-3.1,
+    require setting the WWW-Authenticate header.
+    """
     
-    def kind_type(exc): #TODO explain
+    def kind_type(exc):
         if isinstance(exc, ValidationError):
             return 'ValidationError'
         elif isinstance(exc, NotAuthenticated):
@@ -16,22 +27,26 @@ def custom_exception_handler(exc, context):
         elif isinstance(exc, PermissionDenied):
             return 'PermissionDenied'
         else:
+            # More values for `kind` might be added in the future for existing or new error types.
+            # Clients should not depend on receiving the `Other` kind to test for a specific error type. 
             return "Other"
     
     response = Response()
     response.status_code = getattr(exc, 'status_code', 500)
-    detail = getattr(exc, 'detail', None)
+    detail = getattr(exc, 'detail', "An error occurred.")
     additional_info = getattr(exc, 'additional_info', None)
-    if not isinstance(exc, ValidationError): #standard error format
+    if isinstance(exc, ValidationError): #validation error format
+        response.data = {
+            'kind': kind_type(exc),
+            'message': 'Validation error',
+            'detail': additional_info,
+            'errors': detail
+        }
+    else: #standard error format
         response.data = {
             'kind': kind_type(exc),
             'message': detail,
             'detail': additional_info
-        }
-    else: #validation error format
-        response.data = {
-            'kind': kind_type(exc),
-            'errors': detail
         }
     return response
 
