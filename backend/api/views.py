@@ -13,6 +13,8 @@ from rest_framework.generics import RetrieveAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.exceptions import ParseError, PermissionDenied, NotFound
+from api.exceptions import UnsupportedDocument, InvalidStatus
 from rest_framework.views import APIView
 
 from api.serializers import GutenbergJobSerializer, PrinterSerializer, PrintRequestSerializer, UserInfoSerializer, \
@@ -24,7 +26,6 @@ from printing.converter import detect_file_format, SUPPORTED_FILE_FORMATS
 from printing.printing import print_file
 
 logger = logging.getLogger('gutenberg.api.printing')
-
 
 class LargeResultsSetPagination(PageNumberPagination):
     page_size = 1000
@@ -60,59 +61,51 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=['post'], name='Submit new job')
     def submit(self, request):
         serializer = PrintRequestSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
         printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
                                                           printer_id=serializer.validated_data['printer'])
         if not printer_with_perms:
-            return Response("Printer does not exist", status=status.HTTP_400_BAD_REQUEST)
+            raise NotFound("Selected printer does not exist")
 
         try:
             job = self._create_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
             self._upload_artefact(job, **serializer.validated_data)
             self._run_job(job)
         except UnsupportedDocumentError as ex:
-            # FIXME: Use a common error message format
-            return Response("Error: {}".format(ex), status=status.HTTP_400_BAD_REQUEST)
+            raise UnsupportedDocument(str(ex))
         return Response(self.get_serializer(job).data)
 
     @action(detail=True, methods=['post'], name='Upload artefact')
     def upload_artefact(self, request, pk=None):
         job = self.get_object()
         if job.status != JobStatus.INCOMING:
-            return Response("Error: invalid job status for this request", status=status.HTTP_400_BAD_REQUEST)
+            raise InvalidStatus("Invalid job status for this request", additional_info="current status: {}".format(job.status))
         serializer = UploadJobArtefactRequestSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
         try:
             self._upload_artefact(job, **serializer.validated_data)
             if serializer.validated_data['last'] == True:
                 self._run_job(job)
         except UnsupportedDocumentError as ex:
-            # FIXME: Use a common error message format
-            return Response("Error: {}".format(ex), status=status.HTTP_400_BAD_REQUEST)
+            raise UnsupportedDocument(str(ex))
         return Response(self.get_serializer(job).data)
 
     @action(detail=True, methods=['post'], name='Run job')
     def run_job(self, request, pk=None):
         job = self.get_object()
         if job.status != JobStatus.INCOMING:
-            return Response("Error: invalid job status for this request", status=status.HTTP_400_BAD_REQUEST)
+            raise InvalidStatus("Invalid job status for this request", additional_info="current status: {}".format(job.status))
         self._run_job(job)
         return Response(self.get_serializer(job).data)
 
     @action(detail=False, methods=['post'], name='Create new job')
     def create_job(self, request):
         serializer = CreatePrintJobRequestSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
         printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
                                                           printer_id=serializer.validated_data['printer'])
         if not printer_with_perms:
-            return Response("Printer does not exist", status=status.HTTP_400_BAD_REQUEST)
+            raise NotFound("Selected printer does not exist")
         job = self._create_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
         return Response(self.get_serializer(job).data)
 
@@ -175,7 +168,7 @@ class ResetApiTokenView(APIView):
     def post(self, request, *args, **kwargs):
         self.request.user.api_key = _generate_token()
         self.request.user.save()
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class LoginApiView(APIView):
@@ -194,19 +187,17 @@ class LoginApiView(APIView):
 
     def post(self, request, *args, **kwargs):
         serializer = LoginSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
 
         username = serializer.validated_data['username']
         password = serializer.validated_data['password']
         user = authenticate(username=username, password=password)
         if not user:
-            return Response(data={'message': 'Username or password incorrect'}, status=403)
+            raise PermissionDenied("Invalid username or password")
         if not user.is_active:
-            return Response(data={'message': 'Account is not active'}, status=403)
+            raise PermissionDenied("Account is not active")
         login(request, user)
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get(self, request, *args, **kwargs):
         """
@@ -214,4 +205,4 @@ class LoginApiView(APIView):
         it should always be called on login.
         """
         rotate_token(request)
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
