@@ -18,7 +18,7 @@ DATABASES = {
 OIDC_APP_BASE_URL = 'https://yourapp.com/'
 
 # Set user's Django groups to the roles from the access token claims.
-# Roles from the `realm_access.roles` claim will be saved as a groups with the names `oidc.realm.{group_name}`.
+# Roles from the `realm_access.roles` claim will be saved as groups with the names `oidc.realm.{group_name}`.
 # Roles from the `resource_access.{client_id}.roles` claim will be saved as `oidc.client.{group_name}`.
 # If the user is in any other group with a name starting with `oidc.`, it will be removed.
 # See https://www.keycloak.org/docs/latest/server_admin/index.html#_oidc_token_role_mappings for more details.
