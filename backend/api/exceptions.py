@@ -41,8 +41,11 @@ def custom_exception_handler(exc, context):
     additional_info = getattr(exc, 'additional_info', None)
     if isinstance(exc, ValidationError): #validation error format
         response.data = {
+            # `ValidationError` is different from other standard subclasses of `ApiError`,
+            # its `detail` field might contain multiple errors - the `ValidationError` kind was added to support it.
+            # Error responses with the `kind` of `ValidationError` have the extra `errors` field.  
             'kind': kind_type(exc),
-            'message': 'Validation error',
+            'message': 'The server received an invalid request',
             'detail': additional_info,
             'errors': detail
         }
