@@ -19,7 +19,7 @@ export default defineNuxtPlugin({
       // Avoid leaking the X-CSRFToken, recommended by the Django docs (see the link below).
       mode: 'same-origin',
       credentials: 'same-origin',
-      gutenbergExpectJson: true,
+      gutenbergRequireNonEmpty: true,
       gutenbergDisableUnauthenticatedHandling: false,
 
       onRequest(request) {
@@ -30,9 +30,7 @@ export default defineNuxtPlugin({
         if (csrfToken.value) {
           request.options.headers.append('X-CSRFToken', csrfToken.value);
         }
-        if (request.options.gutenbergExpectJson === true) {
-          request.options.headers.set('accept', 'application/json');
-        }
+        request.options.headers.set('accept', 'application/json');
       },
 
       async onResponse({ options, response }) {
@@ -40,16 +38,21 @@ export default defineNuxtPlugin({
         // the value of the `csrfToken` ref is up to date.
         csrfToken.value = Cookies.get('csrftoken');
 
-        if (!response.ok || options.gutenbergExpectJson !== true) return;
+        if (!response.ok) return;
+
         if (response.status === 204) {
-          console.error(
-            `Unexpected empty response from a request to "${response.url}. gutenbergExpectJson was set to true.`,
-          );
-          throw createError({
-            message: 'Empty response received from the server',
-            statusCode: 500,
-          });
+          if (options.gutenbergRequireNonEmpty) {
+            console.error(
+              `Unexpected empty response from a request to "${response.url}. gutenbergExpectJson was set to true.`,
+            );
+            throw createError({
+              message: 'Empty response received from the server',
+              statusCode: 500,
+            });
+          }
+          return;
         }
+
         if (response.headers.get('content-type') !== 'application/json') {
           console.error(
             `Unexpected content type in a response from a request to "${response.url}".

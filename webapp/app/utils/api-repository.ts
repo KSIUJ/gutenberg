@@ -73,7 +73,7 @@ export const createApiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => (
   async refreshCsrfToken(): Promise<void> {
     await fetch('/api/login/', {
       method: 'GET',
-      gutenbergExpectJson: false,
+      gutenbergRequireNonEmpty: false,
     });
   },
 
@@ -84,7 +84,7 @@ export const createApiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => (
         username,
         password,
       },
-      gutenbergExpectJson: false,
+      gutenbergRequireNonEmpty: false,
     });
   },
 
@@ -143,7 +143,7 @@ export const createApiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => (
   async resetIppToken(): Promise<void> {
     await fetch('/api/resettoken/', {
       method: 'POST',
-      gutenbergExpectJson: false,
+      gutenbergRequireNonEmpty: false,
     });
   },
 
