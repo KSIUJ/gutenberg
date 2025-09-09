@@ -71,9 +71,11 @@ export default defineNuxtPlugin({
         const isAuthError = response.status === 401 || response.status === 403;
         if (!isAuthError) return;
         // To distinguish between unauthenticated requests and missing permissions,
-        // Gutenberg sets a custom X-Reason header for error responses.
-        const reason = response.headers.get('X-Reason');
-        if (reason !== 'NotAuthenticated' && reason !== 'AuthenticationFailed') return;
+        // Gutenberg sets a `kind` JSON field in error responses.
+        if (response._data === null || typeof response._data !== 'object') return;
+        if (!('kind' in response._data) || typeof response._data.kind !== 'string') return;
+        const { kind } = response._data;
+        if (kind !== 'NotAuthenticated' && kind !== 'AuthenticationFailed') return;
 
         if (!('$auth' in nuxtApp)) {
           console.warn('The auth plugin was not available in API plugin\'s onResponseError handler');
@@ -81,7 +83,7 @@ export default defineNuxtPlugin({
         }
 
         if (nuxtApp.$auth.me.value === Unauthenticated) {
-          console.warn(`Got ${reason} auth error in API plugin's onResponseError handler, `
+          console.warn(`Got ${kind} auth error in API plugin's onResponseError handler, `
             + 'but `$auth.me` was already `Unauthenticated`');
           return;
         }
