@@ -14,4 +14,4 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-ksi-oidc-django = { git = "https://github.com/KSIUJ/ksi-oidc-python", subdirectory="django" }
+ksi-oidc-django = { git = "https://github.com/KSIUJ/ksi-oidc-python", subdirectory="django", tag="django-v1.0.0-beta.1" }
