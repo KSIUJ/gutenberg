@@ -39,3 +39,9 @@ if settings.DEBUG:
                           document_root=settings.MEDIA_ROOT)
 
 admin.site.site_header = 'Gutenberg'
+
+# NOTE: These handlers are not used when `DEBUG = True`.
+handler400 = 'common.views.bad_request'
+handler403 = 'common.views.permission_denied'
+handler404 = 'common.views.page_not_found'
+handler500 = 'common.views.server_error'
