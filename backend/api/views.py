@@ -7,16 +7,15 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.debug import sensitive_post_parameters
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, exceptions
 from rest_framework.decorators import action
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.exceptions import ParseError, PermissionDenied, NotFound
-from api.exceptions import UnsupportedDocument, InvalidStatus
 from rest_framework.views import APIView
 
+from api.exceptions import UnsupportedDocument, InvalidStatus
 from api.serializers import GutenbergJobSerializer, PrinterSerializer, PrintRequestSerializer, UserInfoSerializer, \
     CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer, LoginSerializer
 from common.models import User
@@ -65,7 +64,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
                                                           printer_id=serializer.validated_data['printer'])
         if not printer_with_perms:
-            raise NotFound("Selected printer does not exist")
+            raise exceptions.NotFound("Selected printer does not exist")
 
         try:
             job = self._create_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
@@ -105,7 +104,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
                                                           printer_id=serializer.validated_data['printer'])
         if not printer_with_perms:
-            raise NotFound("Selected printer does not exist")
+            raise exceptions.NotFound("Selected printer does not exist")
         job = self._create_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
         return Response(self.get_serializer(job).data)
 
@@ -193,9 +192,9 @@ class LoginApiView(APIView):
         password = serializer.validated_data['password']
         user = authenticate(username=username, password=password)
         if not user:
-            raise PermissionDenied("Invalid username or password")
+            raise exceptions.PermissionDenied("Invalid username or password")
         if not user.is_active:
-            raise PermissionDenied("Account is not active")
+            raise exceptions.PermissionDenied("Account is not active")
         login(request, user)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
