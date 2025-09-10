@@ -205,3 +205,13 @@ class LoginApiView(APIView):
         """
         rotate_token(request)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+class NotFoundView(APIView):
+    def _handle(self, request, path):
+        raise exceptions.NotFound(f'API route "{path}" not found')
+
+    get = _handle
+    post = _handle
+    put = _handle
+    patch = _handle
+    delete = _handle

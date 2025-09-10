@@ -1,6 +1,10 @@
+import logging
+
 from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
 from django.http import Http404 as DjangoHttp404, JsonResponse
 from rest_framework import exceptions
+
+logger = logging.getLogger('gutenberg.api.exceptions')
 
 
 def _get_exception_kind(exc):
@@ -39,11 +43,12 @@ def custom_exception_handler(exc, context):
         exc = exceptions.PermissionDenied(*exc.args)
 
     if not isinstance(exc, exceptions.APIException):
+        logger.error("API view handler returned an unexpected exception", exc_info=exc)
         # Returns a generic 500 response to avoid leaking internal data unintentionally.
         return JsonResponse(
             {
                 'kind': 'Other',
-                'message': 'An internal server error occurred.',
+                'message': 'An internal server error occurred',
                 'detail': None,
             },
             status=500,
