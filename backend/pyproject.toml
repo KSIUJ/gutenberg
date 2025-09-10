@@ -10,8 +10,8 @@ dependencies = [
     "djangorestframework>=3.16.1",
     "python-magic>=0.4.27",
     "redis>=6.4.0",
-    "ksi-oidc-django>=1.0.0-beta.0",
+    "ksi-oidc-django>=1.0.0",
 ]
 
 [tool.uv.sources]
-ksi-oidc-django = { git = "https://github.com/KSIUJ/ksi-oidc-python", subdirectory="django", tag="django-v1.0.0-beta.1" }
+ksi-oidc-django = { git = "https://github.com/KSIUJ/ksi-oidc-python", subdirectory="django", tag="django-v1.0.0" }
