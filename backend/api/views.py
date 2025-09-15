@@ -57,23 +57,6 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         job.refresh_from_db()
         return Response(self.get_serializer(job).data)
 
-    @action(detail=False, methods=['post'], name='Submit new job')
-    def submit(self, request):
-        serializer = PrintRequestSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
-                                                          printer_id=serializer.validated_data['printer'])
-        if not printer_with_perms:
-            raise exceptions.NotFound("Selected printer does not exist")
-
-        try:
-            job = self._create_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
-            self._upload_artefact(job, **serializer.validated_data)
-            self._run_job(job)
-        except UnsupportedDocumentError as ex:
-            raise UnsupportedDocument(str(ex))
-        return Response(self.get_serializer(job).data)
-
     @action(detail=True, methods=['post'], name='Upload artefact')
     def upload_artefact(self, request, pk=None):
         job = self.get_object()
@@ -92,8 +75,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=['post'], name='Run job')
     def run_job(self, request, pk=None):
         job = self.get_object()
-        if job.status != JobStatus.INCOMING:
-            raise InvalidStatus("Invalid job status for this request", additional_info="current status: {}".format(job.status))
+        self._validate_properties(job, job.printer, job.properties)
         self._run_job(job)
         return Response(self.get_serializer(job).data)
 
@@ -107,14 +89,22 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             raise exceptions.NotFound("Selected printer does not exist")
         job = self._create_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
         return Response(self.get_serializer(job).data)
+    
+    @action(detail=True, methods=['get'], name='Validate job properties')
+    def validate_properties(self, request, pk=None):
+        job = self.get_object()
+        printer = job.printer
+        properties = job.properties
+        self._validate_properties(job, printer, properties)
+        return Response(self.get_serializer(job).data)
 
     def _create_printing_job(self, printer_with_perms,
                              copies: int, pages_to_print: str,
                              color: bool, two_sides: str, fit_to_page: bool, **_):
         job = GutenbergJob.objects.create(name='webrequest', job_type=JobType.PRINT, status=JobStatus.INCOMING,
                                           owner=self.request.user, printer=printer_with_perms)
-        color = color if printer_with_perms.color_allowed else False
-        two_sides = two_sides if printer_with_perms.duplex_supported else TwoSidedPrinting.ONE_SIDED
+        #color = color if printer_with_perms.color_allowed else False
+        #two_sides = two_sides if printer_with_perms.duplex_supported else TwoSidedPrinting.ONE_SIDED
         PrintingProperties.objects.create(color=color, copies=copies, two_sides=two_sides,
                                           pages_to_print=pages_to_print, job=job, fit_to_page=fit_to_page)
         return job
@@ -133,6 +123,18 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         print_file.delay(job.id)
         logger.info('User %s submitted job: %s', self.request.user.username, job.id)
         return job
+    
+    def _validate_properties(self, job, printer, properties):
+        if job.status != JobStatus.INCOMING:
+            raise InvalidStatus("Invalid job status for this request", additional_info="current status: {}".format(job.status))
+        printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
+                                                          printer_id=printer.id)
+        if not printer_with_perms:
+            raise exceptions.NotFound("Selected printer does not exist")
+        if properties.color and not printer_with_perms.color_allowed:
+            raise exceptions.ValidationError("Color printing is not allowed on the selected printer")
+        if properties.two_sides != TwoSidedPrinting.ONE_SIDED and not printer_with_perms.duplex_supported:
+            raise exceptions.ValidationError("Two-sided printing is not supported on the selected printer")
 
 
 class PrinterViewSet(viewsets.ReadOnlyModelViewSet):

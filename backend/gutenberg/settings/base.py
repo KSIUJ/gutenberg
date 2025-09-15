@@ -72,7 +72,8 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 AUTH_USER_MODEL = 'common.User'
 
 REST_FRAMEWORK = {
-    'EXCEPTION_HANDLER': 'api.exceptions.custom_exception_handler'
+    #disabled for testing purposes, enable later
+    #'EXCEPTION_HANDLER': 'api.exceptions.custom_exception_handler'
 }
 
 ROOT_URLCONF = 'gutenberg.urls'
