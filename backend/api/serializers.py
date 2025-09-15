@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from common.models import User
-from control.models import GutenbergJob, Printer, TwoSidedPrinting, validate_pages_to_print
+from control.models import GutenbergJob, Printer, TwoSidedPrinting, validate_pages_to_print, JobArtefact
 from printing.converter import SUPPORTED_EXTENSIONS
 
 
@@ -46,6 +46,13 @@ class UploadJobArtefactRequestSerializer(serializers.Serializer):
 
 class DeleteJobArtefactRequestSerializer(serializers.Serializer):
     artefact_id = serializers.IntegerField(required=True)
+    
+class ChangeArtefactOrderRequestSerializer(serializers.Serializer):
+    new_order = serializers.ListField(
+        child=serializers.IntegerField(), 
+        allow_empty=False,
+        required=True
+    )
 
 class UserInfoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -56,3 +63,11 @@ class UserInfoSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField(required=True)
     password = serializers.CharField(required=True)
+
+class JobArtefactSerializer(serializers.ModelSerializer):
+    # Return the file URL
+    file = serializers.FileField(read_only=True)
+
+    class Meta:
+        model = JobArtefact
+        fields = ['id', 'file', 'artefact_type', 'mime_type', 'document_number']

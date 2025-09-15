@@ -135,6 +135,7 @@ class GutenbergJob(models.Model):
     date_created = models.DateTimeField(auto_now_add=True)
     date_processed = models.DateTimeField(null=True, blank=True)
     date_finished = models.DateTimeField(null=True, blank=True)
+    next_document_number = models.IntegerField(default=1)
 
     def __str__(self):
         return "{} - {} - {} - {}".format(self.date_created, self.job_type, self.name, self.owner)
@@ -161,6 +162,8 @@ class JobArtefact(models.Model):
     file = models.FileField(upload_to='artefacts/%Y/%m/%d/')
     artefact_type = models.CharField(max_length=4, default=JobArtefactType.SOURCE, choices=JobArtefactType.choices)
     mime_type = models.CharField(max_length=100, default='application/octet-stream')
+    #document ordering starts from 1, 0 means something went wrong
+    document_number = models.IntegerField(default=0)
 
     def __str__(self):
         return self.file.name

@@ -17,7 +17,8 @@ from rest_framework.views import APIView
 
 from api.exceptions import UnsupportedDocument, InvalidStatus
 from api.serializers import GutenbergJobSerializer, PrinterSerializer, PrintRequestSerializer, UserInfoSerializer, \
-    CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer, LoginSerializer
+    CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer, LoginSerializer, \
+        DeleteJobArtefactRequestSerializer, ChangeArtefactOrderRequestSerializer, JobArtefactSerializer
 from common.models import User
 from control.models import GutenbergJob, Printer, JobStatus, PrintingProperties, TwoSidedPrinting, JobArtefact, \
     JobArtefactType, JobType
@@ -41,6 +42,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = GutenbergJob.objects.all()
     pagination_class = LargeResultsSetPagination
+    next_number = 1
 
     def get_queryset(self):
         user = self.request.user
@@ -66,8 +68,6 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         serializer.is_valid(raise_exception=True)
         try:
             self._upload_artefact(job, **serializer.validated_data)
-            if serializer.validated_data['last'] == True:
-                self._run_job(job)
         except UnsupportedDocumentError as ex:
             raise UnsupportedDocument(str(ex))
         return Response(self.get_serializer(job).data)
@@ -84,6 +84,19 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         if not artefact:
             raise exceptions.NotFound("Selected artefact does not exist")
         artefact.delete()
+        return Response(self.get_serializer(job).data)
+    
+    @action(detail=True, methods=['post'], name='Change artefact order')
+    def change_artefact_order(self, request, pk=None):
+        job = self.get_object()
+        if job.status != JobStatus.INCOMING:
+            raise InvalidStatus("Invalid job status for this request", additional_info="current status: {}".format(job.status))
+        serializer = ChangeArtefactOrderRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            job = self._change_order(**serializer.validated_data)
+        except exceptions.ValidationError as ex:
+            raise ex
         return Response(self.get_serializer(job).data)
 
     @action(detail=True, methods=['post'], name='Run job')
@@ -129,6 +142,13 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         self._validate_properties(printer.id, properties)
         return Response(self.get_serializer(job).data)
 
+    @action(detail=True, methods=['get'], name='List artefacts')
+    def artefacts(self, request, pk=None):
+        job = self.get_object()
+        artefacts = job.artefacts.all().order_by('document_number')
+        serializer = JobArtefactSerializer(artefacts, many=True, context={'request': request})
+        return Response(serializer.data)
+
     def _create_printing_job(self, printer_with_perms,
                              copies: int, pages_to_print: str,
                              color: bool, two_sides: str, fit_to_page: bool, **_):
@@ -153,12 +173,28 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         return job
 
     def _upload_artefact(self, job, file, **_):
-        artefact = JobArtefact.objects.create(job=job, artefact_type=JobArtefactType.SOURCE, file=file)
+        artefact = JobArtefact.objects.create(job=job, artefact_type=JobArtefactType.SOURCE, file=file, document_number=job.next_document_number)
+        job.next_document_number += 1
+        job.save()
         file_type = detect_file_format(artefact.file.path)
         if file_type not in SUPPORTED_FILE_FORMATS:
             raise UnsupportedDocumentError("Unsupported file type: {}".format(file_type))
         artefact.mime_type = file_type
         artefact.save()
+        
+    def _change_order(self, new_order):
+        job = self.get_object()
+        artefacts = list(job.artefacts.all())
+        artefact_dict = {artefact.id: artefact for artefact in artefacts}
+        if set(new_order) != set(artefact_dict.keys()):
+            raise exceptions.ValidationError("New order does not match existing artefacts")
+        for index, artefact_id in enumerate(new_order):
+            artefact = artefact_dict[artefact_id]
+            artefact.document_number = index + 1
+            artefact.save()
+        job.next_document_number = len(new_order) + 1
+        job.save()
+        return job
 
     def _run_job(self, job):
         job.status = JobStatus.PENDING
