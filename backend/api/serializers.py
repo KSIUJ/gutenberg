@@ -43,8 +43,9 @@ class CreatePrintJobRequestSerializer(serializers.Serializer):
 
 class UploadJobArtefactRequestSerializer(serializers.Serializer):
     file = serializers.FileField(allow_empty_file=False, required=True)
-    last = serializers.BooleanField(default=False)
 
+class DeleteJobArtefactRequestSerializer(serializers.Serializer):
+    artefact_id = serializers.IntegerField(required=True)
 
 class UserInfoSerializer(serializers.ModelSerializer):
     class Meta:

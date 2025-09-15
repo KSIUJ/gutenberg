@@ -71,11 +71,25 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         except UnsupportedDocumentError as ex:
             raise UnsupportedDocument(str(ex))
         return Response(self.get_serializer(job).data)
+    
+    @action(detail=True, methods=['delete'], name='Delete artefact')
+    def delete_artefact(self, request, pk=None):
+        job = self.get_object()
+        if job.status != JobStatus.INCOMING:
+            raise InvalidStatus("Invalid job status for this request", additional_info="current status: {}".format(job.status))
+        serializer = DeleteJobArtefactRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        artefact_id = serializer.validated_data['artefact_id']
+        artefact = JobArtefact.objects.filter(id=artefact_id, job=job).first()
+        if not artefact:
+            raise exceptions.NotFound("Selected artefact does not exist")
+        artefact.delete()
+        return Response(self.get_serializer(job).data)
 
     @action(detail=True, methods=['post'], name='Run job')
     def run_job(self, request, pk=None):
         job = self.get_object()
-        self._validate_properties(job, job.printer, job.properties)
+        self._validate_properties(job.printer, job.properties)
         self._run_job(job)
         return Response(self.get_serializer(job).data)
 
@@ -90,12 +104,29 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         job = self._create_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
         return Response(self.get_serializer(job).data)
     
+    @action(detail=True, methods=['post'], name='Change job properties')
+    def change_properties(self, request, pk=None):
+        job = self.get_object()
+        serializer = CreatePrintJobRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self._validate_properties(serializer.validated_data['printer'], PrintingProperties(
+            color=serializer.validated_data['color'],
+            copies=serializer.validated_data['copies'],
+            two_sides=serializer.validated_data['two_sides'],
+            pages_to_print=serializer.validated_data['pages_to_print'],
+            fit_to_page=serializer.validated_data['fit_to_page'],
+        ))
+        printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
+                                                          printer_id=serializer.validated_data['printer'])
+        job = self._change_properties(printer_with_perms=printer_with_perms, **serializer.validated_data)
+        return Response(self.get_serializer(job).data)
+    
     @action(detail=True, methods=['get'], name='Validate job properties')
     def validate_properties(self, request, pk=None):
         job = self.get_object()
         printer = job.printer
         properties = job.properties
-        self._validate_properties(job, printer, properties)
+        self._validate_properties(printer.id, properties)
         return Response(self.get_serializer(job).data)
 
     def _create_printing_job(self, printer_with_perms,
@@ -107,6 +138,18 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         #two_sides = two_sides if printer_with_perms.duplex_supported else TwoSidedPrinting.ONE_SIDED
         PrintingProperties.objects.create(color=color, copies=copies, two_sides=two_sides,
                                           pages_to_print=pages_to_print, job=job, fit_to_page=fit_to_page)
+        return job
+    
+    def _change_properties(self, printer_with_perms, copies: int, pages_to_print: str,
+                           color: bool, two_sides: str, fit_to_page: bool, **_):
+        job = self.get_object()
+        job.printer = printer_with_perms
+        job.properties.color = color
+        job.properties.copies = copies
+        job.properties.two_sides = two_sides
+        job.properties.pages_to_print = pages_to_print
+        job.properties.fit_to_page = fit_to_page
+        job.properties.save()
         return job
 
     def _upload_artefact(self, job, file, **_):
@@ -124,11 +167,12 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         logger.info('User %s submitted job: %s', self.request.user.username, job.id)
         return job
     
-    def _validate_properties(self, job, printer, properties):
+    def _validate_properties(self, printer:int , properties):
+        job = self.get_object()
         if job.status != JobStatus.INCOMING:
             raise InvalidStatus("Invalid job status for this request", additional_info="current status: {}".format(job.status))
         printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
-                                                          printer_id=printer.id)
+                                                          printer_id=printer)
         if not printer_with_perms:
             raise exceptions.NotFound("Selected printer does not exist")
         if properties.color and not printer_with_perms.color_allowed:
