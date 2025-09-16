@@ -3,6 +3,7 @@
 # Admin documentation
 - [Instance setup](admin/setup.md)
 - [Printer management](admin/printer-management.md)
+- [OpenID Connect](admin/openid-connect.md)
 
 # API documentation
 - [IPP and REST APIs overview](api/overview.md)

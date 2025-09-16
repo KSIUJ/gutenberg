@@ -18,10 +18,12 @@ from django.conf.urls import include
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path
+from ksi_oidc_django.views import OidcLoginView
 
 import api.urls
 import ipp.urls
 import printing.urls
+from printing.views import webapp_login
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -30,8 +32,9 @@ urlpatterns = [
     path('ipp/', include(ipp.urls)),
     path('api/', include(api.urls)),
 
-    path('oidc/', include('mozilla_django_oidc.urls')),
-    path('api-auth/', include('rest_framework.urls'))
+    path('login/', OidcLoginView.as_view(fallback_view=webapp_login), name='login'),
+    path('oidc/', include('ksi_oidc_django.urls')),
+    path('api-auth/', include('rest_framework.urls')),
 ]
 
 if settings.DEBUG:
