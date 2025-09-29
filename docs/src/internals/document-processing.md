@@ -6,7 +6,7 @@
     - Optionally convert to PDF with a page size taken from the document data
     - Determine the orientation of the document data
 2. Determine the Input Page size based on the available Media Sheet size and the settings:
-    - [`number-up`]``
+    - [`number-up`]
     - [`orientation-requested`] or the orientation of the document data
     - [`imposition-template`]
     - optionally [`image-orientation`]
@@ -15,10 +15,10 @@
 4. Filter pages and add required blank pages to the Input Pages:
     - [`page-ranges`]
     - [`sides`] and [`imposition-template`] determine the required blank page count
-5. Place the Input Pages on the Final Pages:
+5. Place the Input Pages on the Final Pages and convert to a standard PDF version:
     - [`number-up`]
     - as if using [`presentation-direction-number-up`] with the value of `toright-tobottom`
-6. Place the Final Pages on the Media Sheet Pages (rotate if necessary):
+6. Place the Final Pages on the Media Sheet pages (rotate if necessary):
     - [`imposition-template`]
 
 

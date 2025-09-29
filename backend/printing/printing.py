@@ -2,6 +2,7 @@ import datetime
 import logging
 import os
 import shutil
+import subprocess
 import tempfile
 from typing import Optional
 
@@ -15,7 +16,7 @@ from control.models import GutenbergJob, TwoSidedPrinting, JobStatus, PrinterTyp
     JobArtefact, JobArtefactType
 from printing.backends import DisabledPrinter, LocalCupsPrinter
 from printing.converter import detect_file_format, get_converter
-from printing.postprocess import auto_postprocess
+from printing.postprocess import FinalPageProcessor
 from printing.processing.imposition_templates import StandardImpositionTemplate
 from printing.processing.pages import PageSize
 from printing.utils import JobCanceledException, TASK_TIMEOUT_S, DEFAULT_IPP_FORMAT, \
@@ -103,19 +104,26 @@ def print_file(job_id):
                     preprocess_result = conv.preprocess(tmp_input)
                     handle_cancellation(job)
 
-                    imposition_template = StandardImpositionTemplate()
+                    imposition_template = StandardImpositionTemplate(media_size=PageSize(width_mm=210, height_mm=297), work_dir=artefact_tmpdir)
                     # TODO: Support `orientation_requested` IPP attribute
                     input_page_orientation = preprocess_result.orientation
-                    # TODO: When n-up is supported, Final Page and Input Page size might not be the same
-                    input_page_size = imposition_template.get_final_page_sizes(PageSize(width_mm=210, height_mm=297)).get(input_page_orientation)
+                    # TODO: Use the N-up setting
+                    final_page_processor = FinalPageProcessor(artefact_tmpdir, 16, imposition_template.get_final_page_sizes(), input_page_orientation)
 
-                    output_file = conv.create_input_pages(preprocess_result, input_page_size)
+                    input_pages_file = conv.create_input_pages(preprocess_result, final_page_processor.input_page_size)
                     handle_cancellation(job)
 
-                    postprocess_out, num_pages = auto_postprocess(output_file, conv.output_type, artefact_tmpdir, job)
-                    shutil.copyfile(postprocess_out, os.path.join(job_tmpdir, f'{idx:03}_{os.path.basename(postprocess_out)}'))
-                    sum_num_pages += num_pages
+                    # TODO: Filter pages in create_final_pages or earlier in converter
+                    final_pages_file = final_page_processor.create_final_pages(input_pages_file)
                     handle_cancellation(job)
+
+                    output_file = imposition_template.create_output_pdf(final_pages_file, final_page_processor.final_page_orientation)
+
+                    shutil.copyfile(output_file, os.path.join(job_tmpdir, f'{idx:03}_output.pdf'))
+                    sum_num_pages += 1 # TODO: Fix
+                    handle_cancellation(job)
+
+                    subprocess.run(["dolphin", artefact_tmpdir])
             job.status = JobStatus.PRINTING
             job.status_reason = ''
             job.date_processed = timezone.now()

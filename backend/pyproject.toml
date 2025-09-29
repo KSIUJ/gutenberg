@@ -9,6 +9,7 @@ dependencies = [
     "django==5.2.4",
     "djangorestframework==3.16.0",
     "mozilla-django-oidc==4.0.1",
+    "pypdf>=6.1.1",
     "python-magic==0.4.27",
     "redis==6.2.0",
 ]

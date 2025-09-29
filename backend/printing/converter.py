@@ -58,7 +58,6 @@ class Converter(ABC):
 class SandboxConverter(Converter, ABC):
     def run_in_sandbox(self, command: List[str]) -> str:
         sandboxed_command = [SANDBOX_PATH, self.work_dir] + command
-        print(" ".join(sandboxed_command))
         return subprocess.check_output(
             sandboxed_command,
             text=True,
@@ -120,7 +119,7 @@ class ResizingConverter(SandboxConverter, ABC):
 
 
     def create_input_pages(self, preprocess_result: "ResizingConverter.PreprocessResult", input_page_size: PageSize) -> str:
-        out = os.path.join(self.work_dir, 'out.pdf')
+        out = os.path.join(self.work_dir, 'input_pages.pdf')
         self.run_in_sandbox([
             'gs', '-sDEVICE=pdfwrite', '-dCompatibilityLevel=1.4',
             '-dNOPAUSE', '-dBATCH', '-dSAFER',
@@ -150,7 +149,7 @@ class ImageConverter(SandboxConverter):
         return ImageConverter.PreprocessResult(orientation, input_file)
 
     def create_input_pages(self, preprocess_result: "ImageConverter.PreprocessResult", input_page_size: PageSize) -> str:
-        out = os.path.join(self.work_dir, 'out.pdf')
+        out = os.path.join(self.work_dir, 'input_pages.pdf')
 
         pixels_per_inch = 300
         pixels_per_mm = pixels_per_inch / 25.4

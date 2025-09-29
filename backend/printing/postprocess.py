@@ -1,12 +1,16 @@
 import os
-import re
 import subprocess
-import sys
+from math import log2
+from typing import List
 
-from control.models import GutenbergJob, JobStatus
+from pypdf import PdfReader, PdfWriter, Transformation
+
+from control.models import JobStatus
+from printing.processing.pages import PageSize, PageSizes, PageOrientation
 from printing.utils import SANDBOX_PATH, JobCanceledException, TASK_TIMEOUT_S
 
 
+# TODO: Use this
 def _no_pages_cancel(job):
     job.status = JobStatus.CANCELED
     job.status_reason = 'No pages to print. Check your pages filter expression.'
@@ -14,77 +18,92 @@ def _no_pages_cancel(job):
     raise JobCanceledException()
 
 
-def postprocess_postscript(input_file: str, work_dir: str, job: GutenbergJob):
-    out = os.path.join(work_dir, 'final.pdf')
-    subprocess.check_output([SANDBOX_PATH, work_dir, 'gs', '-sDEVICE=pdfwrite', '-dNOPAUSE',
-                             '-dBATCH', '-dSAFER', '-dCompatibilityLevel=1.4',
-                             '-sOutputFile=' + out, input_file], stderr=subprocess.STDOUT, timeout=TASK_TIMEOUT_S)
+class FinalPageProcessor:
+    """
+    A utility for creating Final Pages from Input Pages by applying page filter and n-up.
 
-    properties = job.properties
-    if properties.pages_to_print:
-        new_out = os.path.join(work_dir, 'post.pdf')
-        pages = properties.pages_to_print.split(',')
-        try:
-            subprocess.check_output([SANDBOX_PATH, work_dir, 'pdftk', out, 'cat', *pages, 'output', new_out],
-                                    stderr=subprocess.STDOUT, timeout=TASK_TIMEOUT_S)
-        except subprocess.CalledProcessError as ex:
-            if b'Error: Range start page number exceeds size of PDF' in ex.output:
-                _no_pages_cancel(job)
-            raise ex
-        out = new_out
+    Finds the Input Page size based on the n-up and Input Page orientation settings and the Final Page sizes
+    for the selected imposition template.
 
-    meta = subprocess.check_output([SANDBOX_PATH, work_dir, 'pdftk', out, 'dump_data_annots'],
-                                   stderr=subprocess.STDOUT, timeout=TASK_TIMEOUT_S).decode('utf-8', errors='ignore')
-    num_pages = int(re.match(r'^NumberOfPages:\s+(\d+)', meta).group(1))
+    Input Page orientation is not necessarily the orientation of the pages in the input file (e.g., PDF).
+    The pages from the input file will be positioned on the Input Pages without rotating it.
+    """
 
-    return out, num_pages
+    work_dir: str
+    final_page_orientation: PageOrientation
+    final_page_size: PageSize
+    input_page_size: PageSize
+    rows: int
+    columns: int
 
+    def __init__(self, work_dir: str, n: int, final_sizes: PageSizes, input_orientation: PageOrientation):
+        self.work_dir = work_dir
 
-PWG_PAGE_HEADER = b'PwgRaster\0'
-CHUNK_SIZE = 100000
+        divide_count = round(log2(n))
+        if 2 ** divide_count != n:
+            raise ValueError("n must be a power of 2")
 
+        self.final_page_orientation = input_orientation.rotate() if divide_count % 2 == 1 else input_orientation
 
-def postprocess_pwg(input_file: str, work_dir: str, job: GutenbergJob):
-    out = os.path.join(work_dir, 'final.pwg')
-    properties = job.properties
-    if properties.pages_to_print:
-        ranges = [range(int(r[0]), int(r[0]) + 1) if len(r) == 1 else range(int(r[0]), int(r[1]) + 1)
-                  for r in [x.split('-') for x in properties.pages_to_print.split(',')]]
-    else:
-        ranges = [range(1, sys.maxsize)]
-    page_counter = 0
-    saved_pages = -1  # we save the file header first as a page, hence -1.
-    last = False
-    save_current = True
-    # Count and filter pages
-    with open(input_file, 'rb') as input_fd, open(out, 'xb') as output_fd:
-        buff = bytearray()
-        while not last:
-            rd = input_fd.read(CHUNK_SIZE)
-            last = len(rd) < CHUNK_SIZE
-            buff += rd
-            while True:
-                page_header = buff.find(PWG_PAGE_HEADER, 1)
-                if page_header < 0:
-                    break
-                if save_current:
-                    output_fd.write(buff[:page_header])
-                    saved_pages += 1
-                buff = buff[page_header:]
-                page_counter += 1
-                save_current = any(page_counter in r for r in ranges)
-        if save_current:
-            if buff:
-                saved_pages += 1
-            output_fd.write(buff)
-    if saved_pages == 0:
-        _no_pages_cancel(job)
-    return out, saved_pages
+        short_divide_count = divide_count // 2
+        long_divide_count = divide_count - short_divide_count
 
+        if self.final_page_orientation == PageOrientation.PORTRAIT:
+            width_divide_count = short_divide_count
+            height_divide_count = long_divide_count
+        else:
+            width_divide_count = long_divide_count
+            height_divide_count = short_divide_count
 
-def auto_postprocess(input_file: str, input_type: str, work_dir: str, job: GutenbergJob):
-    return {
-        'application/pdf': postprocess_postscript,
-        'application/postscript': postprocess_postscript,
-        'image/pwg-raster': postprocess_pwg,
-    }[input_type](input_file, work_dir, job)
+        self.final_page_size = final_sizes.get(self.final_page_orientation)
+        self.columns = 2 ** width_divide_count
+        self.rows = 2 ** height_divide_count
+        self.input_page_size = PageSize(
+            width_mm=self.final_page_size.width_mm / self.columns,
+            height_mm=self.final_page_size.height_mm / self.rows,
+        )
+
+    def run_in_sandbox(self, command: List[str]) -> str:
+        sandboxed_command = [SANDBOX_PATH, self.work_dir] + command
+        print("Running command", " ".join(sandboxed_command))
+        return subprocess.check_output(
+            sandboxed_command,
+            text=True,
+            stderr=subprocess.STDOUT,
+            timeout=TASK_TIMEOUT_S,
+        )
+
+    def create_final_pages(self, input_pages_file: str) -> str:
+        out = os.path.join(self.work_dir, 'final_pages.pdf')
+        reader = PdfReader(input_pages_file)
+        writer = PdfWriter()
+
+        next_row = 0
+        next_col = 0
+        dest_page = None
+
+        for page in reader.pages:
+            if next_row == 0 and next_col == 0:
+                dest_page = writer.add_blank_page(
+                    width=self.final_page_size.width_pt(),
+                    height=self.final_page_size.height_pt(),
+                )
+
+            dest_page.merge_transformed_page(
+                page,
+                Transformation().translate(
+                    next_col * self.input_page_size.width_pt(),
+                    next_row * self.input_page_size.height_pt(),
+                ),
+            )
+
+            next_col += 1
+            if next_col == self.columns:
+                next_row += 1
+                next_col = 0
+            if next_row == self.rows:
+                next_row = 0
+
+        with open(out, "xb") as output_file:
+            writer.write(output_file)
+        return out
