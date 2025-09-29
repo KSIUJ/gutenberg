@@ -1,7 +1,8 @@
 from rest_framework import serializers
 
 from common.models import User
-from control.models import GutenbergJob, Printer, TwoSidedPrinting, validate_pages_to_print, validate_n_up
+from control.models import GutenbergJob, Printer, TwoSidedPrinting, validate_pages_to_print, validate_n_up, \
+    ImpositionTemplate
 from printing.converter import SUPPORTED_EXTENSIONS
 
 
@@ -31,6 +32,7 @@ class PrintRequestSerializer(serializers.Serializer):
     color = serializers.BooleanField(default=False)
     fit_to_page = serializers.BooleanField(default=True)
     n_up = serializers.IntegerField(default=1, validators=[validate_n_up])
+    imposition_template = serializers.ChoiceField(choices=ImpositionTemplate.choices, default=ImpositionTemplate.NONE)
 
 
 class CreatePrintJobRequestSerializer(serializers.Serializer):
@@ -41,6 +43,7 @@ class CreatePrintJobRequestSerializer(serializers.Serializer):
     color = serializers.BooleanField(default=False)
     fit_to_page = serializers.BooleanField(default=True)
     n_up = serializers.IntegerField(default=1, validators=[validate_n_up])
+    imposition_template = serializers.ChoiceField(choices=ImpositionTemplate.choices, default=ImpositionTemplate.NONE)
 
 
 class UploadJobArtefactRequestSerializer(serializers.Serializer):

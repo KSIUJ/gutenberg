@@ -7,7 +7,7 @@ from printing.processing.pages import PageSize, PageSizes, PageOrientation
 from printing.utils import SANDBOX_PATH, TASK_TIMEOUT_S
 
 
-class BaseImpositionTemplate(ABC):
+class BaseImpositionProcessor(ABC):
     media_size: PageSize
 
     def __init__(self, media_size: PageSize):
@@ -35,7 +35,7 @@ class BaseImpositionTemplate(ABC):
 
         pass
 
-class SandboxImpositionTemplate(BaseImpositionTemplate, ABC):
+class SandboxImpositionProcessor(BaseImpositionProcessor, ABC):
     work_dir: str
 
     def __init__(self, media_size: PageSize, work_dir: str):
@@ -52,7 +52,7 @@ class SandboxImpositionTemplate(BaseImpositionTemplate, ABC):
         )
 
 
-class StandardImpositionTemplate(SandboxImpositionTemplate):
+class StandardImpositionProcessor(SandboxImpositionProcessor):
     def get_final_page_sizes(self) -> PageSizes:
         return PageSizes(
             portrait=self.media_size,
@@ -72,7 +72,7 @@ class StandardImpositionTemplate(SandboxImpositionTemplate):
         return out
 
 
-class BookletImpositionTemplate(SandboxImpositionTemplate):
+class BookletImpositionProcessor(SandboxImpositionProcessor):
     def get_final_page_sizes(self) -> PageSizes:
         landscape_size = PageSize(width_mm=self.media_size.width_mm, height_mm=self.media_size.height_mm/2)
         return PageSizes(
@@ -82,3 +82,11 @@ class BookletImpositionTemplate(SandboxImpositionTemplate):
 
     def create_output_pdf(self, final_pages_path: str, final_page_orientation: PageOrientation) -> str:
         raise NotImplementedError
+
+
+def get_imposition_processor(imposition_template: str, media_size: PageSize, work_dir: str) -> BaseImpositionProcessor:
+    if imposition_template == "none":
+        return StandardImpositionProcessor(media_size, work_dir)
+    if imposition_template == "booklet":
+        return BookletImpositionProcessor(media_size, work_dir)
+    raise ValueError(f"Unknown imposition template: {imposition_template}")

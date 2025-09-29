@@ -138,6 +138,21 @@
           aria-labelledby="n-up-select"
         />
 
+        <label
+          id="imposition-template-select"
+          class="text-label px-form"
+        >Imposition template</label>
+        <p-select-button
+          v-model="jobCreator.impositionTemplate"
+          :options="impositionTemplateOptions"
+          option-value="value"
+          data-key="value"
+          option-label="label"
+          :allow-empty="false"
+          fluid
+          aria-labelledby="imposition-template-select"
+        />
+
         <h2 class="mt-8 text-header ">
           Printing options
         </h2>
@@ -302,6 +317,11 @@ const colorOptions = computed(() => [
 // ];
 
 const nUpOptions = [1, 2, 4, 8, 16, 32];
+
+const impositionTemplateOptions = [
+  { value: 'none' as ImpositionTemplate, label: 'None' },
+  { value: 'booklet' as ImpositionTemplate, label: 'Booklet' },
+];
 
 const onFileSelect = (event: FileUploadSelectEvent) => {
   jobCreator.addFiles(event.files);

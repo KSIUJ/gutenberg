@@ -36,6 +36,11 @@ class PrinterType(models.TextChoices):
     LOCAL_CUPS = 'LP', _('local cups')
 
 
+class ImpositionTemplate(models.TextChoices):
+    NONE = 'none', _('none'),
+    BOOKLET = 'booklet', _('booklet')
+
+
 # class ScannerType(models.TextChoices):
 #     DISABLED = 'NA', _('disabled')
 #     LOCAL_SCANIMAGE = 'SC', _('local scanimage')
@@ -191,3 +196,4 @@ class PrintingProperties(models.Model):
     job = models.OneToOneField(GutenbergJob, on_delete=models.CASCADE, related_name='properties')
     fit_to_page = models.BooleanField(default=True)
     n_up = models.IntegerField(default=1, validators=[validate_n_up])
+    imposition_template = models.CharField(default=ImpositionTemplate.NONE, choices=ImpositionTemplate.choices)

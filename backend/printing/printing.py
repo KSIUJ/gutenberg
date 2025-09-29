@@ -17,7 +17,7 @@ from control.models import GutenbergJob, TwoSidedPrinting, JobStatus, PrinterTyp
 from printing.backends import DisabledPrinter, LocalCupsPrinter
 from printing.converter import detect_file_format, get_converter
 from printing.postprocess import FinalPageProcessor, NoPagesToPrintException
-from printing.processing.imposition_templates import StandardImpositionTemplate
+from printing.processing.imposition import get_imposition_processor
 from printing.processing.pages import PageSize
 from printing.utils import JobCanceledException, TASK_TIMEOUT_S, DEFAULT_IPP_FORMAT, \
     AUTODETECT_IPP_FORMAT, SUPPORTED_IPP_FORMATS, DocumentFormatError, handle_cancellation
@@ -111,11 +111,12 @@ def print_file(job_id):
                     preprocess_result = conv.preprocess(tmp_input)
                     handle_cancellation(job)
 
-                    imposition_template = StandardImpositionTemplate(media_size=PageSize(width_mm=210, height_mm=297), work_dir=artefact_tmpdir)
+                    # TODO: Use proper source for media size
+                    media_size = PageSize(width_mm=210, height_mm=297)
+                    imposition_processor = get_imposition_processor(job.properties.imposition_template, media_size, artefact_tmpdir)
                     # TODO: Support `orientation_requested` IPP attribute
                     input_page_orientation = preprocess_result.orientation
-                    # TODO: Use the N-up setting
-                    final_page_processor = FinalPageProcessor(artefact_tmpdir, job.properties.n_up, imposition_template.get_final_page_sizes(), input_page_orientation)
+                    final_page_processor = FinalPageProcessor(artefact_tmpdir, job.properties.n_up, imposition_processor.get_final_page_sizes(), input_page_orientation)
 
                     input_pages_file = conv.create_input_pages(preprocess_result, final_page_processor.input_page_size)
                     handle_cancellation(job)
@@ -126,7 +127,7 @@ def print_file(job_id):
                         _no_pages_cancel(job)
                     handle_cancellation(job)
 
-                    output_file = imposition_template.create_output_pdf(final_pages_file, final_page_processor.final_page_orientation)
+                    output_file = imposition_processor.create_output_pdf(final_pages_file, final_page_processor.final_page_orientation)
 
                     shutil.copyfile(output_file, os.path.join(job_tmpdir, f'{idx:03}_output.pdf'))
                     sum_num_pages += 1 # TODO: Fix
