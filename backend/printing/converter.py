@@ -84,33 +84,23 @@ class ResizingConverter(SandboxConverter, ABC):
 
         pass
 
-    _MEDIABOX_PATTERN = re.compile(
-        r'^Page .+ MediaBox: \[(\d+(?:.\d+)?) (\d+(?:.\d+)?) (\d+(?:.\d+)?) (\d+(?:.\d+)?)].*\sRotate\s*=\s*(\d+)',
-        flags=re.MULTILINE,
-    )
+    _DIMENSIONS_PATTERN = re.compile(r'^PageMediaDimensions: (\d+(?:\.\d+)?) (\d+(?:\.\d+)?)$', flags=re.MULTILINE)
+    _ROTATION_PATTERN = re.compile(r'^PageMediaRotation: (\d+)$', flags=re.MULTILINE)
 
     def preprocess(self, input_file: str) -> "ResizingConverter.PreprocessResult":
         preprocess_result_path = self.convert_to_pdf_or_ps(input_file)
-        # TODO: Consider using pdftk
-        command = [
-            'gs',
-            '-dNODISPLAY', '-dNOPAUSE', '-dBATCH', '-dSAFER', '-q',
-            f'-sFile={preprocess_result_path}', f'--permit-file-read={preprocess_result_path}',
-            '-dDumpMediaSizes', '-dDumpFontsNeeded=false', 'pdf_info.ps',
-        ]
+        command = ['pdftk', preprocess_result_path, 'dump_data_utf8']
         output = self.run_in_sandbox(command)
 
         vertical_page_count = 0
         horizontal_page_count = 0
 
-        for match in ResizingConverter._MEDIABOX_PATTERN.finditer(output):
-            llx, lly, urx, ury = map(float, match.groups()[:4])
-            rotation = int(match.group(5))
+        pages = output.split('\nPageMediaBegin\n')[1:]
+        for page in pages:
+            width, height = map(float, ResizingConverter._DIMENSIONS_PATTERN.search(page).groups())
+            rotation = ResizingConverter._ROTATION_PATTERN.search(page).group(1)
 
-            width = urx - llx
-            height = ury - lly
-
-            if rotation in (90, 270):
+            if rotation in ("90", "270"):
                 width, height = height, width
 
             if height > width:
