@@ -1,26 +1,52 @@
 import os
+import re
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
-from collections import deque, defaultdict
+from dataclasses import dataclass
 from itertools import chain
-from typing import List, Type, Set, Tuple
+from typing import List, Tuple
 
 import magic
 
-from printing.utils import SANDBOX_PATH, TASK_TIMEOUT_S
+from printing.processing.pages import PageSize, PageOrientation
+from printing.utils import SANDBOX_PATH, TASK_TIMEOUT_S, logger
 
 
 class Converter(ABC):
+    """
+    A document to PDF converter class. The resulting PDF contains the Input Pages used for further processing.
+    """
+
+    @dataclass(frozen=True)
+    class PreprocessResult:
+        orientation: PageOrientation
+        preprocess_result_path: str
+
     supported_types = []
     supported_extensions = []
-    output_type = None
+    output_type = 'application/pdf'
 
     def __init__(self, work_dir):
         self.work_dir = work_dir
 
     @abstractmethod
-    def convert(self, input_file: str) -> str:
+    def preprocess(self, input_file: str) -> PreprocessResult:
+        """
+        Determine the input data orientation and optionally perform initial conversion steps,
+        which don't require knowing the Input Page size.
+        """
+
+        pass
+
+    @abstractmethod
+    def create_input_pages(self, preprocess_result: PreprocessResult, input_page_size: PageSize) -> str:
+        """
+        Place the preprocessed document data on the Input Pages.
+
+        :return: The resulting PDF which contains the Input Pages.
+        """
+
         pass
 
     @classmethod
@@ -30,28 +56,137 @@ class Converter(ABC):
 
 
 class SandboxConverter(Converter, ABC):
-    def run_in_sandbox(self, command: List[str]):
-        subprocess.check_output(
-            [SANDBOX_PATH, self.work_dir] + command, stderr=subprocess.STDOUT, timeout=TASK_TIMEOUT_S)
+    def run_in_sandbox(self, command: List[str]) -> str:
+        sandboxed_command = [SANDBOX_PATH, self.work_dir] + command
+        return subprocess.check_output(
+            sandboxed_command,
+            text=True,
+            stderr=subprocess.STDOUT,
+            timeout=TASK_TIMEOUT_S,
+        )
 
     @staticmethod
     def binary_exists(name: str):
         return shutil.which(name) is not None
 
 
+class ResizingConverter(SandboxConverter, ABC):
+    """
+    An abstract converter used for input formats which declare a page size (e.g., PDF, PostScript, PWG Raster, .docx)
+    in the document data.
+    """
+
+    @abstractmethod
+    def convert_to_pdf_or_ps(self, input_file: str) -> str:
+        """
+        A method that converts `input_file` to PDF or PostScript and returns the output file path.
+        """
+
+        pass
+
+    _MEDIABOX_PATTERN = re.compile(
+        r'^Page .+ MediaBox: \[(\d+(?:.\d+)?) (\d+(?:.\d+)?) (\d+(?:.\d+)?) (\d+(?:.\d+)?)].*\sRotate\s*=\s*(\d+)',
+        flags=re.MULTILINE,
+    )
+
+    def preprocess(self, input_file: str) -> "ResizingConverter.PreprocessResult":
+        preprocess_result_path = self.convert_to_pdf_or_ps(input_file)
+        command = [
+            'gs',
+            '-dNODISPLAY', '-dNOPAUSE', '-dBATCH', '-dSAFER', '-q',
+            f'-sFile={preprocess_result_path}', f'--permit-file-read={preprocess_result_path}',
+            '-dDumpMediaSizes', '-dDumpFontsNeeded=false', 'pdf_info.ps',
+        ]
+        print(' '.join(command))
+        output = self.run_in_sandbox(command)
+
+        vertical_page_count = 0
+        horizontal_page_count = 0
+
+        for match in ResizingConverter._MEDIABOX_PATTERN.finditer(output):
+            llx, lly, urx, ury = map(float, match.groups()[:4])
+            rotation = int(match.group(5))
+
+            width = urx - llx
+            height = ury - lly
+
+            if rotation in (90, 270):
+                width, height = height, width
+
+            if height > width:
+                vertical_page_count += 1
+            if width > height:
+                horizontal_page_count += 1
+
+        if horizontal_page_count + vertical_page_count == 0:
+            logger.warning("Failed to determine orientation in ResizingConverter")
+
+        dominant_orientation = PageOrientation.LANDSCAPE if horizontal_page_count > vertical_page_count else PageOrientation.PORTRAIT
+        return ResizingConverter.PreprocessResult(
+            orientation=dominant_orientation,
+            preprocess_result_path=preprocess_result_path,
+        )
+
+
+    def create_input_pages(self, preprocess_result: "ResizingConverter.PreprocessResult", input_page_size: PageSize) -> str:
+        out = os.path.join(self.work_dir, 'out.pdf')
+        self.run_in_sandbox([
+            'gs', '-sDEVICE=pdfwrite', '-dCompatibilityLevel=1.4',
+            '-dNOPAUSE', '-dBATCH', '-dSAFER',
+
+            # Specify the page size of the resulting PDF to be the size of the Input Page
+            '-dFIXEDMEDIA',
+            f"-dDEVICEWIDTHPOINTS={input_page_size.width_pt()}",
+            f"-dDEVICEHEIGHTPOINTS={input_page_size.height_pt()}",
+
+            # TODO: Use fit to page always or conditionally
+
+            '-sOutputFile=' + out, preprocess_result.preprocess_result_path
+        ])
+        return out
+
+
 class ImageConverter(SandboxConverter):
     supported_types = ['image/png', 'image/jpeg']
     supported_extensions = ['.png', '.jpg', '.jpeg']
-    output_type = 'application/pdf'
 
-    CONVERT_OPTIONS = [
-        '-resize', '2365x3335', '-gravity', 'center', '-background', 'white',
-        '-extent', '2490x3510', '-units', 'PixelsPerInch', '-density', '300x300'
-    ]
+    def preprocess(self, input_file: str) -> "ImageConverter.PreprocessResult":
+        identify_result = self.run_in_sandbox(
+            ['identify', '-ping', '-format', '%w %h', input_file],
+        )
+        [width, height] = [int(size) for size in identify_result.split(' ')]
+        orientation = PageOrientation.LANDSCAPE if width > height else PageOrientation.PORTRAIT
+        return ImageConverter.PreprocessResult(orientation, input_file)
 
-    def convert(self, input_file: str) -> str:
+    def create_input_pages(self, preprocess_result: "ImageConverter.PreprocessResult", input_page_size: PageSize) -> str:
         out = os.path.join(self.work_dir, 'out.pdf')
-        self.run_in_sandbox(['convert', input_file] + self.CONVERT_OPTIONS + [out])
+
+        pixels_per_inch = 300
+        pixels_per_mm = pixels_per_inch / 25.4
+
+        # Calculate the image size in pixels assuming a 5 mm margin on both sides
+        fit_area_width = round((input_page_size.width_mm - 10) * pixels_per_mm)
+        fit_area_height = round((input_page_size.height_mm - 10) * pixels_per_mm)
+
+        page_width = round(input_page_size.width_mm * pixels_per_mm)
+        page_height = round(input_page_size.height_mm * pixels_per_mm)
+
+        # TODO: Use scaling options (like fit to page)
+        # TODO: Add `-dAutoRotatePages=/None`?
+        #       See https://unix.stackexchange.com/questions/442720/ghostscript-changes-orientation-of-pdf
+        self.run_in_sandbox(
+            [
+                'convert', preprocess_result.preprocess_result_path,
+                # Resize the image to fit the "fit area"
+                '-resize', f'{fit_area_width}x{fit_area_height}',
+                # Place the resized image on the page
+                '-gravity', 'center', '-background', 'white', '-extent', f"{page_width}x{page_height}",
+                # Set the PDF density to print using the standard normal quality
+                '-units', 'PixelsPerInch', '-density', f'{pixels_per_inch}x{pixels_per_inch}',
+                "-page", f"{page_width}x{page_height}",
+                out,
+            ],
+        )
         return out
 
     @classmethod
@@ -59,14 +194,13 @@ class ImageConverter(SandboxConverter):
         return cls.binary_exists('convert')
 
 
-class DocConverter(SandboxConverter):
+class DocConverter(ResizingConverter):
     supported_types = ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                        'application/rtf', 'application/vnd.oasis.opendocument.text']
     supported_extensions = ['.doc', '.docx', '.rtf', '.odt']
-    output_type = 'application/pdf'
 
-    def convert(self, input_file: str) -> str:
-        out = os.path.join(self.work_dir, 'out.pdf')
+    def convert_to_pdf_or_ps(self, input_file: str) -> str:
+        out = os.path.join(self.work_dir, 'converted.pdf')
         self.run_in_sandbox(['unoconv', '-o', out, input_file])
         return out
 
@@ -75,50 +209,61 @@ class DocConverter(SandboxConverter):
         return cls.binary_exists('unoconv')
 
 
-NATIVE_FILE_FORMATS = ['application/pdf', 'image/pwg-raster', 'application/postscript']
-NATIVE_FILE_EXTENSIONS = ['.pdf', '.pwg']
-CONVERTERS_ALL = [ImageConverter, DocConverter]
+class PwgRasterConverter(ResizingConverter):
+    supported_types = ['image/pwg-raster']
+    supported_extensions = ['.pwg']
+
+    def convert_to_pdf_or_ps(self, input_file: str) -> str:
+        out = os.path.join(self.work_dir, 'converted.pdf')
+        self.run_in_sandbox(['cupsfilter', '-i', 'image/pwg-raster', '-m', 'application/pdf', input_file, out])
+        return out
+
+    @classmethod
+    def is_available(cls):
+        if not cls.binary_exists("cupsfilter"):
+            return False
+
+        try:
+            subprocess.check_output(
+                ["cupsfilter", "--list-filters", "-i", "image/pwg-raster", '-m', 'application/pdf'],
+                stderr=subprocess.STDOUT, timeout=5,
+            )
+            return True
+        except subprocess.CalledProcessError:
+            return False
+
+
+class PdfAndPsConverter(ResizingConverter):
+    supported_types = ['application/pdf', 'application/postscript']
+    supported_extensions = ['.pdf', '.ps']
+
+    def convert_to_pdf_or_ps(self, input_file: str) -> str:
+        return input_file
+
+    @classmethod
+    def is_available(cls):
+        return True
+
+CONVERTERS_ALL = [ImageConverter, DocConverter, PwgRasterConverter, PdfAndPsConverter]
 CONVERTERS = [conv for conv in CONVERTERS_ALL if conv.is_available()]
-SUPPORTED_FILE_FORMATS = NATIVE_FILE_FORMATS + list(chain.from_iterable(conv.supported_types for conv in CONVERTERS))
-SUPPORTED_EXTENSIONS = NATIVE_FILE_EXTENSIONS + list(
-    chain.from_iterable(conv.supported_extensions for conv in CONVERTERS))
+SUPPORTED_FILE_FORMATS = list(chain.from_iterable(conv.supported_types for conv in CONVERTERS))
+SUPPORTED_EXTENSIONS = list(chain.from_iterable(conv.supported_extensions for conv in CONVERTERS))
+
+def _create_converter_map() -> dict[str, type[Converter]]:
+    result:  dict[str, type[Converter]] = dict()
+    for conv_class in CONVERTERS:
+        for input_type in conv_class.supported_types:
+            if input_type in result:
+                # If multiple converters for the same input type are available, use the first one
+                pass
+            result[input_type] = conv_class
+    return result
+
+CONVERTER_FOR_TYPE = _create_converter_map()
 
 
 class NoConverterAvailableError(ValueError):
     pass
-
-
-def get_converter_chain(input_type: str, output_types: Set[str]) -> Tuple[List[Type[Converter]], str]:
-    converters_for_type = defaultdict(list)
-    reverse = {}
-    for conv in CONVERTERS:
-        for mime in conv.supported_types:
-            converters_for_type[mime].append(conv)
-
-    def bfs():
-        queue = deque([input_type])
-        while len(queue) > 0:
-            v = queue.pop()
-            for conv in converters_for_type[v]:
-                u = conv.output_type
-                if u not in reverse:
-                    reverse[u] = v, conv
-                    queue.append(u)
-                if u in output_types:
-                    return
-
-    bfs()
-    intersect = output_types & reverse.keys()
-    if not intersect:
-        raise NoConverterAvailableError(
-            "Unable to convert {} to {} - no converter available".format(input_type, output_types))
-    pipeline = deque()
-    v = next(iter(intersect))
-    final_type = v
-    while v != input_type:
-        v, conv = reverse[v]
-        pipeline.appendleft(conv)
-    return list(pipeline), final_type
 
 
 def detect_file_format(input_file: str):
@@ -135,12 +280,19 @@ def detect_file_format(input_file: str):
 
 
 def auto_convert(input_file: str, input_type: str, work_dir: str) -> Tuple[str, str]:
-    out_types = set(NATIVE_FILE_FORMATS)
-    if input_type in out_types:
-        return input_file, input_type
-    pipeline, out_type = get_converter_chain(input_type, out_types)
-    file = input_file
-    for conv_class in pipeline:
-        conv = conv_class(work_dir)
-        file = conv.convert(file)
-    return file, out_type
+    try:
+        conv_class = CONVERTER_FOR_TYPE[input_type]
+    except KeyError:
+        raise NoConverterAvailableError(
+            "Unable to convert {} - no converter available".format(input_type))
+    conv = conv_class(work_dir)
+    preprocess_result = conv.preprocess(input_file)
+
+    # TODO: Use `requested_orientation` when specified
+    # TODO: Use Imposition Templates here
+    page_size = PageSize(width_mm=210, height_mm=297)
+    if preprocess_result.orientation == PageOrientation.LANDSCAPE:
+        page_size = page_size.rotated()
+
+    output_file = conv.create_input_pages(preprocess_result, page_size)
+    return output_file, conv_class.output_type

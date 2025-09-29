@@ -2,6 +2,9 @@ from dataclasses import dataclass
 from enum import Enum
 from math import log2
 
+from printing.utils import MM_PER_PT
+
+
 class PageOrientation(Enum):
     PORTRAIT = "portrait"
     LANDSCAPE = "landscape"
@@ -29,6 +32,12 @@ class PageSize:
 
     def rotated(self):
         return PageSize(width_mm=self.height_mm, height_mm=self.width_mm)
+
+    def width_pt(self):
+        return self.width_mm / MM_PER_PT
+
+    def height_pt(self):
+        return self.height_mm / MM_PER_PT
 
 
 @dataclass(frozen=True)
