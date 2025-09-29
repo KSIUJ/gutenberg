@@ -58,6 +58,7 @@ class Converter(ABC):
 class SandboxConverter(Converter, ABC):
     def run_in_sandbox(self, command: List[str]) -> str:
         sandboxed_command = [SANDBOX_PATH, self.work_dir] + command
+        print(" ".join(sandboxed_command))
         return subprocess.check_output(
             sandboxed_command,
             text=True,
@@ -77,9 +78,9 @@ class ResizingConverter(SandboxConverter, ABC):
     """
 
     @abstractmethod
-    def convert_to_pdf_or_ps(self, input_file: str) -> str:
+    def convert_to_pdf(self, input_file: str) -> str:
         """
-        A method that converts `input_file` to PDF or PostScript and returns the output file path.
+        A method that converts `input_file` to PDF and returns the output file path.
         """
 
         pass
@@ -88,7 +89,7 @@ class ResizingConverter(SandboxConverter, ABC):
     _ROTATION_PATTERN = re.compile(r'^PageMediaRotation: (\d+)$', flags=re.MULTILINE)
 
     def preprocess(self, input_file: str) -> "ResizingConverter.PreprocessResult":
-        preprocess_result_path = self.convert_to_pdf_or_ps(input_file)
+        preprocess_result_path = self.convert_to_pdf(input_file)
         command = ['pdftk', preprocess_result_path, 'dump_data_utf8']
         output = self.run_in_sandbox(command)
 
@@ -189,7 +190,7 @@ class DocConverter(ResizingConverter):
                        'application/rtf', 'application/vnd.oasis.opendocument.text']
     supported_extensions = ['.doc', '.docx', '.rtf', '.odt']
 
-    def convert_to_pdf_or_ps(self, input_file: str) -> str:
+    def convert_to_pdf(self, input_file: str) -> str:
         out = os.path.join(self.work_dir, 'converted.pdf')
         self.run_in_sandbox(['unoconv', '-o', out, input_file])
         return out
@@ -203,7 +204,7 @@ class PwgRasterConverter(ResizingConverter):
     supported_types = ['image/pwg-raster']
     supported_extensions = ['.pwg']
 
-    def convert_to_pdf_or_ps(self, input_file: str) -> str:
+    def convert_to_pdf(self, input_file: str) -> str:
         out = os.path.join(self.work_dir, 'converted.pdf')
         self.run_in_sandbox(['cupsfilter', '-i', 'image/pwg-raster', '-m', 'application/pdf', input_file, out])
         return out
@@ -223,18 +224,38 @@ class PwgRasterConverter(ResizingConverter):
             return False
 
 
-class PdfAndPsConverter(ResizingConverter):
-    supported_types = ['application/pdf', 'application/postscript']
-    supported_extensions = ['.pdf', '.ps']
+class PostScriptConverter(ResizingConverter):
+    supported_types = ['application/postscript']
+    supported_extensions = ['.ps']
 
-    def convert_to_pdf_or_ps(self, input_file: str) -> str:
+    def convert_to_pdf(self, input_file: str) -> str:
+        out = os.path.join(self.work_dir, 'converted.pdf')
+        self.run_in_sandbox([
+            'gs', '-sDEVICE=pdfwrite', '-dCompatibilityLevel=1.4',
+            '-dNOPAUSE', '-dBATCH', '-dSAFER',
+            '-sOutputFile=' + out, input_file
+        ])
+        return out
+
+    @classmethod
+    def is_available(cls):
+        return True
+
+
+class PdfConverter(ResizingConverter):
+    supported_types = ['application/pdf']
+    supported_extensions = ['.pdf']
+
+    def convert_to_pdf(self, input_file: str) -> str:
+        # no-op, the file is already PDF
         return input_file
 
     @classmethod
     def is_available(cls):
         return True
 
-CONVERTERS_ALL = [ImageConverter, DocConverter, PwgRasterConverter, PdfAndPsConverter]
+
+CONVERTERS_ALL = [ImageConverter, DocConverter, PwgRasterConverter, PdfConverter, PostScriptConverter]
 CONVERTERS = [conv for conv in CONVERTERS_ALL if conv.is_available()]
 SUPPORTED_FILE_FORMATS = list(chain.from_iterable(conv.supported_types for conv in CONVERTERS))
 SUPPORTED_EXTENSIONS = list(chain.from_iterable(conv.supported_extensions for conv in CONVERTERS))
