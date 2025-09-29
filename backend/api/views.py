@@ -149,11 +149,18 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
                              color: bool, two_sides: str, fit_to_page: bool, **_):
         job = GutenbergJob.objects.create(name='webrequest', job_type=JobType.PRINT, status=JobStatus.INCOMING,
                                           owner=self.request.user, printer=printer_with_perms)
-        
-        self._validate_properties(printer_with_perms.id, job.properties)
-        PrintingProperties.objects.create(color=color, copies=copies, two_sides=two_sides,
-                                          pages_to_print=pages_to_print, job=job, fit_to_page=fit_to_page)
-        return job
+
+        try:
+            self._validate_properties(printer_with_perms.id, job.properties)
+            PrintingProperties.objects.create(color=color, copies=copies, two_sides=two_sides,
+            pages_to_print=pages_to_print, job=job, fit_to_page=fit_to_page)
+            return job
+        except Exception as ex:
+            job.delete()
+            raise ex
+
+
+
 
     def _change_properties(self, printer_with_perms = None, copies: int=None, pages_to_print: str=None,
                            color: bool=None, two_sides: str=None, fit_to_page: bool=None, **_):
