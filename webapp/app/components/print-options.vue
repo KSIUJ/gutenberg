@@ -129,7 +129,7 @@
         <label
           id="n-up-select"
           class="text-label px-form"
-        >Pages per sheet (N-up)</label>
+        >Input pages on each final page (N-up)</label>
         <p-select-button
           v-model="jobCreator.nUp"
           :options="nUpOptions"
