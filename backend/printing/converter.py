@@ -142,7 +142,7 @@ class ImageConverter(SandboxConverter):
 
     def preprocess(self, input_file: str) -> "ImageConverter.PreprocessResult":
         identify_result = self.run_in_sandbox(
-            ['identify', '-ping', '-format', '%w %h', input_file],
+            ['identify', '-auto-orient', '-format', '%w %h', input_file],
         )
         [width, height] = [int(size) for size in identify_result.split(' ')]
         orientation = PageOrientation.LANDSCAPE if width > height else PageOrientation.PORTRAIT
@@ -167,6 +167,8 @@ class ImageConverter(SandboxConverter):
         self.run_in_sandbox(
             [
                 'convert', preprocess_result.preprocess_result_path,
+                # Auto-orient the image based on the EXIF orientation tag
+                '-auto-orient',
                 # Resize the image to fit the "fit area"
                 '-resize', f'{fit_area_width}x{fit_area_height}',
                 # Place the resized image on the page
