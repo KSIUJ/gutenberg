@@ -18,7 +18,8 @@ from rest_framework.views import APIView
 from api.exceptions import UnsupportedDocument, InvalidStatus
 from api.serializers import GutenbergJobSerializer, PrinterSerializer, PrintRequestSerializer, UserInfoSerializer, \
     CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer, LoginSerializer, \
-        DeleteJobArtefactRequestSerializer, ChangeArtefactOrderRequestSerializer, JobArtefactSerializer
+        DeleteJobArtefactRequestSerializer, ChangeArtefactOrderRequestSerializer, JobArtefactSerializer, \
+            ChangePrintJobPropertiesRequestSerializer
 from common.models import User
 from control.models import GutenbergJob, Printer, JobStatus, PrintingProperties, TwoSidedPrinting, JobArtefact, \
     JobArtefactType, JobType
@@ -42,7 +43,6 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = GutenbergJob.objects.all()
     pagination_class = LargeResultsSetPagination
-    next_number = 1
 
     def get_queryset(self):
         user = self.request.user
@@ -119,27 +119,22 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
     
     @action(detail=True, methods=['post'], name='Change job properties')
     def change_properties(self, request, pk=None):
+        #not given fields are not changed
         job = self.get_object()
-        serializer = CreatePrintJobRequestSerializer(data=request.data)
+        serializer = ChangePrintJobPropertiesRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        self._validate_properties(serializer.validated_data['printer'], PrintingProperties(
-            color=serializer.validated_data['color'],
-            copies=serializer.validated_data['copies'],
-            two_sides=serializer.validated_data['two_sides'],
-            pages_to_print=serializer.validated_data['pages_to_print'],
-            fit_to_page=serializer.validated_data['fit_to_page'],
-        ))
+        printer=serializer.validated_data.get('printer')
+        if printer is None:
+            printer=job.printer.id
         printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
-                                                          printer_id=serializer.validated_data['printer'])
+                                                          printer_id=printer)
         job = self._change_properties(printer_with_perms=printer_with_perms, **serializer.validated_data)
         return Response(self.get_serializer(job).data)
     
     @action(detail=True, methods=['get'], name='Validate job properties')
     def validate_properties(self, request, pk=None):
         job = self.get_object()
-        printer = job.printer
-        properties = job.properties
-        self._validate_properties(printer.id, properties)
+        self._validate_properties(job.printer.id, job.properties)
         return Response(self.get_serializer(job).data)
 
     @action(detail=True, methods=['get'], name='List artefacts')
@@ -154,22 +149,31 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
                              color: bool, two_sides: str, fit_to_page: bool, **_):
         job = GutenbergJob.objects.create(name='webrequest', job_type=JobType.PRINT, status=JobStatus.INCOMING,
                                           owner=self.request.user, printer=printer_with_perms)
-        #color = color if printer_with_perms.color_allowed else False
-        #two_sides = two_sides if printer_with_perms.duplex_supported else TwoSidedPrinting.ONE_SIDED
+        
+        self._validate_properties(printer_with_perms.id, job.properties)
         PrintingProperties.objects.create(color=color, copies=copies, two_sides=two_sides,
                                           pages_to_print=pages_to_print, job=job, fit_to_page=fit_to_page)
         return job
-    
-    def _change_properties(self, printer_with_perms, copies: int, pages_to_print: str,
-                           color: bool, two_sides: str, fit_to_page: bool, **_):
+
+    def _change_properties(self, printer_with_perms = None, copies: int=None, pages_to_print: str=None,
+                           color: bool=None, two_sides: str=None, fit_to_page: bool=None, **_):
         job = self.get_object()
-        job.printer = printer_with_perms
-        job.properties.color = color
-        job.properties.copies = copies
-        job.properties.two_sides = two_sides
-        job.properties.pages_to_print = pages_to_print
-        job.properties.fit_to_page = fit_to_page
+        if printer_with_perms.id is not None:
+            job.printer = printer_with_perms
+        if color is not None:
+            job.properties.color = color
+        if copies is not None:
+            job.properties.copies = copies
+        if two_sides is not None:
+            job.properties.two_sides = two_sides
+        if pages_to_print is not None:
+            job.properties.pages_to_print = pages_to_print
+        if fit_to_page is not None:
+            job.properties.fit_to_page = fit_to_page
+
+        self._validate_properties(printer_with_perms.id, job.properties)
         job.properties.save()
+        job.save()
         return job
 
     def _upload_artefact(self, job, file, **_):
@@ -188,6 +192,8 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         artefact_dict = {artefact.id: artefact for artefact in artefacts}
         if set(new_order) != set(artefact_dict.keys()):
             raise exceptions.ValidationError("New order does not match existing artefacts")
+        if len(set(new_order)) != len(new_order):
+            raise exceptions.ValidationError("New order contains duplicate artefact IDs")
         for index, artefact_id in enumerate(new_order):
             artefact = artefact_dict[artefact_id]
             artefact.document_number = index + 1
