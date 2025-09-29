@@ -97,6 +97,7 @@ class FinalPageProcessor:
 
         for page_index in self._create_pages_to_print_iter(pages_to_print, len(reader.pages)):
             page = reader.pages[page_index]
+            page.transfer_rotation_to_content()
             if next_row == 0 and next_col == 0:
                 dest_page = writer.add_blank_page(
                     width=self.final_page_size.width_pt(),

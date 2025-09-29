@@ -3,6 +3,8 @@ import subprocess
 from abc import ABC, abstractmethod
 from typing import List
 
+from pypdf import PdfReader, PdfWriter, Transformation, PageObject
+
 from printing.processing.pages import PageSize, PageSizes, PageOrientation
 from printing.utils import SANDBOX_PATH, TASK_TIMEOUT_S
 
@@ -25,7 +27,7 @@ class BaseImpositionProcessor(ABC):
         pass
 
     @abstractmethod
-    def create_output_pdf(self, final_pages_path: str, final_page_orientation: PageOrientation) -> str:
+    def create_output_pdf(self, final_pages_file: str, final_page_orientation: PageOrientation) -> str:
         """
         Creates the output PDF with imposition applied, and Final Pages rotated to exactly
         match the media size without rotating.
@@ -59,15 +61,15 @@ class StandardImpositionProcessor(SandboxImpositionProcessor):
             landscape=self.media_size.rotated(),
         )
 
-    def create_output_pdf(self, final_pages_path: str, final_page_orientation: PageOrientation) -> str:
+    def create_output_pdf(self, final_pages_file: str, final_page_orientation: PageOrientation) -> str:
         if final_page_orientation == PageOrientation.PORTRAIT:
             # No-op, the orientation of the Final Pages is already portrait
-            return final_pages_path
+            return final_pages_file
 
         # The Final Pages are in landscape orientation, rotate them 90
         out = os.path.join(self.work_dir, 'output.pdf')
         self.run_in_sandbox([
-            "pdftk", final_pages_path, "cat", "1-endeast", "output", out,
+            "pdftk", final_pages_file, "cat", "1-endeast", "output", out,
         ])
         return out
 
@@ -80,8 +82,39 @@ class BookletImpositionProcessor(SandboxImpositionProcessor):
             landscape=landscape_size,
         )
 
-    def create_output_pdf(self, final_pages_path: str, final_page_orientation: PageOrientation) -> str:
-        raise NotImplementedError
+    def create_output_pdf(self, final_pages_file: str, final_page_orientation: PageOrientation) -> str:
+        out = os.path.join(self.work_dir, 'output.pdf')
+        reader = PdfReader(final_pages_file)
+        writer = PdfWriter()
+
+        y_midpoint_pt = self.media_size.height_pt()/2
+        rotation = 90 if final_page_orientation == PageOrientation.PORTRAIT else 0
+
+        def try_add_page(source_index: int, target: PageObject, top = False):
+            if source_index < 0 or source_index >= len(reader.pages):
+                return
+            # Note: This modifies the `PageObject` instance
+            page = reader.pages[source_index].rotate(rotation)
+            page.transfer_rotation_to_content()
+            transformation = Transformation()
+            if top:
+                transformation = transformation.translate(0, y_midpoint_pt)
+            target.merge_transformed_page(page, transformation)
+            page.rotate(rotation)
+
+        media_sheet_count = -(len(reader.pages) // -4) # Ceil division
+        for i in range(media_sheet_count):
+            front_page = writer.add_blank_page(width=self.media_size.width_pt(), height=self.media_size.height_pt())
+            try_add_page(2 * media_sheet_count - 1 - 2*i, front_page, True)
+            try_add_page(2 * media_sheet_count + 2*i, front_page, False)
+
+            rear_page = writer.add_blank_page(width=self.media_size.width_pt(), height=self.media_size.height_pt())
+            try_add_page(2 * media_sheet_count - 2 - 2*i, rear_page, False)
+            try_add_page(2 * media_sheet_count + 1 + 2*i, rear_page, True)
+
+        with open(out, "xb") as output_file:
+            writer.write(output_file)
+        return out
 
 
 def get_imposition_processor(imposition_template: str, media_size: PageSize, work_dir: str) -> BaseImpositionProcessor:
