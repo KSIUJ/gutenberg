@@ -126,6 +126,18 @@
           input-id="fit-to-page-enabled"
         />
 
+        <label
+          id="n-up-select"
+          class="text-label px-form"
+        >Pages per sheet (N-up)</label>
+        <p-select-button
+          v-model="jobCreator.nUp"
+          :options="nUpOptions"
+          :allow-empty="false"
+          fluid
+          aria-labelledby="n-up-select"
+        />
+
         <h2 class="mt-8 text-header ">
           Printing options
         </h2>
@@ -288,6 +300,8 @@ const colorOptions = computed(() => [
 //   { value: 'even', label: 'Even' },
 //   { value: 'custom', label: 'Custom' },
 // ];
+
+const nUpOptions = [1, 2, 4, 8, 16, 32];
 
 const onFileSelect = (event: FileUploadSelectEvent) => {
   jobCreator.addFiles(event.files);

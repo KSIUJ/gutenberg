@@ -29,6 +29,7 @@ export type CreatePrintJobRequest = {
   two_sides: ApiDuplexMode;
   color?: boolean;
   fit_to_page?: boolean;
+  n_up?: number;
 };
 
 // TODO: Add the 'SCANNING' and 'WAITING_PAGE' statuses when scanning is implemented

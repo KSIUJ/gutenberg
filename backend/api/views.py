@@ -110,13 +110,13 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
 
     def _create_printing_job(self, printer_with_perms,
                              copies: int, pages_to_print: str,
-                             color: bool, two_sides: str, fit_to_page: bool, **_):
+                             color: bool, two_sides: str, fit_to_page: bool, n_up: int, **_):
         job = GutenbergJob.objects.create(name='webrequest', job_type=JobType.PRINT, status=JobStatus.INCOMING,
                                           owner=self.request.user, printer=printer_with_perms)
         color = color if printer_with_perms.color_allowed else False
         two_sides = two_sides if printer_with_perms.duplex_supported else TwoSidedPrinting.ONE_SIDED
         PrintingProperties.objects.create(color=color, copies=copies, two_sides=two_sides,
-                                          pages_to_print=pages_to_print, job=job, fit_to_page=fit_to_page)
+                                          pages_to_print=pages_to_print, job=job, fit_to_page=fit_to_page, n_up=n_up)
         return job
 
     def _upload_artefact(self, job, file, **_):

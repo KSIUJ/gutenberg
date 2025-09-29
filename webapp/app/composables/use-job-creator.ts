@@ -41,6 +41,7 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
   const colorMode = ref<ColorMode>('monochrome');
   const fitToPageEnabled = ref(true);
   const pagesToPrint = ref<string>('');
+  const nUp = ref<number>(1);
 
   const printLoading = ref(false);
   const printError = ref<unknown | null>(null);
@@ -194,6 +195,7 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
       copies: copyCount.value,
       color: colorMode.value === 'color',
       fit_to_page: fitToPageEnabled.value,
+      n_up: nUp.value,
     } satisfies CreatePrintJobRequest;
     return ok(request);
   });
@@ -298,6 +300,7 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
     colorMode,
     fitToPageEnabled,
     pagesToPrint,
+    nUp,
     errorMessageList,
     addFiles,
     documents: readonly(documentQueue),
