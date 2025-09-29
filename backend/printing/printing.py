@@ -115,7 +115,7 @@ def print_file(job_id):
                     # TODO: Support `orientation_requested` IPP attribute
                     input_page_orientation = preprocess_result.orientation
                     # TODO: Use the N-up setting
-                    final_page_processor = FinalPageProcessor(artefact_tmpdir, 4, imposition_template.get_final_page_sizes(), input_page_orientation)
+                    final_page_processor = FinalPageProcessor(artefact_tmpdir, job.properties.n_up, imposition_template.get_final_page_sizes(), input_page_orientation)
 
                     input_pages_file = conv.create_input_pages(preprocess_result, final_page_processor.input_page_size)
                     handle_cancellation(job)

@@ -1,4 +1,5 @@
 import re
+from math import log2
 
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
@@ -176,6 +177,12 @@ def validate_pages_to_print(value):
             raise ValidationError('Invalid page range: {}-{}'.format(part[0], part[-1]), code)
 
 
+def validate_n_up(value: int):
+    divide_count = round(log2(value))
+    if 2 ** divide_count != value:
+        raise ValueError("n_up value must be a power of 2")
+
+
 class PrintingProperties(models.Model):
     color = models.BooleanField(default=False)
     copies = models.IntegerField(default=1)
@@ -183,3 +190,4 @@ class PrintingProperties(models.Model):
     pages_to_print = models.CharField(max_length=100, null=True, blank=True, validators=[validate_pages_to_print])
     job = models.OneToOneField(GutenbergJob, on_delete=models.CASCADE, related_name='properties')
     fit_to_page = models.BooleanField(default=True)
+    n_up = models.IntegerField(default=1, validators=[validate_n_up])
