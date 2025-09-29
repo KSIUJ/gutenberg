@@ -7,10 +7,16 @@ from printing.converter import SUPPORTED_EXTENSIONS
 
 class GutenbergJobSerializer(serializers.ModelSerializer):
     printer = serializers.SlugRelatedField(slug_field='name', read_only=True)
+    artefacts = serializers.SerializerMethodField()
 
     class Meta:
         model = GutenbergJob
-        fields = ['id', 'pages', 'printer', 'status', 'status_reason']
+        fields = ['id', 'pages', 'printer', 'status', 'status_reason', 'artefacts']
+
+    def get_artefacts(self, obj):
+        artefacts = obj.artefacts.all().order_by('document_number')
+        request = self.context.get('request')
+        return JobArtefactSerializer(artefacts, many=True, context={'request': request}).data
 
 
 class PrinterSerializer(serializers.ModelSerializer):
