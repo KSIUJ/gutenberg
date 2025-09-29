@@ -39,7 +39,7 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
   const copyCount = ref(1);
   const duplexMode = ref<DuplexMode>('disabled');
   const colorMode = ref<ColorMode>('monochrome');
-  const fitToPageEnabled = ref(false);
+  const fitToPageEnabled = ref(true);
   const pagesToPrint = ref<string>('');
 
   const printLoading = ref(false);
