@@ -4,11 +4,16 @@ from printing.processing.pages import PageSize, PageSizes
 
 
 class BaseImpositionTemplate(ABC):
-    def get_page_sizes(self, media_size: PageSize) -> PageSizes:
+    def get_final_page_sizes(self, media_size: PageSize) -> PageSizes:
+        """
+        Returns the size of the Final Pages for the landscape and portrait orientations
+        for printing on Media Sheets of the size `media_size`.
+        """
+
         pass
 
 class StandardImpositionTemplate(BaseImpositionTemplate):
-    def get_page_sizes(self, media_size: PageSize) -> PageSizes:
+    def get_final_page_sizes(self, media_size: PageSize) -> PageSizes:
         if media_size.is_horizontal():
             raise ValueError("StandardImpositionTemplate expects a vertical media size")
 
@@ -18,7 +23,7 @@ class StandardImpositionTemplate(BaseImpositionTemplate):
         )
 
 class BrochureImpositionTemplate(BaseImpositionTemplate):
-    def get_page_sizes(self, media_size: PageSize) -> PageSizes:
+    def get_final_page_sizes(self, media_size: PageSize) -> PageSizes:
         if media_size.is_horizontal():
             raise ValueError("BrochureImpositionTemplate expects a vertical media size")
 

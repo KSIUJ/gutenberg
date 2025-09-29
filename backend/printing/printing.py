@@ -14,8 +14,10 @@ from django.utils import timezone
 from control.models import GutenbergJob, TwoSidedPrinting, JobStatus, PrinterType, Printer, PrintingProperties, \
     JobArtefact, JobArtefactType
 from printing.backends import DisabledPrinter, LocalCupsPrinter
-from printing.converter import auto_convert, detect_file_format
+from printing.converter import detect_file_format, get_converter
 from printing.postprocess import auto_postprocess
+from printing.processing.imposition_templates import StandardImpositionTemplate
+from printing.processing.pages import PageSize
 from printing.utils import JobCanceledException, TASK_TIMEOUT_S, DEFAULT_IPP_FORMAT, \
     AUTODETECT_IPP_FORMAT, SUPPORTED_IPP_FORMATS, DocumentFormatError, handle_cancellation
 
@@ -85,7 +87,7 @@ def print_file(job_id):
     job.status_reason = ''
     job.save()
     try:
-        with tempfile.TemporaryDirectory() as job_tmpdir:
+        with (tempfile.TemporaryDirectory() as job_tmpdir):
             sum_num_pages = 0
             for idx, artefact in enumerate(job.artefacts.filter(artefact_type=JobArtefactType.SOURCE)):
                 with tempfile.TemporaryDirectory() as artefact_tmpdir:
@@ -96,10 +98,22 @@ def print_file(job_id):
                         ext = '.bin'
                     tmp_input = os.path.join(artefact_tmpdir, 'input' + ext)
                     shutil.copyfile(file_path, tmp_input)
-                    out, out_type = auto_convert(tmp_input, file_format, artefact_tmpdir)
+
+                    conv = get_converter(file_format, artefact_tmpdir)
+                    preprocess_result = conv.preprocess(tmp_input)
                     handle_cancellation(job)
-                    out, num_pages = auto_postprocess(out, out_type, artefact_tmpdir, job)
-                    shutil.copyfile(out, os.path.join(job_tmpdir, f'{idx:03}_{os.path.basename(out)}'))
+
+                    imposition_template = StandardImpositionTemplate()
+                    # TODO: Support `orientation_requested` IPP attribute
+                    input_page_orientation = preprocess_result.orientation
+                    # TODO: When n-up is supported, Final Page and Input Page size might not be the same
+                    input_page_size = imposition_template.get_final_page_sizes(PageSize(width_mm=210, height_mm=297)).get(input_page_orientation)
+
+                    output_file = conv.create_input_pages(preprocess_result, input_page_size)
+                    handle_cancellation(job)
+
+                    postprocess_out, num_pages = auto_postprocess(output_file, conv.output_type, artefact_tmpdir, job)
+                    shutil.copyfile(postprocess_out, os.path.join(job_tmpdir, f'{idx:03}_{os.path.basename(postprocess_out)}'))
                     sum_num_pages += num_pages
                     handle_cancellation(job)
             job.status = JobStatus.PRINTING

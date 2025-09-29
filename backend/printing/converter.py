@@ -5,7 +5,7 @@ import subprocess
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from itertools import chain
-from typing import List, Tuple
+from typing import List
 
 import magic
 
@@ -91,13 +91,13 @@ class ResizingConverter(SandboxConverter, ABC):
 
     def preprocess(self, input_file: str) -> "ResizingConverter.PreprocessResult":
         preprocess_result_path = self.convert_to_pdf_or_ps(input_file)
+        # TODO: Consider using pdftk
         command = [
             'gs',
             '-dNODISPLAY', '-dNOPAUSE', '-dBATCH', '-dSAFER', '-q',
             f'-sFile={preprocess_result_path}', f'--permit-file-read={preprocess_result_path}',
             '-dDumpMediaSizes', '-dDumpFontsNeeded=false', 'pdf_info.ps',
         ]
-        print(' '.join(command))
         output = self.run_in_sandbox(command)
 
         vertical_page_count = 0
@@ -279,20 +279,10 @@ def detect_file_format(input_file: str):
     return input_type
 
 
-def auto_convert(input_file: str, input_type: str, work_dir: str) -> Tuple[str, str]:
+def get_converter(input_type: str, work_dir: str) -> Converter:
     try:
         conv_class = CONVERTER_FOR_TYPE[input_type]
     except KeyError:
         raise NoConverterAvailableError(
             "Unable to convert {} - no converter available".format(input_type))
-    conv = conv_class(work_dir)
-    preprocess_result = conv.preprocess(input_file)
-
-    # TODO: Use `requested_orientation` when specified
-    # TODO: Use Imposition Templates here
-    page_size = PageSize(width_mm=210, height_mm=297)
-    if preprocess_result.orientation == PageOrientation.LANDSCAPE:
-        page_size = page_size.rotated()
-
-    output_file = conv.create_input_pages(preprocess_result, page_size)
-    return output_file, conv_class.output_type
+    return conv_class(work_dir)
