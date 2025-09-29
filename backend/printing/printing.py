@@ -2,6 +2,7 @@ import datetime
 import logging
 import os
 import shutil
+import subprocess
 import tempfile
 from typing import Optional
 
@@ -107,13 +108,12 @@ def print_file(job_id):
                     # TODO: Support `orientation_requested` IPP attribute
                     input_page_orientation = preprocess_result.orientation
                     # TODO: Use the N-up setting
-                    final_page_processor = FinalPageProcessor(artefact_tmpdir, 16, imposition_template.get_final_page_sizes(), input_page_orientation)
+                    final_page_processor = FinalPageProcessor(artefact_tmpdir, 4, imposition_template.get_final_page_sizes(), input_page_orientation)
 
                     input_pages_file = conv.create_input_pages(preprocess_result, final_page_processor.input_page_size)
                     handle_cancellation(job)
 
-                    # TODO: Filter pages in create_final_pages or earlier in converter
-                    final_pages_file = final_page_processor.create_final_pages(input_pages_file)
+                    final_pages_file = final_page_processor.create_final_pages(input_pages_file, job.properties.pages_to_print)
                     handle_cancellation(job)
 
                     output_file = imposition_template.create_output_pdf(final_pages_file, final_page_processor.final_page_orientation)

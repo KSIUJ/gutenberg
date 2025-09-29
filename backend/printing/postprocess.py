@@ -1,7 +1,8 @@
 import os
 import subprocess
+from itertools import chain
 from math import log2
-from typing import List
+from typing import List, Optional
 
 from pypdf import PdfReader, PdfWriter, Transformation
 
@@ -73,7 +74,22 @@ class FinalPageProcessor:
             timeout=TASK_TIMEOUT_S,
         )
 
-    def create_final_pages(self, input_pages_file: str) -> str:
+    @staticmethod
+    def _create_pages_to_print_iter(pages_to_print: Optional[str], input_page_count: int):
+        if not pages_to_print:
+            return range(input_page_count)
+
+        def _create_iter_for_range(page_range: str):
+            parts = page_range.split('-')
+            # The range is 1-indexed inclusive, [start, end) is 0-indexed inclusive-exclusive.
+            start = int(parts[0]) - 1
+            # If len(parts) == 1 then parts[-1] = parts[0]
+            end = min(int(parts[-1]), input_page_count)
+            return range(start, end)
+
+        return chain.from_iterable(map(_create_iter_for_range, pages_to_print.split(',')))
+
+    def create_final_pages(self, input_pages_file: str, pages_to_print: str) -> str:
         out = os.path.join(self.work_dir, 'final_pages.pdf')
         reader = PdfReader(input_pages_file)
         writer = PdfWriter()
@@ -82,7 +98,8 @@ class FinalPageProcessor:
         next_col = 0
         dest_page = None
 
-        for page in reader.pages:
+        for page_index in self._create_pages_to_print_iter(pages_to_print, len(reader.pages)):
+            page = reader.pages[page_index]
             if next_row == 0 and next_col == 0:
                 dest_page = writer.add_blank_page(
                     width=self.final_page_size.width_pt(),
@@ -93,7 +110,8 @@ class FinalPageProcessor:
                 page,
                 Transformation().translate(
                     next_col * self.input_page_size.width_pt(),
-                    next_row * self.input_page_size.height_pt(),
+                    # The y-coordinate starts from the bottom of the page
+                    (self.rows - 1 - next_row) * self.input_page_size.height_pt(),
                 ),
             )
 

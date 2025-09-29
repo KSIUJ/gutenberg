@@ -1,10 +1,7 @@
-import os
 import re
 
-from django.conf import settings
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
-from django.core.files.storage import FileSystemStorage
 from django.db import models
 from django.db.models import F, Max, Q, IntegerField
 from django.db.models.functions import Cast
@@ -175,7 +172,7 @@ def validate_pages_to_print(value):
     for part in parts:
         # In case of single page numbers, part[0] and part[-1] is the
         # same thing, so we don't have to separately check for that
-        if int(part[0]) > int(part[-1]):
+        if int(part[0]) > int(part[-1]) or int(part[0]) < 1:
             raise ValidationError('Invalid page range: {}-{}'.format(part[0], part[-1]), code)
 
 
