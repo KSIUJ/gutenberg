@@ -16,7 +16,7 @@ from control.models import GutenbergJob, TwoSidedPrinting, JobStatus, PrinterTyp
     JobArtefact, JobArtefactType
 from printing.backends import DisabledPrinter, LocalCupsPrinter
 from printing.converter import detect_file_format, get_converter
-from printing.postprocess import FinalPageProcessor
+from printing.postprocess import FinalPageProcessor, NoPagesToPrintException
 from printing.processing.imposition_templates import StandardImpositionTemplate
 from printing.processing.pages import PageSize
 from printing.utils import JobCanceledException, TASK_TIMEOUT_S, DEFAULT_IPP_FORMAT, \
@@ -76,6 +76,13 @@ def submit_print_job(document_buffer,
     return job_id
 
 
+def _no_pages_cancel(job):
+    job.status = JobStatus.CANCELED
+    job.status_reason = 'No pages to print. Check your pages filter expression.'
+    job.save()
+    raise JobCanceledException()
+
+
 @shared_task
 def print_file(job_id):
     job = GutenbergJob.objects.filter(id=job_id).first()
@@ -100,7 +107,7 @@ def print_file(job_id):
                     tmp_input = os.path.join(artefact_tmpdir, 'input' + ext)
                     shutil.copyfile(file_path, tmp_input)
 
-                    conv = get_converter(file_format, artefact_tmpdir)
+                    conv = get_converter(file_format, artefact_tmpdir, job.properties.fit_to_page)
                     preprocess_result = conv.preprocess(tmp_input)
                     handle_cancellation(job)
 
@@ -113,7 +120,10 @@ def print_file(job_id):
                     input_pages_file = conv.create_input_pages(preprocess_result, final_page_processor.input_page_size)
                     handle_cancellation(job)
 
-                    final_pages_file = final_page_processor.create_final_pages(input_pages_file, job.properties.pages_to_print)
+                    try:
+                        final_pages_file = final_page_processor.create_final_pages(input_pages_file, job.properties.pages_to_print)
+                    except NoPagesToPrintException:
+                        _no_pages_cancel(job)
                     handle_cancellation(job)
 
                     output_file = imposition_template.create_output_pdf(final_pages_file, final_page_processor.final_page_orientation)

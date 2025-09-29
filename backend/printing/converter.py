@@ -27,8 +27,9 @@ class Converter(ABC):
     supported_extensions = []
     output_type = 'application/pdf'
 
-    def __init__(self, work_dir):
+    def __init__(self, work_dir: str, fit_to_page: bool):
         self.work_dir = work_dir
+        self.fit_to_page = fit_to_page
 
     @abstractmethod
     def preprocess(self, input_file: str) -> PreprocessResult:
@@ -129,7 +130,7 @@ class ResizingConverter(SandboxConverter, ABC):
             f"-dDEVICEWIDTHPOINTS={input_page_size.width_pt()}",
             f"-dDEVICEHEIGHTPOINTS={input_page_size.height_pt()}",
 
-            # TODO: Use fit to page always or conditionally
+            *(['-dFitPage'] if self.fit_to_page else []),
 
             '-sOutputFile=' + out, preprocess_result.preprocess_result_path
         ])
@@ -291,10 +292,10 @@ def detect_file_format(input_file: str):
     return input_type
 
 
-def get_converter(input_type: str, work_dir: str) -> Converter:
+def get_converter(input_type: str, work_dir: str, fit_to_page: bool) -> Converter:
     try:
         conv_class = CONVERTER_FOR_TYPE[input_type]
     except KeyError:
         raise NoConverterAvailableError(
             "Unable to convert {} - no converter available".format(input_type))
-    return conv_class(work_dir)
+    return conv_class(work_dir, fit_to_page)

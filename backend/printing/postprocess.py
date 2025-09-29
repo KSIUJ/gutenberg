@@ -6,17 +6,13 @@ from typing import List, Optional
 
 from pypdf import PdfReader, PdfWriter, Transformation
 
-from control.models import JobStatus
 from printing.processing.pages import PageSize, PageSizes, PageOrientation
-from printing.utils import SANDBOX_PATH, JobCanceledException, TASK_TIMEOUT_S
+from printing.utils import SANDBOX_PATH, TASK_TIMEOUT_S
 
 
-# TODO: Use this
-def _no_pages_cancel(job):
-    job.status = JobStatus.CANCELED
-    job.status_reason = 'No pages to print. Check your pages filter expression.'
-    job.save()
-    raise JobCanceledException()
+class NoPagesToPrintException(BaseException):
+    def __init__(self):
+        super().__init__("No pages to print")
 
 
 class FinalPageProcessor:
@@ -94,6 +90,7 @@ class FinalPageProcessor:
         reader = PdfReader(input_pages_file)
         writer = PdfWriter()
 
+        used_input_pages = 0
         next_row = 0
         next_col = 0
         dest_page = None
@@ -115,12 +112,16 @@ class FinalPageProcessor:
                 ),
             )
 
+            used_input_pages += 1
             next_col += 1
             if next_col == self.columns:
                 next_row += 1
                 next_col = 0
             if next_row == self.rows:
                 next_row = 0
+
+        if used_input_pages == 0:
+            raise NoPagesToPrintException
 
         with open(out, "xb") as output_file:
             writer.write(output_file)
