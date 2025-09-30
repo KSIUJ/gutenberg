@@ -82,6 +82,7 @@ class StandardImpositionProcessor(SandboxImpositionProcessor):
 
         # TODO: Add extra blank page if the number of pages is odd and duplex printing is enabled
 
+        writer.compress_identical_objects()
         with open(out, "xb") as output_file:
             writer.write(output_file)
         return ImpositionResult(
@@ -128,6 +129,7 @@ class BookletImpositionProcessor(SandboxImpositionProcessor):
             try_add_page(2 * media_sheet_count - 2 - 2*i, rear_page, False)
             try_add_page(2 * media_sheet_count + 1 + 2*i, rear_page, True)
 
+        writer.compress_identical_objects()
         with open(out, "xb") as output_file:
             writer.write(output_file)
         return ImpositionResult(

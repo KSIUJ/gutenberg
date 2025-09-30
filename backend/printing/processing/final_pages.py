@@ -124,6 +124,7 @@ class FinalPageProcessor:
         if used_input_pages == 0:
             raise NoPagesToPrintException
 
+        writer.compress_identical_objects()
         with open(out, "xb") as output_file:
             writer.write(output_file)
         return out
