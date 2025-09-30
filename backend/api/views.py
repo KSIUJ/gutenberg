@@ -21,8 +21,8 @@ from api.serializers import GutenbergJobSerializer, PrinterSerializer, PrintRequ
 from common.models import User
 from control.models import GutenbergJob, Printer, JobStatus, PrintingProperties, TwoSidedPrinting, JobArtefact, \
     JobArtefactType, JobType
-from printing.converter import detect_file_format, SUPPORTED_FILE_FORMATS
 from printing.printing import print_file
+from printing.processing.converter import detect_file_format, SUPPORTED_FILE_FORMATS
 
 logger = logging.getLogger('gutenberg.api.printing')
 

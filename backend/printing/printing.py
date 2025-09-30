@@ -15,8 +15,8 @@ from django.utils import timezone
 from control.models import GutenbergJob, TwoSidedPrinting, JobStatus, PrinterType, Printer, PrintingProperties, \
     JobArtefact, JobArtefactType
 from printing.backends import DisabledPrinter, LocalCupsPrinter
-from printing.converter import detect_file_format, get_converter
-from printing.postprocess import FinalPageProcessor, NoPagesToPrintException
+from printing.processing.converter import detect_file_format, get_converter
+from printing.processing.final_pages import FinalPageProcessor, NoPagesToPrintException
 from printing.processing.imposition import get_imposition_processor
 from printing.processing.pages import PageSize
 from printing.utils import JobCanceledException, TASK_TIMEOUT_S, DEFAULT_IPP_FORMAT, \
@@ -127,10 +127,10 @@ def print_file(job_id):
                         _no_pages_cancel(job)
                     handle_cancellation(job)
 
-                    output_file = imposition_processor.create_output_pdf(final_pages_file, final_page_processor.final_page_orientation)
+                    imposition_result = imposition_processor.create_output_pdf(final_pages_file, final_page_processor.final_page_orientation)
 
-                    shutil.copyfile(output_file, os.path.join(job_tmpdir, f'{idx:03}_output.pdf'))
-                    sum_num_pages += 1 # TODO: Fix
+                    shutil.copyfile(imposition_result.output_file, os.path.join(job_tmpdir, f'{idx:03}_output.pdf'))
+                    sum_num_pages += imposition_result.media_sheet_page_count
                     handle_cancellation(job)
             job.status = JobStatus.PRINTING
             job.status_reason = ''

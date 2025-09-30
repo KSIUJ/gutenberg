@@ -3,7 +3,7 @@ from rest_framework import serializers
 from common.models import User
 from control.models import GutenbergJob, Printer, TwoSidedPrinting, validate_pages_to_print, validate_n_up, \
     ImpositionTemplate
-from printing.converter import SUPPORTED_EXTENSIONS
+from printing.processing.converter import SUPPORTED_EXTENSIONS
 
 
 class GutenbergJobSerializer(serializers.ModelSerializer):

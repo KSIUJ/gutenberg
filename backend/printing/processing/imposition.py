@@ -1,12 +1,20 @@
 import os
 import subprocess
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import List
 
 from pypdf import PdfReader, PdfWriter, Transformation, PageObject
 
 from printing.processing.pages import PageSize, PageSizes, PageOrientation
-from printing.utils import SANDBOX_PATH, TASK_TIMEOUT_S
+from printing.utils import SANDBOX_PATH, TASK_TIMEOUT_S, ceil_div
+
+
+@dataclass(frozen=True)
+class ImpositionResult:
+    output_file: str
+    media_sheet_count: int
+    media_sheet_page_count: int
 
 
 class BaseImpositionProcessor(ABC):
@@ -27,12 +35,10 @@ class BaseImpositionProcessor(ABC):
         pass
 
     @abstractmethod
-    def create_output_pdf(self, final_pages_file: str, final_page_orientation: PageOrientation) -> str:
+    def create_output_pdf(self, final_pages_file: str, final_page_orientation: PageOrientation) -> ImpositionResult:
         """
         Creates the output PDF with imposition applied, and Final Pages rotated to exactly
         match the media size without rotating.
-
-        :return: The path to the output PDF
         """
 
         pass
@@ -61,17 +67,28 @@ class StandardImpositionProcessor(SandboxImpositionProcessor):
             landscape=self.media_size.rotated(),
         )
 
-    def create_output_pdf(self, final_pages_file: str, final_page_orientation: PageOrientation) -> str:
-        if final_page_orientation == PageOrientation.PORTRAIT:
-            # No-op, the orientation of the Final Pages is already portrait
-            return final_pages_file
-
-        # The Final Pages are in landscape orientation, rotate them 90
+    def create_output_pdf(self, final_pages_file: str, final_page_orientation: PageOrientation) -> ImpositionResult:
         out = os.path.join(self.work_dir, 'output.pdf')
-        self.run_in_sandbox([
-            "pdftk", final_pages_file, "cat", "1-endeast", "output", out,
-        ])
-        return out
+        reader = PdfReader(final_pages_file)
+        writer = PdfWriter()
+
+        rotation = 0 if final_page_orientation == PageOrientation.PORTRAIT else 90
+
+        for page in reader.pages:
+            dest_page = writer.add_blank_page(width=self.media_size.width_pt(), height=self.media_size.height_pt())
+            page = page.rotate(rotation)
+            page.transfer_rotation_to_content()
+            dest_page.merge_page(page)
+
+        # TODO: Add extra blank page if the number of pages is odd and duplex printing is enabled
+
+        with open(out, "xb") as output_file:
+            writer.write(output_file)
+        return ImpositionResult(
+            output_file=out,
+            media_sheet_count=ceil_div(len(reader.pages), 2),
+            media_sheet_page_count=len(reader.pages),
+        )
 
 
 class BookletImpositionProcessor(SandboxImpositionProcessor):
@@ -82,7 +99,7 @@ class BookletImpositionProcessor(SandboxImpositionProcessor):
             landscape=landscape_size,
         )
 
-    def create_output_pdf(self, final_pages_file: str, final_page_orientation: PageOrientation) -> str:
+    def create_output_pdf(self, final_pages_file: str, final_page_orientation: PageOrientation) -> ImpositionResult:
         out = os.path.join(self.work_dir, 'output.pdf')
         reader = PdfReader(final_pages_file)
         writer = PdfWriter()
@@ -100,9 +117,8 @@ class BookletImpositionProcessor(SandboxImpositionProcessor):
             if top:
                 transformation = transformation.translate(0, y_midpoint_pt)
             target.merge_transformed_page(page, transformation)
-            page.rotate(rotation)
 
-        media_sheet_count = -(len(reader.pages) // -4) # Ceil division
+        media_sheet_count = ceil_div(len(reader.pages), 4)
         for i in range(media_sheet_count):
             front_page = writer.add_blank_page(width=self.media_size.width_pt(), height=self.media_size.height_pt())
             try_add_page(2 * media_sheet_count - 1 - 2*i, front_page, True)
@@ -114,7 +130,11 @@ class BookletImpositionProcessor(SandboxImpositionProcessor):
 
         with open(out, "xb") as output_file:
             writer.write(output_file)
-        return out
+        return ImpositionResult(
+            output_file=out,
+            media_sheet_count=media_sheet_count,
+            media_sheet_page_count=2*media_sheet_count,
+        )
 
 
 def get_imposition_processor(imposition_template: str, media_size: PageSize, work_dir: str) -> BaseImpositionProcessor:
