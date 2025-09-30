@@ -93,10 +93,8 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             raise InvalidStatus("Invalid job status for this request", additional_info="current status: {}".format(job.status))
         serializer = ChangeArtefactOrderRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        try:
-            job = self._change_order(**serializer.validated_data)
-        except exceptions.ValidationError as ex:
-            raise ex
+        
+        job = self._change_order(**serializer.validated_data)
         return Response(self.get_serializer(job).data)
 
     @action(detail=True, methods=['post'], name='Run job')
@@ -147,17 +145,15 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
     def _create_printing_job(self, printer_with_perms,
                              copies: int, pages_to_print: str,
                              color: bool, two_sides: str, fit_to_page: bool, **_):
-        job = GutenbergJob.objects.create(name='webrequest', job_type=JobType.PRINT, status=JobStatus.INCOMING,
+        job = GutenbergJob(name='webrequest', job_type=JobType.PRINT, status=JobStatus.INCOMING,
                                           owner=self.request.user, printer=printer_with_perms)
-        PrintingProperties.objects.create(color=color, copies=copies, two_sides=two_sides,
+        job.properties = PrintingProperties(color=color, copies=copies, two_sides=two_sides,
                                           pages_to_print=pages_to_print, job=job, fit_to_page=fit_to_page)
 
-        try:
-            self._validate_properties(printer_with_perms.id, job.properties)
-            return job
-        except Exception as ex:
-            job.delete()
-            raise ex
+        self._validate_properties(printer_with_perms.id, job.properties)
+        job.properties.save()
+        job.save()
+        return job
 
 
 
@@ -165,7 +161,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
     def _change_properties(self, printer_with_perms = None, copies: int=None, pages_to_print: str=None,
                            color: bool=None, two_sides: str=None, fit_to_page: bool=None, **_):
         job = self.get_object()
-        if printer_with_perms.id is not None:
+        if printer_with_perms is not None:
             job.printer = printer_with_perms
         if color is not None:
             job.properties.color = color
@@ -178,7 +174,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         if fit_to_page is not None:
             job.properties.fit_to_page = fit_to_page
 
-        self._validate_properties(printer_with_perms.id, job.properties)
+        self._validate_properties(job.printer.id, job.properties, job=job)
         job.properties.save()
         job.save()
         return job
@@ -216,8 +212,9 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         logger.info('User %s submitted job: %s', self.request.user.username, job.id)
         return job
     
-    def _validate_properties(self, printer:int , properties):
-        job = self.get_object()
+    def _validate_properties(self, printer:int , properties, job=None):
+        if job is None:
+            job = self.get_object()
         if job.status != JobStatus.INCOMING:
             raise InvalidStatus("Invalid job status for this request", additional_info="current status: {}".format(job.status))
         printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
