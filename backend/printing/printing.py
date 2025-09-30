@@ -127,7 +127,11 @@ def print_file(job_id):
                         _no_pages_cancel(job)
                     handle_cancellation(job)
 
-                    imposition_result = imposition_processor.create_output_pdf(final_pages_file, final_page_processor.final_page_orientation)
+                    imposition_result = imposition_processor.create_output_pdf(
+                        final_pages_file,
+                        final_page_processor.final_page_orientation,
+                        job.properties.two_sides != TwoSidedPrinting.ONE_SIDED,
+                    )
 
                     shutil.copyfile(imposition_result.output_file, os.path.join(job_tmpdir, f'{idx:03}_output.pdf'))
                     sum_num_pages += imposition_result.media_sheet_page_count

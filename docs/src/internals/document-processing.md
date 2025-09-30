@@ -1,5 +1,9 @@
 # Document processing
 
+> [!NOTE]
+> This document describes how this feature will eventually work.
+> Some features are not yet implemented and the design might change.
+
 ## Document processing steps and relevant IPP Job attributes
 
 1. Preprocess the documents:

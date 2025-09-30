@@ -35,7 +35,7 @@ class BaseImpositionProcessor(ABC):
         pass
 
     @abstractmethod
-    def create_output_pdf(self, final_pages_file: str, final_page_orientation: PageOrientation) -> ImpositionResult:
+    def create_output_pdf(self, final_pages_file: str, final_page_orientation: PageOrientation, duplex_enabled: bool) -> ImpositionResult:
         """
         Creates the output PDF with imposition applied, and Final Pages rotated to exactly
         match the media size without rotating.
@@ -67,7 +67,7 @@ class StandardImpositionProcessor(SandboxImpositionProcessor):
             landscape=self.media_size.rotated(),
         )
 
-    def create_output_pdf(self, final_pages_file: str, final_page_orientation: PageOrientation) -> ImpositionResult:
+    def create_output_pdf(self, final_pages_file: str, final_page_orientation: PageOrientation, duplex_enabled: bool) -> ImpositionResult:
         out = os.path.join(self.work_dir, 'output.pdf')
         reader = PdfReader(final_pages_file)
         writer = PdfWriter()
@@ -80,7 +80,9 @@ class StandardImpositionProcessor(SandboxImpositionProcessor):
             page.transfer_rotation_to_content()
             dest_page.merge_page(page)
 
-        # TODO: Add extra blank page if the number of pages is odd and duplex printing is enabled
+        # If duplex printing is enabled, make sure that the number of pages in the output PDF is even
+        if duplex_enabled and len(reader.pages) % 2 == 1:
+            writer.add_blank_page(width=self.media_size.width_pt(), height=self.media_size.height_pt())
 
         writer.compress_identical_objects()
         with open(out, "xb") as output_file:
@@ -100,7 +102,7 @@ class BookletImpositionProcessor(SandboxImpositionProcessor):
             landscape=landscape_size,
         )
 
-    def create_output_pdf(self, final_pages_file: str, final_page_orientation: PageOrientation) -> ImpositionResult:
+    def create_output_pdf(self, final_pages_file: str, final_page_orientation: PageOrientation, duplex_enabled: bool) -> ImpositionResult:
         out = os.path.join(self.work_dir, 'output.pdf')
         reader = PdfReader(final_pages_file)
         writer = PdfWriter()
