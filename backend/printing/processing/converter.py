@@ -1,5 +1,4 @@
 import os
-import re
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
@@ -8,6 +7,7 @@ from itertools import chain
 from typing import List
 
 import magic
+from pypdf import PdfReader
 
 from printing.processing.pages import PageSize, PageOrientation
 from printing.utils import SANDBOX_PATH, TASK_TIMEOUT_S, logger
@@ -85,28 +85,17 @@ class ResizingConverter(SandboxConverter, ABC):
 
         pass
 
-    _DIMENSIONS_PATTERN = re.compile(r'^PageMediaDimensions: (\d+(?:\.\d+)?) (\d+(?:\.\d+)?)$', flags=re.MULTILINE)
-    _ROTATION_PATTERN = re.compile(r'^PageMediaRotation: (\d+)$', flags=re.MULTILINE)
-
     def preprocess(self, input_file: str) -> "ResizingConverter.PreprocessResult":
         preprocess_result_path = self.convert_to_pdf(input_file)
-        command = ['pdftk', preprocess_result_path, 'dump_data_utf8']
-        output = self.run_in_sandbox(command)
+        reader = PdfReader(preprocess_result_path)
 
         vertical_page_count = 0
         horizontal_page_count = 0
 
-        pages = output.split('\nPageMediaBegin\n')[1:]
-        for page in pages:
-            width, height = map(float, ResizingConverter._DIMENSIONS_PATTERN.search(page).groups())
-            rotation = ResizingConverter._ROTATION_PATTERN.search(page).group(1)
-
-            if rotation in ("90", "270"):
-                width, height = height, width
-
-            if height > width:
+        for page in reader.pages:
+            if page.mediabox.height > page.mediabox.width:
                 vertical_page_count += 1
-            if width > height:
+            if page.mediabox.width > page.mediabox.height:
                 horizontal_page_count += 1
 
         if horizontal_page_count + vertical_page_count == 0:
