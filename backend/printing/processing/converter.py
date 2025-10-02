@@ -119,6 +119,9 @@ class ResizingConverter(SandboxConverter, ABC):
             f"-dDEVICEWIDTHPOINTS={input_page_size.width_pt()}",
             f"-dDEVICEHEIGHTPOINTS={input_page_size.height_pt()}",
 
+            # FIXME: -dFitPage automatically rotates pages, this is not what we want.
+            #       Preventing this is not easy in GhostScript, so the
+            #       resizing to the Input Page size should happen in the FinalPageProcessor.
             *(['-dFitPage'] if self.fit_to_page else []),
 
             '-sOutputFile=' + out, preprocess_result.preprocess_result_path
