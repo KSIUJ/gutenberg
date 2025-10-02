@@ -32,6 +32,7 @@ export type CreatePrintJobRequest = {
   fit_to_page?: boolean;
   n_up?: number;
   imposition_template?: ImpositionTemplate;
+  orientation_requested?: OrientationRequested;
 };
 
 // TODO: Add the 'SCANNING' and 'WAITING_PAGE' statuses when scanning is implemented

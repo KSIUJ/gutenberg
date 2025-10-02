@@ -13,12 +13,12 @@ from django.db.models.functions import Greatest, Coalesce
 from django.utils import timezone
 
 from control.models import GutenbergJob, TwoSidedPrinting, JobStatus, PrinterType, Printer, PrintingProperties, \
-    JobArtefact, JobArtefactType
+    JobArtefact, JobArtefactType, OrientationRequested
 from printing.backends import DisabledPrinter, LocalCupsPrinter
 from printing.processing.converter import detect_file_format, get_converter
 from printing.processing.final_pages import FinalPageProcessor, NoPagesToPrintException
 from printing.processing.imposition import get_imposition_processor
-from printing.processing.pages import PageSize
+from printing.processing.pages import PageSize, PageOrientation
 from printing.utils import JobCanceledException, TASK_TIMEOUT_S, DEFAULT_IPP_FORMAT, \
     AUTODETECT_IPP_FORMAT, SUPPORTED_IPP_FORMATS, DocumentFormatError, handle_cancellation
 
@@ -114,8 +114,11 @@ def print_file(job_id):
                     # TODO: Use proper source for media size
                     media_size = PageSize(width_mm=210, height_mm=297)
                     imposition_processor = get_imposition_processor(job.properties.imposition_template, media_size, artefact_tmpdir)
-                    # TODO: Support `orientation_requested` IPP attribute
-                    input_page_orientation = preprocess_result.orientation
+                    input_page_orientation = {
+                        OrientationRequested.AUTO: preprocess_result.orientation,
+                        OrientationRequested.LANDSCAPE: PageOrientation.LANDSCAPE,
+                        OrientationRequested.PORTRAIT: PageOrientation.PORTRAIT,
+                    }[job.properties.orientation_requested]
                     final_page_processor = FinalPageProcessor(artefact_tmpdir, job.properties.n_up, imposition_processor.get_final_page_sizes(), input_page_orientation)
 
                     input_pages_file = conv.create_input_pages(preprocess_result, final_page_processor.input_page_size)

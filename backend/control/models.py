@@ -41,6 +41,12 @@ class ImpositionTemplate(models.TextChoices):
     BOOKLET = 'booklet', _('booklet')
 
 
+class OrientationRequested(models.TextChoices):
+    AUTO = 'AUTO', _('auto')
+    PORTRAIT = 'PORTRAIT', _('portrait')
+    LANDSCAPE = 'LANDSCAPE', _('landscape')
+
+
 # class ScannerType(models.TextChoices):
 #     DISABLED = 'NA', _('disabled')
 #     LOCAL_SCANIMAGE = 'SC', _('local scanimage')
@@ -197,3 +203,4 @@ class PrintingProperties(models.Model):
     fit_to_page = models.BooleanField(default=True)
     n_up = models.IntegerField(default=1, validators=[validate_n_up])
     imposition_template = models.CharField(default=ImpositionTemplate.NONE, choices=ImpositionTemplate.choices)
+    orientation_requested = models.CharField(default=OrientationRequested.AUTO, choices=OrientationRequested.choices)

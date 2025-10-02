@@ -120,6 +120,21 @@
           </input-hint>
         </div>
 
+        <label
+          id="orientation-requested-select"
+          class="text-label px-form"
+        >Input page orientation</label>
+        <p-select-button
+          v-model="jobCreator.orientationRequested"
+          :options="orientationRequestedOptions"
+          option-value="value"
+          data-key="value"
+          option-label="label"
+          :allow-empty="false"
+          fluid
+          aria-labelledby="orientation-requested-select"
+        />
+
         <labeled-toggle
           v-model="jobCreator.fitToPageEnabled"
           label="Fit to page"
@@ -269,6 +284,7 @@
 
 <script setup lang="ts">
 import type { FileUploadSelectEvent } from 'primevue';
+import type { OrientationRequested } from '~/composables/use-job-creator';
 
 const printers = await usePrinters();
 const jobCreator = useJobCreator(printers);
@@ -321,6 +337,12 @@ const nUpOptions = [1, 2, 4, 8, 16, 32];
 const impositionTemplateOptions = [
   { value: 'none' as ImpositionTemplate, label: 'None' },
   { value: 'booklet' as ImpositionTemplate, label: 'Booklet' },
+];
+
+const orientationRequestedOptions = [
+  { value: 'AUTO' as OrientationRequested, label: 'Auto' },
+  { value: 'PORTRAIT' as OrientationRequested, label: 'Portrait' },
+  { value: 'LANDSCAPE' as OrientationRequested, label: 'Landscape' },
 ];
 
 const onFileSelect = (event: FileUploadSelectEvent) => {

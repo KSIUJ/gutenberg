@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from enum import Enum
 
-from printing.utils import MM_PER_PT
+
+MM_PER_PT = 25.4 / 72
 
 
 class PageOrientation(Enum):
