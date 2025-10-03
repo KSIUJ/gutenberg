@@ -15,7 +15,8 @@ from printing.utils import SANDBOX_PATH, TASK_TIMEOUT_S, logger
 
 class Converter(ABC):
     """
-    A document to PDF converter class. The resulting PDF contains the Input Pages used for further processing.
+    A document to PDF converter class. The resulting PDF contains the pages used for further processing.
+    The converter should keep the original page orientation.
     """
 
     @dataclass(frozen=True)
@@ -41,11 +42,13 @@ class Converter(ABC):
         pass
 
     @abstractmethod
-    def create_input_pages(self, preprocess_result: PreprocessResult, input_page_size: PageSize) -> str:
+    def create_input_pdf(self, preprocess_result: PreprocessResult, input_page_size: PageSize) -> str:
         """
-        Place the preprocessed document data on the Input Pages.
+        Perform the conversion of the input file to PDF or return the PDF generated in `preprocess`.
+        `input_page_size` can be used to generate the page size expected in the further steps,
+        but returning pages in this size is not required in the converter classes.
 
-        :return: The resulting PDF which contains the Input Pages.
+        :return: The path to the resulting PDF which contains the Input Pages.
         """
 
         pass
@@ -71,10 +74,14 @@ class SandboxConverter(Converter, ABC):
         return shutil.which(name) is not None
 
 
-class ResizingConverter(SandboxConverter, ABC):
+class EarlyConverter(SandboxConverter, ABC):
     """
-    An abstract converter used for input formats which declare a page size (e.g., PDF, PostScript, PWG Raster, .docx)
-    in the document data.
+    An abstract converter class which performs the conversion to PDF in the `preprocess` step
+    by calling the user-provided `convert_to_pdf` method and determines the orientation based on
+    the generated PDF.
+
+    The resulting PDF will have the orientation and page size of the original document,
+    `input_page_size` is ignored.
     """
 
     @abstractmethod
@@ -85,7 +92,7 @@ class ResizingConverter(SandboxConverter, ABC):
 
         pass
 
-    def preprocess(self, input_file: str) -> "ResizingConverter.PreprocessResult":
+    def preprocess(self, input_file: str) -> "EarlyConverter.PreprocessResult":
         preprocess_result_path = self.convert_to_pdf(input_file)
         reader = PdfReader(preprocess_result_path)
 
@@ -102,31 +109,17 @@ class ResizingConverter(SandboxConverter, ABC):
             logger.warning("Failed to determine orientation in ResizingConverter")
 
         dominant_orientation = PageOrientation.LANDSCAPE if horizontal_page_count > vertical_page_count else PageOrientation.PORTRAIT
-        return ResizingConverter.PreprocessResult(
+        return EarlyConverter.PreprocessResult(
             orientation=dominant_orientation,
             preprocess_result_path=preprocess_result_path,
         )
 
 
-    def create_input_pages(self, preprocess_result: "ResizingConverter.PreprocessResult", input_page_size: PageSize) -> str:
-        out = os.path.join(self.work_dir, 'input_pages.pdf')
-        self.run_in_sandbox([
-            'gs', '-sDEVICE=pdfwrite', '-dCompatibilityLevel=1.4',
-            '-dNOPAUSE', '-dBATCH', '-dSAFER',
-
-            # Specify the page size of the resulting PDF to be the size of the Input Page
-            '-dFIXEDMEDIA',
-            f"-dDEVICEWIDTHPOINTS={input_page_size.width_pt()}",
-            f"-dDEVICEHEIGHTPOINTS={input_page_size.height_pt()}",
-
-            # FIXME: -dFitPage automatically rotates pages, this is not what we want.
-            #       Preventing this is not easy in GhostScript, so the
-            #       resizing to the Input Page size should happen in the FinalPageProcessor.
-            *(['-dFitPage'] if self.fit_to_page else []),
-
-            '-sOutputFile=' + out, preprocess_result.preprocess_result_path
-        ])
-        return out
+    def create_input_pdf(self, preprocess_result: "EarlyConverter.PreprocessResult", input_page_size: PageSize) -> str:
+        # The PDF was created in the `preprocess` step,
+        # it might have dimensions different from `input_page_size`, but this will be handled
+        # in the next processing steps.
+        return preprocess_result.preprocess_result_path
 
 
 class ImageConverter(SandboxConverter):
@@ -141,8 +134,8 @@ class ImageConverter(SandboxConverter):
         orientation = PageOrientation.LANDSCAPE if width > height else PageOrientation.PORTRAIT
         return ImageConverter.PreprocessResult(orientation, input_file)
 
-    def create_input_pages(self, preprocess_result: "ImageConverter.PreprocessResult", input_page_size: PageSize) -> str:
-        out = os.path.join(self.work_dir, 'input_pages.pdf')
+    def create_input_pdf(self, preprocess_result: "ImageConverter.PreprocessResult", input_page_size: PageSize) -> str:
+        out = os.path.join(self.work_dir, 'converted.pdf')
 
         pixels_per_inch = 300
         pixels_per_mm = pixels_per_inch / 25.4
@@ -155,8 +148,6 @@ class ImageConverter(SandboxConverter):
         page_height = round(input_page_size.height_mm * pixels_per_mm)
 
         # TODO: Use scaling options (like fit to page)
-        # TODO: Add `-dAutoRotatePages=/None`?
-        #       See https://unix.stackexchange.com/questions/442720/ghostscript-changes-orientation-of-pdf
         self.run_in_sandbox(
             [
                 'convert', preprocess_result.preprocess_result_path,
@@ -179,7 +170,7 @@ class ImageConverter(SandboxConverter):
         return cls.binary_exists('convert')
 
 
-class DocConverter(ResizingConverter):
+class DocConverter(EarlyConverter):
     supported_types = ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                        'application/rtf', 'application/vnd.oasis.opendocument.text']
     supported_extensions = ['.doc', '.docx', '.rtf', '.odt']
@@ -194,7 +185,7 @@ class DocConverter(ResizingConverter):
         return cls.binary_exists('unoconv')
 
 
-class PwgRasterConverter(ResizingConverter):
+class PwgRasterConverter(EarlyConverter):
     supported_types = ['image/pwg-raster']
     supported_extensions = ['.pwg']
 
@@ -218,7 +209,7 @@ class PwgRasterConverter(ResizingConverter):
             return False
 
 
-class PostScriptConverter(ResizingConverter):
+class PostScriptConverter(EarlyConverter):
     supported_types = ['application/postscript']
     supported_extensions = ['.ps']
 
@@ -233,10 +224,10 @@ class PostScriptConverter(ResizingConverter):
 
     @classmethod
     def is_available(cls):
-        return True
+        return cls.binary_exists('gs')
 
 
-class PdfConverter(ResizingConverter):
+class PdfConverter(EarlyConverter):
     supported_types = ['application/pdf']
     supported_extensions = ['.pdf']
 

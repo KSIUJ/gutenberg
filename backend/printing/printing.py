@@ -121,7 +121,7 @@ def print_file(job_id):
                     }[job.properties.orientation_requested]
                     final_page_processor = FinalPageProcessor(artefact_tmpdir, job.properties.n_up, imposition_processor.get_final_page_sizes(), input_page_orientation)
 
-                    input_pages_file = conv.create_input_pages(preprocess_result, final_page_processor.input_page_size)
+                    input_pages_file = conv.create_input_pdf(preprocess_result, final_page_processor.input_page_size)
                     handle_cancellation(job)
 
                     try:
