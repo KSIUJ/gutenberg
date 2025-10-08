@@ -100,7 +100,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=['post'], name='Run job')
     def run_job(self, request, pk=None):
         job = self.get_object()
-        self._validate_properties(job.printer, job.properties)
+        self._validate_properties(job.printer.id, job.properties, job)
         self._run_job(job)
         return Response(self.get_serializer(job).data)
 
@@ -117,22 +117,22 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=['post'], name='Change job properties')
     def change_properties(self, request, pk=None):
-        #not given fields are not changed
+        # Not given fields are not changed
         job = self.get_object()
         serializer = ChangePrintJobPropertiesRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        printer=serializer.validated_data.get('printer')
-        if printer is None:
-            printer=job.printer.id
+        printer_id=serializer.validated_data.get('printer')
+        if printer_id is None:
+            printer_id=job.printer.id
         printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
-                                                          printer_id=printer)
+                                                          printer_id=printer_id)
         job = self._change_properties(printer_with_perms=printer_with_perms, **serializer.validated_data)
         return Response(self.get_serializer(job).data)
 
     @action(detail=True, methods=['get'], name='Validate job properties')
     def validate_properties(self, request, pk=None):
         job = self.get_object()
-        self._validate_properties(job.printer.id, job.properties)
+        self._validate_properties(job.printer.id, job.properties, job)
         return Response(self.get_serializer(job).data)
 
     @action(detail=True, methods=['get'], name='List artefacts')
@@ -169,9 +169,9 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             orientation_requested=orientation_requested,
         )
 
-        self._validate_properties(printer_with_perms.id, job.properties)
-        job.properties.save()
+        self._validate_properties(printer_with_perms.id, job.properties, job)
         job.save()
+        job.properties.save()
         return job
 
     def _change_properties(
@@ -245,13 +245,11 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         logger.info('User %s submitted job: %s', self.request.user.username, job.id)
         return job
 
-    def _validate_properties(self, printer:int , properties, job=None):
-        if job is None:
-            job = self.get_object()
+    def _validate_properties(self, printer_id: int, properties, job):
         if job.status != JobStatus.INCOMING:
             raise InvalidStatus("Invalid job status for this request", additional_info="current status: {}".format(job.status))
         printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
-                                                          printer_id=printer)
+                                                          printer_id=printer_id)
         if not printer_with_perms:
             raise exceptions.NotFound("Selected printer does not exist")
         if properties.color and not printer_with_perms.color_allowed:
