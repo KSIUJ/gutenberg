@@ -33,8 +33,8 @@ DJANGO_INSTALLED_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
-    'mozilla_django_oidc',
     'rest_framework',
+    'ksi_oidc_django',
 ]
 
 # Apps overriding templates in defined by THIRD_PARTY_APPS.
@@ -58,7 +58,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    # 'mozilla_django_oidc.middleware.SessionRefresh',
+    'ksi_oidc_django.middleware.OidcAuthMiddleware',
 ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
@@ -185,7 +185,17 @@ LOGGING = {
             'handlers': ['console', 'print_file'],
             'level': 'INFO',
             'propagate': True,
-        }
+        },
+        'ksi_oidc_django': {
+            'handlers': ['console', 'print_file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'ksi_oidc_common': {
+            'handlers': ['console', 'print_file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
     }
 }
 
@@ -201,3 +211,5 @@ OIDC_RP_SCOPES = 'openid email'
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+
+OIDC_SSO_CHECK_COOLDOWN_SECONDS = 300

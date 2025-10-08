@@ -1,10 +1,8 @@
-import os
 import re
+from math import log2
 
-from django.conf import settings
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
-from django.core.files.storage import FileSystemStorage
 from django.db import models
 from django.db.models import F, Max, Q, IntegerField
 from django.db.models.functions import Cast
@@ -36,6 +34,17 @@ class TwoSidedPrinting(models.TextChoices):
 class PrinterType(models.TextChoices):
     DISABLED = 'NA', _('disabled')
     LOCAL_CUPS = 'LP', _('local cups')
+
+
+class ImpositionTemplate(models.TextChoices):
+    NONE = 'none', _('none'),
+    BOOKLET = 'booklet', _('booklet')
+
+
+class OrientationRequested(models.TextChoices):
+    AUTO = 'AUTO', _('auto')
+    PORTRAIT = 'PORTRAIT', _('portrait')
+    LANDSCAPE = 'LANDSCAPE', _('landscape')
 
 
 # class ScannerType(models.TextChoices):
@@ -178,8 +187,14 @@ def validate_pages_to_print(value):
     for part in parts:
         # In case of single page numbers, part[0] and part[-1] is the
         # same thing, so we don't have to separately check for that
-        if int(part[0]) > int(part[-1]):
+        if int(part[0]) > int(part[-1]) or int(part[0]) < 1:
             raise ValidationError('Invalid page range: {}-{}'.format(part[0], part[-1]), code)
+
+
+def validate_n_up(value: int):
+    divide_count = round(log2(value))
+    if 2 ** divide_count != value:
+        raise ValueError("n_up value must be a power of 2")
 
 
 class PrintingProperties(models.Model):
@@ -189,3 +204,6 @@ class PrintingProperties(models.Model):
     pages_to_print = models.CharField(max_length=100, null=True, blank=True, validators=[validate_pages_to_print])
     job = models.OneToOneField(GutenbergJob, on_delete=models.CASCADE, related_name='properties')
     fit_to_page = models.BooleanField(default=True)
+    n_up = models.IntegerField(default=1, validators=[validate_n_up])
+    imposition_template = models.CharField(default=ImpositionTemplate.NONE, choices=ImpositionTemplate.choices)
+    orientation_requested = models.CharField(default=OrientationRequested.AUTO, choices=OrientationRequested.choices)

@@ -1,8 +1,9 @@
 from rest_framework import serializers
 
 from common.models import User
-from control.models import GutenbergJob, Printer, TwoSidedPrinting, validate_pages_to_print, JobArtefact
-from printing.converter import SUPPORTED_EXTENSIONS
+from control.models import GutenbergJob, Printer, TwoSidedPrinting, validate_pages_to_print, validate_n_up, \
+    ImpositionTemplate, OrientationRequested, JobArtefact
+from printing.processing.converter import SUPPORTED_EXTENSIONS
 
 
 class GutenbergJobSerializer(serializers.ModelSerializer):
@@ -36,6 +37,9 @@ class PrintRequestSerializer(serializers.Serializer):
     two_sides = serializers.ChoiceField(choices=TwoSidedPrinting.choices, required=True)
     color = serializers.BooleanField(default=False)
     fit_to_page = serializers.BooleanField(default=True)
+    n_up = serializers.IntegerField(default=1, validators=[validate_n_up])
+    imposition_template = serializers.ChoiceField(choices=ImpositionTemplate.choices, default=ImpositionTemplate.NONE)
+    orientation_requested = serializers.ChoiceField(choices=OrientationRequested.choices, default=OrientationRequested.AUTO)
 
 
 class CreatePrintJobRequestSerializer(serializers.Serializer):
@@ -45,6 +49,9 @@ class CreatePrintJobRequestSerializer(serializers.Serializer):
     two_sides = serializers.ChoiceField(choices=TwoSidedPrinting.choices, required=True)
     color = serializers.BooleanField(default=False)
     fit_to_page = serializers.BooleanField(default=True)
+    n_up = serializers.IntegerField(default=1, validators=[validate_n_up])
+    imposition_template = serializers.ChoiceField(choices=ImpositionTemplate.choices, default=ImpositionTemplate.NONE)
+    orientation_requested = serializers.ChoiceField(choices=OrientationRequested.choices, default=OrientationRequested.AUTO)
 
 class ChangePrintJobPropertiesRequestSerializer(serializers.Serializer):
     printer = serializers.IntegerField(required=False)
@@ -53,16 +60,20 @@ class ChangePrintJobPropertiesRequestSerializer(serializers.Serializer):
     two_sides = serializers.ChoiceField(choices=TwoSidedPrinting.choices, required=False)
     color = serializers.BooleanField(required=False)
     fit_to_page = serializers.BooleanField(required=False)
+    n_up = serializers.IntegerField(required=False, validators=[validate_n_up])
+    imposition_template = serializers.ChoiceField(required=False, choices=ImpositionTemplate.choices)
+    orientation_requested = serializers.ChoiceField(required=False, choices=OrientationRequested.choices)
+
 
 class UploadJobArtefactRequestSerializer(serializers.Serializer):
     file = serializers.FileField(allow_empty_file=False, required=True)
 
 class DeleteJobArtefactRequestSerializer(serializers.Serializer):
     artefact_id = serializers.IntegerField(required=True)
-    
+
 class ChangeArtefactOrderRequestSerializer(serializers.Serializer):
     new_order = serializers.ListField(
-        child=serializers.IntegerField(), 
+        child=serializers.IntegerField(),
         allow_empty=False,
         required=True
     )

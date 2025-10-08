@@ -25,7 +25,9 @@ class PrinterDescriptionGroup(AttributeGroup):
                                                        default=['en'])
     ipp_versions_supported = OneSetField(accepted_fields=[KeywordField()], required=True, default=['1.1', '2.0'])
     ipp_features_supported = OneSetField(accepted_fields=[KeywordField()], default=['ipp-everywhere'])
+    # TODO: Implement multiple document jobs
     multiple_document_jobs_supported = BooleanField(default=False)
+    # TODO: Is this fake?
     multiple_operation_time_out = IntegerField(default=600)
     natural_language_configured = NaturalLangField(required=True, default='en')
     operations_supported = OneSetField(accepted_fields=[EnumField()], required=True, default=[
@@ -77,8 +79,10 @@ class PrinterDescriptionGroup(AttributeGroup):
                                                              'job-name', 'print-rendering-intent',
                                                              'print-content-optimize', 'page_ranges'])
     preferred_attributes_supported = BooleanField(default=False)
+    # TODO: Is this really what Gutenberg does?
     multiple_operation_time_out_action = KeywordField(default='process-job')
     overrides_supported = OneSetField(accepted_fields=[KeywordField()], default=['pages', 'document-number'])
+    # TODO: Infinite toner glitch!
     printer_supply = OneSetField(accepted_fields=[OctetStringField()], default=[
         b'index=1;class=supplyThatIsConsumed;type=toner;unit=percent;maxcapacity=100;'
         b'level=100;colorantname=multi-color;'])

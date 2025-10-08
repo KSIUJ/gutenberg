@@ -23,8 +23,8 @@ from api.serializers import GutenbergJobSerializer, PrinterSerializer, PrintRequ
 from common.models import User
 from control.models import GutenbergJob, Printer, JobStatus, PrintingProperties, TwoSidedPrinting, JobArtefact, \
     JobArtefactType, JobType
-from printing.converter import detect_file_format, SUPPORTED_FILE_FORMATS
 from printing.printing import print_file
+from printing.processing.converter import detect_file_format, SUPPORTED_FILE_FORMATS
 
 logger = logging.getLogger('gutenberg.api.printing')
 
@@ -71,7 +71,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         except UnsupportedDocumentError as ex:
             raise UnsupportedDocument(str(ex))
         return Response(self.get_serializer(job).data)
-    
+
     @action(detail=True, methods=['delete'], name='Delete artefact')
     def delete_artefact(self, request, pk=None):
         job = self.get_object()
@@ -85,7 +85,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             raise exceptions.NotFound("Selected artefact does not exist")
         artefact.delete()
         return Response(self.get_serializer(job).data)
-    
+
     @action(detail=True, methods=['post'], name='Change artefact order')
     def change_artefact_order(self, request, pk=None):
         job = self.get_object()
@@ -93,7 +93,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             raise InvalidStatus("Invalid job status for this request", additional_info="current status: {}".format(job.status))
         serializer = ChangeArtefactOrderRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         job = self._change_order(**serializer.validated_data)
         return Response(self.get_serializer(job).data)
 
@@ -114,7 +114,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             raise exceptions.NotFound("Selected printer does not exist")
         job = self._create_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
         return Response(self.get_serializer(job).data)
-    
+
     @action(detail=True, methods=['post'], name='Change job properties')
     def change_properties(self, request, pk=None):
         #not given fields are not changed
@@ -128,7 +128,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
                                                           printer_id=printer)
         job = self._change_properties(printer_with_perms=printer_with_perms, **serializer.validated_data)
         return Response(self.get_serializer(job).data)
-    
+
     @action(detail=True, methods=['get'], name='Validate job properties')
     def validate_properties(self, request, pk=None):
         job = self.get_object()
@@ -142,21 +142,37 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = JobArtefactSerializer(artefacts, many=True, context={'request': request})
         return Response(serializer.data)
 
-    def _create_printing_job(self, printer_with_perms,
-                             copies: int, pages_to_print: str,
-                             color: bool, two_sides: str, fit_to_page: bool, **_):
+    def _create_printing_job(
+        self,
+        printer_with_perms,
+        copies: int,
+        pages_to_print: str,
+        color: bool,
+        two_sides: str,
+        fit_to_page: bool,
+        n_up: int,
+        imposition_template: str,
+        orientation_requested: str,
+        **_,
+    ):
         job = GutenbergJob(name='webrequest', job_type=JobType.PRINT, status=JobStatus.INCOMING,
                                           owner=self.request.user, printer=printer_with_perms)
-        job.properties = PrintingProperties(color=color, copies=copies, two_sides=two_sides,
-                                          pages_to_print=pages_to_print, job=job, fit_to_page=fit_to_page)
+        job.properties = PrintingProperties(
+            color=color,
+            copies=copies,
+            two_sides=two_sides,
+            pages_to_print=pages_to_print,
+            job=job,
+            fit_to_page=fit_to_page,
+            n_up=n_up,
+            imposition_template=imposition_template,
+            orientation_requested=orientation_requested,
+        )
 
         self._validate_properties(printer_with_perms.id, job.properties)
         job.properties.save()
         job.save()
         return job
-
-
-
 
     def _change_properties(self, printer_with_perms = None, copies: int=None, pages_to_print: str=None,
                            color: bool=None, two_sides: str=None, fit_to_page: bool=None, **_):
@@ -173,6 +189,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             job.properties.pages_to_print = pages_to_print
         if fit_to_page is not None:
             job.properties.fit_to_page = fit_to_page
+        # TODO: Add support for new properties here
 
         self._validate_properties(job.printer.id, job.properties, job=job)
         job.properties.save()
@@ -188,7 +205,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             raise UnsupportedDocumentError("Unsupported file type: {}".format(file_type))
         artefact.mime_type = file_type
         artefact.save()
-        
+
     def _change_order(self, new_order):
         job = self.get_object()
         artefacts = list(job.artefacts.all())
@@ -211,7 +228,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         print_file.delay(job.id)
         logger.info('User %s submitted job: %s', self.request.user.username, job.id)
         return job
-    
+
     def _validate_properties(self, printer:int , properties, job=None):
         if job is None:
             job = self.get_object()
