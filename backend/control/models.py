@@ -179,6 +179,8 @@ class JobArtefact(models.Model):
 
 
 def validate_pages_to_print(value):
+    if value == "":
+        return
     code = 'invalid'
     if not re.search(r'^\d+(?:-\d+)?(,\d+(?:-\d+)?)*$', str(value)):
         raise ValidationError('Invalid page selection string: {}'.format(value), code=code)

@@ -161,7 +161,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             color=color,
             copies=copies,
             two_sides=two_sides,
-            pages_to_print=pages_to_print,
+            pages_to_print=None if pages_to_print == "" else pages_to_print,
             job=job,
             fit_to_page=fit_to_page,
             n_up=n_up,
@@ -197,7 +197,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         if two_sides is not None:
             job.properties.two_sides = two_sides
         if pages_to_print is not None:
-            job.properties.pages_to_print = pages_to_print
+            job.properties.pages_to_print = None if pages_to_print == "" else pages_to_print
         if fit_to_page is not None:
             job.properties.fit_to_page = fit_to_page
         if n_up is not None:

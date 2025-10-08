@@ -28,24 +28,10 @@ class PrinterSerializer(serializers.ModelSerializer):
         model = Printer
         fields = ['id', 'name', 'color_allowed', 'duplex_supported', 'supported_extensions']
 
-
-class PrintRequestSerializer(serializers.Serializer):
-    printer = serializers.IntegerField(required=True)
-    file = serializers.FileField(allow_empty_file=False, required=True)
-    copies = serializers.IntegerField(required=True)
-    pages_to_print = serializers.CharField(default=None, validators=[validate_pages_to_print])
-    two_sides = serializers.ChoiceField(choices=TwoSidedPrinting.choices, required=True)
-    color = serializers.BooleanField(default=False)
-    fit_to_page = serializers.BooleanField(default=True)
-    n_up = serializers.IntegerField(default=1, validators=[validate_n_up])
-    imposition_template = serializers.ChoiceField(choices=ImpositionTemplate.choices, default=ImpositionTemplate.NONE)
-    orientation_requested = serializers.ChoiceField(choices=OrientationRequested.choices, default=OrientationRequested.AUTO)
-
-
 class CreatePrintJobRequestSerializer(serializers.Serializer):
     printer = serializers.IntegerField(required=True)
     copies = serializers.IntegerField(required=True)
-    pages_to_print = serializers.CharField(default=None, validators=[validate_pages_to_print])
+    pages_to_print = serializers.CharField(allow_null=False, allow_blank=True, default="", validators=[validate_pages_to_print])
     two_sides = serializers.ChoiceField(choices=TwoSidedPrinting.choices, required=True)
     color = serializers.BooleanField(default=False)
     fit_to_page = serializers.BooleanField(default=True)
@@ -56,7 +42,7 @@ class CreatePrintJobRequestSerializer(serializers.Serializer):
 class ChangePrintJobPropertiesRequestSerializer(serializers.Serializer):
     printer = serializers.IntegerField(required=False)
     copies = serializers.IntegerField(required=False)
-    pages_to_print = serializers.CharField(validators=[validate_pages_to_print], required=False)
+    pages_to_print = serializers.CharField(required=False, allow_blank=True, validators=[validate_pages_to_print])
     two_sides = serializers.ChoiceField(choices=TwoSidedPrinting.choices, required=False)
     color = serializers.BooleanField(required=False)
     fit_to_page = serializers.BooleanField(required=False)
