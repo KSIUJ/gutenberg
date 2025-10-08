@@ -1,10 +1,11 @@
 import os
 import subprocess
 from itertools import chain
-from math import log2
+from math import isqrt
 from typing import List, Optional
 
 from pypdf import PdfReader, PdfWriter, Transformation
+from pypdf.generic import RectangleObject
 
 from printing.processing.pages import PageSize, PageSizes, PageOrientation
 from printing.utils import SANDBOX_PATH, TASK_TIMEOUT_S
@@ -27,34 +28,35 @@ class FinalPageProcessor:
     """
 
     work_dir: str
+    fit_to_page: bool
     final_page_orientation: PageOrientation
     final_page_size: PageSize
     input_page_size: PageSize
     rows: int
     columns: int
 
-    def __init__(self, work_dir: str, n: int, final_sizes: PageSizes, input_orientation: PageOrientation):
+    def __init__(self, work_dir: str, n: int, final_sizes: PageSizes, input_orientation: PageOrientation, fit_to_page: bool):
         self.work_dir = work_dir
+        self.fit_to_page = fit_to_page
 
-        divide_count = round(log2(n))
-        if 2 ** divide_count != n:
-            raise ValueError("n must be a power of 2")
-
-        self.final_page_orientation = input_orientation.rotate() if divide_count % 2 == 1 else input_orientation
-
-        short_divide_count = divide_count // 2
-        long_divide_count = divide_count - short_divide_count
+        short_parts = isqrt(n)
+        if short_parts ** 2 == n:
+            long_parts = short_parts
+            self.final_page_orientation = input_orientation
+        elif 2 * (short_parts ** 2) == n:
+            long_parts = 2 * short_parts
+            self.final_page_orientation = input_orientation.rotate()
+        else:
+            raise ValueError("n must be a perfect square or a perfect square times 2")
 
         if self.final_page_orientation == PageOrientation.PORTRAIT:
-            width_divide_count = short_divide_count
-            height_divide_count = long_divide_count
+            self.columns = short_parts
+            self.rows = long_parts
         else:
-            width_divide_count = long_divide_count
-            height_divide_count = short_divide_count
+            self.columns = long_parts
+            self.rows = short_parts
 
         self.final_page_size = final_sizes.get(self.final_page_orientation)
-        self.columns = 2 ** width_divide_count
-        self.rows = 2 ** height_divide_count
         self.input_page_size = PageSize(
             width_mm=self.final_page_size.width_mm / self.columns,
             height_mm=self.final_page_size.height_mm / self.rows,
@@ -104,14 +106,59 @@ class FinalPageProcessor:
                     height=self.final_page_size.height_pt(),
                 )
 
-            dest_page.merge_transformed_page(
-                page,
-                Transformation().translate(
-                    next_col * self.input_page_size.width_pt(),
-                    # The y-coordinate starts from the bottom of the page
-                    (self.rows - 1 - next_row) * self.input_page_size.height_pt(),
-                ),
-            )
+            if self.fit_to_page:
+                scale = min(
+                    self.input_page_size.width_pt() / page.trimbox.width,
+                    self.input_page_size.height_pt() / page.trimbox.height,
+                )
+                page.scale_by(scale)
+
+            left_x = next_col * self.input_page_size.width_pt()
+            right_x = left_x + self.input_page_size.width_pt()
+            target_center_x = (left_x + right_x) / 2
+            # The y-coordinate starts from the bottom of the page
+            bottom_y = (self.rows - 1 - next_row) * self.input_page_size.height_pt()
+            top_y = bottom_y + self.input_page_size.height_pt()
+            target_center_y = (bottom_y + top_y) / 2
+
+            current_center_x = (page.trimbox.left + page.trimbox.right) / 2
+            current_center_y = (page.trimbox.bottom + page.trimbox.top) / 2
+
+            dx = target_center_x - current_center_x
+            dy = target_center_y - current_center_y
+            page.add_transformation(Transformation().translate(dx, dy))
+
+            # Modifying `cropbox` might also appear to modify `trimbox`, `bleedbox` or `artbox`, because
+            # if `trimbox`, `bleedbox` or `artbox` is not defined, then `cropbox` is used as the default value.
+            # In the same manner `mediabox` is used as the default for all others if they are not defined.
+            # Care must be taken to compute all the new values before modifying them.
+            #
+            # This behavior was the source of a bug in `pypdf` discovered while working on Gutenberg:
+            # https://github.com/py-pdf/pypdf/issues/3487
+            new_attrs = dict()
+            for attr in ['trimbox', 'bleedbox', 'artbox', 'cropbox', 'mediabox']:
+                current = getattr(page, attr)
+                new_attrs[attr] = RectangleObject((current.left + dx, current.bottom + dy, current.right + dx, current.top + dy))
+            for attr, value in new_attrs.items():
+                setattr(page, attr, value)
+
+            page.cropbox.bottom = max(page.cropbox.bottom, bottom_y)
+            page.cropbox.top = max(page.cropbox.top, top_y)
+            page.cropbox.left = max(page.cropbox.left, left_x)
+            page.cropbox.right = min(page.cropbox.right, right_x)
+
+            page.trimbox.bottom = max(page.trimbox.bottom, bottom_y)
+            page.trimbox.top = min(page.trimbox.top, top_y)
+            page.trimbox.left = max(page.trimbox.left, left_x)
+            page.trimbox.right = min(page.trimbox.right, right_x)
+
+            # TODO: When borderless printing is added, the bleed box for the outer pages can be expanded here
+            page.bleedbox.bottom = max(page.bleedbox.bottom, bottom_y)
+            page.bleedbox.top = min(page.bleedbox.top, top_y)
+            page.bleedbox.left = max(page.bleedbox.left, left_x)
+            page.bleedbox.right = min(page.bleedbox.right, right_x)
+
+            dest_page.merge_page(page)
 
             used_input_pages += 1
             next_col += 1

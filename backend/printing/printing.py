@@ -107,7 +107,7 @@ def print_file(job_id):
                     tmp_input = os.path.join(artefact_tmpdir, 'input' + ext)
                     shutil.copyfile(file_path, tmp_input)
 
-                    conv = get_converter(file_format, artefact_tmpdir, job.properties.fit_to_page)
+                    conv = get_converter(file_format, artefact_tmpdir)
                     preprocess_result = conv.preprocess(tmp_input)
                     handle_cancellation(job)
 
@@ -119,7 +119,13 @@ def print_file(job_id):
                         OrientationRequested.LANDSCAPE: PageOrientation.LANDSCAPE,
                         OrientationRequested.PORTRAIT: PageOrientation.PORTRAIT,
                     }[job.properties.orientation_requested]
-                    final_page_processor = FinalPageProcessor(artefact_tmpdir, job.properties.n_up, imposition_processor.get_final_page_sizes(), input_page_orientation)
+                    final_page_processor = FinalPageProcessor(
+                        artefact_tmpdir,
+                        job.properties.n_up,
+                        imposition_processor.get_final_page_sizes(),
+                        input_page_orientation,
+                        job.properties.fit_to_page,
+                    )
 
                     input_pages_file = conv.create_input_pdf(preprocess_result, final_page_processor.input_page_size)
                     handle_cancellation(job)
@@ -139,6 +145,8 @@ def print_file(job_id):
                     shutil.copyfile(imposition_result.output_file, os.path.join(job_tmpdir, f'{idx:03}_output.pdf'))
                     sum_num_pages += imposition_result.media_sheet_page_count
                     handle_cancellation(job)
+
+                    subprocess.run(["dolphin", artefact_tmpdir])
             job.status = JobStatus.PRINTING
             job.status_reason = ''
             job.date_processed = timezone.now()

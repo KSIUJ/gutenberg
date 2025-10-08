@@ -28,9 +28,8 @@ class Converter(ABC):
     supported_extensions = []
     output_type = 'application/pdf'
 
-    def __init__(self, work_dir: str, fit_to_page: bool):
+    def __init__(self, work_dir: str):
         self.work_dir = work_dir
-        self.fit_to_page = fit_to_page
 
     @abstractmethod
     def preprocess(self, input_file: str) -> PreprocessResult:
@@ -275,10 +274,10 @@ def detect_file_format(input_file: str):
     return input_type
 
 
-def get_converter(input_type: str, work_dir: str, fit_to_page: bool) -> Converter:
+def get_converter(input_type: str, work_dir: str) -> Converter:
     try:
         conv_class = CONVERTER_FOR_TYPE[input_type]
     except KeyError:
         raise NoConverterAvailableError(
             "Unable to convert {} - no converter available".format(input_type))
-    return conv_class(work_dir, fit_to_page)
+    return conv_class(work_dir)
