@@ -1,5 +1,6 @@
 import type { $Fetch, NitroFetchRequest } from 'nitropack';
 import { FetchError } from 'ofetch';
+import type { ImpositionTemplate } from '~/composables/use-job-creator';
 
 export type User = {
   first_name: string;
@@ -29,6 +30,9 @@ export type CreatePrintJobRequest = {
   two_sides: ApiDuplexMode;
   color?: boolean;
   fit_to_page?: boolean;
+  n_up?: number;
+  imposition_template?: ImpositionTemplate;
+  orientation_requested?: OrientationRequested;
 };
 
 // TODO: Add the 'SCANNING' and 'WAITING_PAGE' statuses when scanning is implemented

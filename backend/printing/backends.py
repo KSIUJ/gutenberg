@@ -88,10 +88,6 @@ class LocalCupsPrinter(PrinterBackend):
             }.get(job.properties.two_sides, None)
             if two_sided_opt:
                 options += ['-o', two_sided_opt]
-        if job.properties.fit_to_page:
-            options += ['-o', 'fit-to-page']
-        else:
-            options += ['-o', 'nofit-to-page']
         return options
 
     def submit_job(self, job: GutenbergJob, file_path: str) -> Any:

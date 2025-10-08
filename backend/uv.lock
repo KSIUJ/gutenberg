@@ -270,6 +270,7 @@ dependencies = [
     { name = "django" },
     { name = "djangorestframework" },
     { name = "ksi-oidc-django" },
+    { name = "pypdf" },
     { name = "python-magic" },
     { name = "redis" },
 ]
@@ -280,6 +281,7 @@ requires-dist = [
     { name = "django", specifier = ">=5.2.6" },
     { name = "djangorestframework", specifier = ">=3.16.1" },
     { name = "ksi-oidc-django", git = "https://github.com/KSIUJ/ksi-oidc-python?subdirectory=django&tag=django-v1.0.0" },
+    { name = "pypdf", git = "https://github.com/Nid01/pypdf?branch=main" },
     { name = "python-magic", specifier = ">=0.4.27" },
     { name = "redis", specifier = ">=6.4.0" },
 ]
@@ -513,6 +515,11 @@ dependencies = [
     { name = "six" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/d2/41/37bda420543432c3da450fcfb1a1d0102a7dc92b69ed02306e299b5f65eb/pyjwkest-1.4.2.tar.gz", hash = "sha256:5560fd5ba08655f29ff6ad1df1e15dc05abc9d976fcbcec8d2b5167f49b70222", size = 41077, upload-time = "2019-06-27T07:01:12.934Z" }
+
+[[package]]
+name = "pypdf"
+version = "6.1.1"
+source = { git = "https://github.com/Nid01/pypdf?branch=main#fc01c9a8ead74c6d1646ac0086aece8ed485d683" }
 
 [[package]]
 name = "python-dateutil"

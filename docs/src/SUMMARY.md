@@ -15,3 +15,4 @@
 - [UI and UX design goals](internals/ui-ux-design.md)
 - [Planned API extensions](internals/api-extensions.md)
 - [Web app overview](internals/webapp-overview.md)
+- [Document processing](internals/document-processing.md)

@@ -37,3 +37,10 @@ def handle_cancellation(job: GutenbergJob, handler: Optional[Callable[[], None]]
         job.status_reason = 'Canceled by user'
         job.save()
         raise JobCanceledException()
+
+def ceil_div(a: int, b: int) -> int:
+    """
+    :return: ceil(a / b)
+    """
+
+    return -(a // -b)
