@@ -8,9 +8,9 @@
 - Linux server: install drivers, configure CUPS
 - Linux server: test `lp` command
 - Check if you have following commands available: `convert` (`imagemagick`),
-  `unoconv`, `gs` (`ghostscript`), `pdftk`, and `bbwrap` (`bubblewrap`)
-    - Debian/Ubuntu: `sudo apt install imagemagick unoconv ghostscript bubblewrap pdftk`
-    - Arch Linux: `sudo pacman -S imagemagick unoconv ghostscript bubblewrap pdftk`
+  `unoconv`, `gs` (`ghostscript`), and `bbwrap` (`bubblewrap`)
+    - Debian/Ubuntu: `sudo apt install imagemagick unoconv ghostscript bubblewrap`
+    - Arch Linux: `sudo pacman -S imagemagick unoconv ghostscript bubblewrap`
 - Gutenberg uses `uv` as the Python project manager.
   See https://docs.astral.sh/uv/getting-started/installation/ for installation instructions.
 - You will also need to have `yarn` or `npm` to build the web interface.

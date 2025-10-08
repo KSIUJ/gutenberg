@@ -120,10 +120,52 @@
           </input-hint>
         </div>
 
+        <label
+          id="orientation-requested-select"
+          class="text-label px-form"
+        >Input page orientation</label>
+        <p-select-button
+          v-model="jobCreator.orientationRequested"
+          :options="orientationRequestedOptions"
+          option-value="value"
+          data-key="value"
+          option-label="label"
+          :allow-empty="false"
+          fluid
+          aria-labelledby="orientation-requested-select"
+        />
+
         <labeled-toggle
           v-model="jobCreator.fitToPageEnabled"
           label="Fit to page"
           input-id="fit-to-page-enabled"
+        />
+
+        <label
+          id="n-up-select"
+          class="text-label px-form"
+        >Input pages on each final page (N-up)</label>
+        <p-select-button
+          v-model="jobCreator.nUp"
+          :options="nUpOptions"
+          :allow-empty="false"
+          fluid
+          aria-labelledby="n-up-select"
+        />
+
+        <label
+          id="imposition-template-select"
+          class="text-label px-form"
+        >Imposition template</label>
+        <p-select-button
+          v-model="jobCreator.impositionTemplate"
+          :options="impositionTemplateOptions"
+          option-value="value"
+          data-key="value"
+          option-label="label"
+          :allow-empty="false"
+          fluid
+          aria-labelledby="imposition-template-select"
         />
 
         <h2 class="mt-8 text-header ">
@@ -242,6 +284,7 @@
 
 <script setup lang="ts">
 import type { FileUploadSelectEvent } from 'primevue';
+import type { OrientationRequested } from '~/composables/use-job-creator';
 
 const printers = await usePrinters();
 const jobCreator = useJobCreator(printers);
@@ -288,6 +331,19 @@ const colorOptions = computed(() => [
 //   { value: 'even', label: 'Even' },
 //   { value: 'custom', label: 'Custom' },
 // ];
+
+const nUpOptions = [1, 2, 4, 8, 16, 32];
+
+const impositionTemplateOptions = [
+  { value: 'none' as ImpositionTemplate, label: 'None' },
+  { value: 'booklet' as ImpositionTemplate, label: 'Booklet' },
+];
+
+const orientationRequestedOptions = [
+  { value: 'AUTO' as OrientationRequested, label: 'Auto' },
+  { value: 'PORTRAIT' as OrientationRequested, label: 'Portrait' },
+  { value: 'LANDSCAPE' as OrientationRequested, label: 'Landscape' },
+];
 
 const onFileSelect = (event: FileUploadSelectEvent) => {
   jobCreator.addFiles(event.files);

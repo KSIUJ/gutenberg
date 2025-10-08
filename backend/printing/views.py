@@ -1,7 +1,8 @@
 from django.conf import settings
-from django.contrib.auth.decorators import login_required
 from django.views.static import serve
 from django.http import HttpResponse
+
+from ksi_oidc_django.decorators import ksi_oidc_check_sso, ksi_oidc_login_required
 
 
 def serve_html_file(request, file="200.html"):
@@ -13,16 +14,17 @@ def serve_html_file(request, file="200.html"):
         return serve(request, file, settings.GUTENBERG_SPA_HTML_DIR)
 
 
+@ksi_oidc_check_sso
 def webapp_public(request):
     return serve_html_file(request)
 
 
-@login_required
+@ksi_oidc_login_required
 def webapp_require_auth(request):
     return serve_html_file(request)
 
 
-# TODO: Redirect to the ?next route if the user is already logged in
-#       See the middleware in /webapp/app/pages/login.vue
-def login(request):
+# This method does not redirect to / or the ?next route if the user is already
+# signed in, it is the job of the `OidcLoginView` from the `ksi-oidc-django` package.
+def webapp_login(request):
     return serve_html_file(request)

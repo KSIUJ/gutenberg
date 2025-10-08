@@ -33,8 +33,8 @@ DJANGO_INSTALLED_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
-    'mozilla_django_oidc',
     'rest_framework',
+    'ksi_oidc_django',
 ]
 
 # Apps overriding templates in defined by THIRD_PARTY_APPS.
@@ -58,7 +58,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    # 'mozilla_django_oidc.middleware.SessionRefresh',
+    'ksi_oidc_django.middleware.OidcAuthMiddleware',
 ]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
@@ -72,7 +72,7 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 AUTH_USER_MODEL = 'common.User'
 
 REST_FRAMEWORK = {
-    'EXCEPTION_HANDLER': 'api.exceptions.auth_exception_handler'
+    'EXCEPTION_HANDLER': 'api.exceptions.custom_exception_handler'
 }
 
 ROOT_URLCONF = 'gutenberg.urls'
@@ -192,7 +192,17 @@ LOGGING = {
             'handlers': ['console', 'print_file'],
             'level': 'INFO',
             'propagate': True,
-        }
+        },
+        'ksi_oidc_django': {
+            'handlers': ['console', 'print_file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'ksi_oidc_common': {
+            'handlers': ['console', 'print_file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
     }
 }
 
@@ -208,6 +218,8 @@ OIDC_RP_SCOPES = 'openid email'
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+
+OIDC_SSO_CHECK_COOLDOWN_SECONDS = 300
 
 # The hostname of the CUPS server.
 # This value will be used as the value of the -h argument for cups-client commands (lp, cancel, etc.).

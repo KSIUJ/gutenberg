@@ -15,10 +15,9 @@ declare module 'ofetch' {
   // package (a dependency of Nuxt 4).
   interface FetchOptions {
     /**
-     * Add the `Accept` header with the value `application/json` to the request.
-     * Verify that the response contains the `Content-Type` header with the value `application/json`.
+     * Raise an error if the response is empty (HTTP status 204).
      */
-    gutenbergExpectJson?: boolean;
+    gutenbergRequireNonEmpty?: boolean;
 
     /**
      * Disable setting `$auth.me` to `Unauthenticated` upon receiving a 401 or 403 response with

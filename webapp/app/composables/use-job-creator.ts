@@ -4,6 +4,8 @@ import { collectResultsObject, error, type Result } from '~/utils/results';
 
 export type DuplexMode = 'disabled' | 'duplex-unspecified' | 'duplex-long-edge' | 'duplex-short-edge';
 export type ColorMode = 'monochrome' | 'color';
+export type ImpositionTemplate = 'none' | 'booklet';
+export type OrientationRequested = 'AUTO' | 'PORTRAIT' | 'LANDSCAPE';
 
 export type JobDocument = {
   localId: number;
@@ -39,8 +41,11 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
   const copyCount = ref(1);
   const duplexMode = ref<DuplexMode>('disabled');
   const colorMode = ref<ColorMode>('monochrome');
-  const fitToPageEnabled = ref(false);
+  const fitToPageEnabled = ref(true);
   const pagesToPrint = ref<string>('');
+  const nUp = ref<number>(1);
+  const impositionTemplate = ref<ImpositionTemplate>('none');
+  const orientationRequested = ref<OrientationRequested>('AUTO');
 
   const printLoading = ref(false);
   const printError = ref<unknown | null>(null);
@@ -194,6 +199,9 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
       copies: copyCount.value,
       color: colorMode.value === 'color',
       fit_to_page: fitToPageEnabled.value,
+      n_up: nUp.value,
+      imposition_template: impositionTemplate.value,
+      orientation_requested: orientationRequested.value,
     } satisfies CreatePrintJobRequest;
     return ok(request);
   });
@@ -298,6 +306,9 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
     colorMode,
     fitToPageEnabled,
     pagesToPrint,
+    nUp,
+    impositionTemplate,
+    orientationRequested,
     errorMessageList,
     addFiles,
     documents: readonly(documentQueue),

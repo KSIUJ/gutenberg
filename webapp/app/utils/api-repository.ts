@@ -1,5 +1,6 @@
 import type { $Fetch, NitroFetchRequest } from 'nitropack';
 import { FetchError } from 'ofetch';
+import type { ImpositionTemplate } from '~/composables/use-job-creator';
 
 export type User = {
   first_name: string;
@@ -29,6 +30,9 @@ export type CreatePrintJobRequest = {
   two_sides: ApiDuplexMode;
   color?: boolean;
   fit_to_page?: boolean;
+  n_up?: number;
+  imposition_template?: ImpositionTemplate;
+  orientation_requested?: OrientationRequested;
 };
 
 // TODO: Add the 'SCANNING' and 'WAITING_PAGE' statuses when scanning is implemented
@@ -73,7 +77,7 @@ export const createApiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => (
   async refreshCsrfToken(): Promise<void> {
     await fetch('/api/login/', {
       method: 'GET',
-      gutenbergExpectJson: false,
+      gutenbergRequireNonEmpty: false,
     });
   },
 
@@ -84,7 +88,7 @@ export const createApiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => (
         username,
         password,
       },
-      gutenbergExpectJson: false,
+      gutenbergRequireNonEmpty: false,
     });
   },
 
@@ -143,7 +147,7 @@ export const createApiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => (
   async resetIppToken(): Promise<void> {
     await fetch('/api/resettoken/', {
       method: 'POST',
-      gutenbergExpectJson: false,
+      gutenbergRequireNonEmpty: false,
     });
   },
 
@@ -160,15 +164,10 @@ export function getErrorMessage(error: unknown): string | undefined {
     return getErrorMessage(error.cause) ?? error.message;
   }
   if (!(error instanceof FetchError)) return undefined;
-  const responseIsJson = error?.response?.headers?.get('content-type')?.startsWith('application/json') ?? false;
 
-  if (responseIsJson && typeof error.data === 'string') return error.data;
   if (typeof error.data === 'object' && error.data !== null) {
     if ('message' in error.data && typeof error.data.message === 'string') {
       return error.data.message;
-    }
-    if ('detail' in error.data && typeof error.data.detail === 'string') {
-      return error.data.detail;
     }
   }
 

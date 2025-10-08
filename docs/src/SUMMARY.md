@@ -3,6 +3,7 @@
 # Admin documentation
 - [Instance setup](admin/setup.md)
 - [Printer management](admin/printer-management.md)
+- [OpenID Connect](admin/openid-connect.md)
 - [Docker deployment](admin/docker.md)
 
 # API documentation
@@ -15,4 +16,5 @@
 - [UI and UX design goals](internals/ui-ux-design.md)
 - [Planned API extensions](internals/api-extensions.md)
 - [Web app overview](internals/webapp-overview.md)
+- [Document processing](internals/document-processing.md)
 - [Docker configuration](./internals/docker.md)

@@ -7,7 +7,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.debug import sensitive_post_parameters
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, exceptions
 from rest_framework.decorators import action
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.pagination import PageNumberPagination
@@ -15,16 +15,18 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from api.serializers import GutenbergJobSerializer, PrinterSerializer, PrintRequestSerializer, UserInfoSerializer, \
-    CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer, LoginSerializer
+from api.exceptions import UnsupportedDocument, InvalidStatus
+from api.serializers import GutenbergJobSerializer, PrinterSerializer, UserInfoSerializer, \
+    CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer, LoginSerializer, \
+    DeleteJobArtefactRequestSerializer, ChangeArtefactOrderRequestSerializer, JobArtefactSerializer, \
+    ChangePrintJobPropertiesRequestSerializer
 from common.models import User
 from control.models import GutenbergJob, Printer, JobStatus, PrintingProperties, TwoSidedPrinting, JobArtefact, \
     JobArtefactType, JobType
-from printing.converter import detect_file_format, SUPPORTED_FILE_FORMATS
 from printing.printing import print_file
+from printing.processing.converter import detect_file_format, SUPPORTED_FILE_FORMATS
 
 logger = logging.getLogger('gutenberg.api.printing')
-
 
 class LargeResultsSetPagination(PageNumberPagination):
     page_size = 1000
@@ -57,83 +59,184 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         job.refresh_from_db()
         return Response(self.get_serializer(job).data)
 
-    @action(detail=False, methods=['post'], name='Submit new job')
-    def submit(self, request):
-        serializer = PrintRequestSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
-        printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
-                                                          printer_id=serializer.validated_data['printer'])
-        if not printer_with_perms:
-            return Response("Printer does not exist", status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            job = self._create_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
-            self._upload_artefact(job, **serializer.validated_data)
-            self._run_job(job)
-        except UnsupportedDocumentError as ex:
-            # FIXME: Use a common error message format
-            return Response("Error: {}".format(ex), status=status.HTTP_400_BAD_REQUEST)
-        return Response(self.get_serializer(job).data)
-
     @action(detail=True, methods=['post'], name='Upload artefact')
     def upload_artefact(self, request, pk=None):
         job = self.get_object()
         if job.status != JobStatus.INCOMING:
-            return Response("Error: invalid job status for this request", status=status.HTTP_400_BAD_REQUEST)
+            raise InvalidStatus("Invalid job status for this request", additional_info="current status: {}".format(job.status))
         serializer = UploadJobArtefactRequestSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
         try:
             self._upload_artefact(job, **serializer.validated_data)
-            if serializer.validated_data['last'] == True:
-                self._run_job(job)
         except UnsupportedDocumentError as ex:
-            # FIXME: Use a common error message format
-            return Response("Error: {}".format(ex), status=status.HTTP_400_BAD_REQUEST)
+            raise UnsupportedDocument(str(ex))
+        return Response(self.get_serializer(job).data)
+
+    @action(detail=True, methods=['delete'], name='Delete artefact')
+    def delete_artefact(self, request, pk=None):
+        job = self.get_object()
+        if job.status != JobStatus.INCOMING:
+            raise InvalidStatus("Invalid job status for this request", additional_info="current status: {}".format(job.status))
+        serializer = DeleteJobArtefactRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        artefact_id = serializer.validated_data['artefact_id']
+        artefact = JobArtefact.objects.filter(id=artefact_id, job=job).first()
+        if not artefact:
+            raise exceptions.NotFound("Selected artefact does not exist")
+        artefact.delete()
+        return Response(self.get_serializer(job).data)
+
+    @action(detail=True, methods=['post'], name='Change artefact order')
+    def change_artefact_order(self, request, pk=None):
+        job = self.get_object()
+        if job.status != JobStatus.INCOMING:
+            raise InvalidStatus("Invalid job status for this request", additional_info="current status: {}".format(job.status))
+        serializer = ChangeArtefactOrderRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        job = self._change_order(**serializer.validated_data)
         return Response(self.get_serializer(job).data)
 
     @action(detail=True, methods=['post'], name='Run job')
     def run_job(self, request, pk=None):
         job = self.get_object()
-        if job.status != JobStatus.INCOMING:
-            return Response("Error: invalid job status for this request", status=status.HTTP_400_BAD_REQUEST)
+        self._validate_properties(job.printer.id, job.properties, job)
         self._run_job(job)
         return Response(self.get_serializer(job).data)
 
     @action(detail=False, methods=['post'], name='Create new job')
     def create_job(self, request):
         serializer = CreatePrintJobRequestSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
         printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
                                                           printer_id=serializer.validated_data['printer'])
         if not printer_with_perms:
-            return Response("Printer does not exist", status=status.HTTP_400_BAD_REQUEST)
+            raise exceptions.NotFound("Selected printer does not exist")
         job = self._create_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
         return Response(self.get_serializer(job).data)
 
-    def _create_printing_job(self, printer_with_perms,
-                             copies: int, pages_to_print: str,
-                             color: bool, two_sides: str, fit_to_page: bool, **_):
-        job = GutenbergJob.objects.create(name='webrequest', job_type=JobType.PRINT, status=JobStatus.INCOMING,
+    @action(detail=True, methods=['post'], name='Change job properties')
+    def change_properties(self, request, pk=None):
+        # Not given fields are not changed
+        job = self.get_object()
+        serializer = ChangePrintJobPropertiesRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        printer_id=serializer.validated_data.get('printer')
+        if printer_id is None:
+            printer_id=job.printer.id
+        printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
+                                                          printer_id=printer_id)
+        job = self._change_properties(printer_with_perms=printer_with_perms, **serializer.validated_data)
+        return Response(self.get_serializer(job).data)
+
+    @action(detail=True, methods=['get'], name='Validate job properties')
+    def validate_properties(self, request, pk=None):
+        job = self.get_object()
+        self._validate_properties(job.printer.id, job.properties, job)
+        return Response(self.get_serializer(job).data)
+
+    @action(detail=True, methods=['get'], name='List artefacts')
+    def artefacts(self, request, pk=None):
+        job = self.get_object()
+        artefacts = job.artefacts.all().order_by('document_number')
+        serializer = JobArtefactSerializer(artefacts, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    def _create_printing_job(
+        self,
+        printer_with_perms,
+        copies: int,
+        pages_to_print: str,
+        color: bool,
+        two_sides: str,
+        fit_to_page: bool,
+        n_up: int,
+        imposition_template: str,
+        orientation_requested: str,
+        **_,
+    ):
+        job = GutenbergJob(name='webrequest', job_type=JobType.PRINT, status=JobStatus.INCOMING,
                                           owner=self.request.user, printer=printer_with_perms)
-        color = color if printer_with_perms.color_allowed else False
-        two_sides = two_sides if printer_with_perms.duplex_supported else TwoSidedPrinting.ONE_SIDED
-        PrintingProperties.objects.create(color=color, copies=copies, two_sides=two_sides,
-                                          pages_to_print=pages_to_print, job=job, fit_to_page=fit_to_page)
+        job.properties = PrintingProperties(
+            color=color,
+            copies=copies,
+            two_sides=two_sides,
+            pages_to_print=None if pages_to_print == "" else pages_to_print,
+            job=job,
+            fit_to_page=fit_to_page,
+            n_up=n_up,
+            imposition_template=imposition_template,
+            orientation_requested=orientation_requested,
+        )
+
+        self._validate_properties(printer_with_perms.id, job.properties, job)
+        job.save()
+        job.properties.save()
+        return job
+
+    def _change_properties(
+        self,
+        printer_with_perms = None,
+        copies: int = None,
+        pages_to_print: str = None,
+        color: bool = None,
+        two_sides: str = None,
+        fit_to_page: bool = None,
+        n_up: int = None,
+        imposition_template: str = None,
+        orientation_requested: str = None,
+        **_,
+    ):
+        job = self.get_object()
+        if printer_with_perms is not None:
+            job.printer = printer_with_perms
+        if color is not None:
+            job.properties.color = color
+        if copies is not None:
+            job.properties.copies = copies
+        if two_sides is not None:
+            job.properties.two_sides = two_sides
+        if pages_to_print is not None:
+            job.properties.pages_to_print = None if pages_to_print == "" else pages_to_print
+        if fit_to_page is not None:
+            job.properties.fit_to_page = fit_to_page
+        if n_up is not None:
+            job.properties.n_up = n_up
+        if imposition_template is not None:
+            job.properties.imposition_template = imposition_template
+        if orientation_requested is not None:
+            job.properties.orientation_requested = orientation_requested
+
+        self._validate_properties(job.printer.id, job.properties, job=job)
+        job.properties.save()
+        job.save()
         return job
 
     def _upload_artefact(self, job, file, **_):
-        artefact = JobArtefact.objects.create(job=job, artefact_type=JobArtefactType.SOURCE, file=file)
+        artefact = JobArtefact.objects.create(job=job, artefact_type=JobArtefactType.SOURCE, file=file, document_number=job.next_document_number)
+        job.next_document_number += 1
+        job.save()
         file_type = detect_file_format(artefact.file.path)
         if file_type not in SUPPORTED_FILE_FORMATS:
             raise UnsupportedDocumentError("Unsupported file type: {}".format(file_type))
         artefact.mime_type = file_type
         artefact.save()
+
+    def _change_order(self, new_order):
+        job = self.get_object()
+        artefacts = list(job.artefacts.all())
+        artefact_dict = {artefact.id: artefact for artefact in artefacts}
+        if set(new_order) != set(artefact_dict.keys()):
+            raise exceptions.ValidationError("New order does not match existing artefacts")
+        if len(set(new_order)) != len(new_order):
+            raise exceptions.ValidationError("New order contains duplicate artefact IDs")
+        for index, artefact_id in enumerate(new_order):
+            artefact = artefact_dict[artefact_id]
+            artefact.document_number = index + 1
+            artefact.save()
+        job.next_document_number = len(new_order) + 1
+        job.save()
+        return job
 
     def _run_job(self, job):
         job.status = JobStatus.PENDING
@@ -141,6 +244,18 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         print_file.delay(job.id)
         logger.info('User %s submitted job: %s', self.request.user.username, job.id)
         return job
+
+    def _validate_properties(self, printer_id: int, properties, job):
+        if job.status != JobStatus.INCOMING:
+            raise InvalidStatus("Invalid job status for this request", additional_info="current status: {}".format(job.status))
+        printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
+                                                          printer_id=printer_id)
+        if not printer_with_perms:
+            raise exceptions.NotFound("Selected printer does not exist")
+        if properties.color and not printer_with_perms.color_allowed:
+            raise exceptions.ValidationError("Color printing is not allowed on the selected printer")
+        if properties.two_sides != TwoSidedPrinting.ONE_SIDED and not printer_with_perms.duplex_supported:
+            raise exceptions.ValidationError("Two-sided printing is not supported on the selected printer")
 
 
 class PrinterViewSet(viewsets.ReadOnlyModelViewSet):
@@ -175,7 +290,7 @@ class ResetApiTokenView(APIView):
     def post(self, request, *args, **kwargs):
         self.request.user.api_key = _generate_token()
         self.request.user.save()
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class LoginApiView(APIView):
@@ -194,19 +309,17 @@ class LoginApiView(APIView):
 
     def post(self, request, *args, **kwargs):
         serializer = LoginSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
 
         username = serializer.validated_data['username']
         password = serializer.validated_data['password']
         user = authenticate(username=username, password=password)
         if not user:
-            return Response(data={'message': 'Username or password incorrect'}, status=403)
+            raise exceptions.PermissionDenied("Invalid username or password")
         if not user.is_active:
-            return Response(data={'message': 'Account is not active'}, status=403)
+            raise exceptions.PermissionDenied("Account is not active")
         login(request, user)
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get(self, request, *args, **kwargs):
         """
@@ -214,4 +327,14 @@ class LoginApiView(APIView):
         it should always be called on login.
         """
         rotate_token(request)
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class NotFoundView(APIView):
+    def _handle(self, request, path):
+        raise exceptions.NotFound(f'API route "{path}" not found')
+
+    get = _handle
+    post = _handle
+    put = _handle
+    patch = _handle
+    delete = _handle

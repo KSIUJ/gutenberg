@@ -44,20 +44,27 @@ LOGGING['handlers']['django_file']['filename'] = '/var/log/gutenberg/django.log'
 # Directory to store the printed files in
 MEDIA_ROOT = '/srv/printing/'
 
-# Uncomment lines below to enable Open ID Connect auth
-# LOGIN_URL = 'oidc_authentication_init'
-# OIDC_ADMIN_ROLE = 'ksi'
-# OIDC_OP_AUTHORIZATION_ENDPOINT = ''
-# OIDC_OP_TOKEN_ENDPOINT = ''
-# OIDC_OP_USER_ENDPOINT = 'o'
-# OIDC_OP_JWKS_ENDPOINT = ''
-# OIDC_OP_LOGOUT_ENDPOINT = ''
-# OIDC_RP_CLIENT_ID = ''
-# OIDC_RP_CLIENT_SECRET = None
-# OIDC_OP_LOGOUT_URL_METHOD = 'gutenberg.auth.oidc_op_logout'
+OIDC_APP_BASE_URL = 'https://yourapp.com/'
+
+# Set user's Django groups to the roles from the access token claims.
+# Roles from the `realm_access.roles` claim will be saved as groups with the names `oidc.realm.{group_name}`.
+# Roles from the `resource_access.{client_id}.roles` claim will be saved as `oidc.client.{group_name}`.
+# If the user is in any other group with a name starting with `oidc.`, it will be removed.
+# See https://www.keycloak.org/docs/latest/server_admin/index.html#_oidc_token_role_mappings for more details.
+OIDC_SYNC_ROLES_AS_GROUPS = True
+
+# Sets or unsets the User.is_staff and User.is_superuser fields
+# if the user's `realm_access.roles` or `resource_access.${client_id}.roles` claims contain the specified role.
+# The settings are tuples in the form `('realm', role_name)` or `('client', role_name)`.
+# Set to None to disable this feature.
+# See https://www.keycloak.org/docs/latest/server_admin/index.html#_oidc_token_role_mappings for more details.
+OIDC_STAFF_ROLE = ('client', 'gutenberg-staff')
+OIDC_SUPERUSER_ROLE = ('client', 'gutenberg-superuser')
+
+# Uncomment these lines to enable OpenID Connect authentication.
 # AUTHENTICATION_BACKENDS = (
 #     'django.contrib.auth.backends.ModelBackend',
-#     'gutenberg.auth.OIDCAuthenticationBackend',
+#     'ksi_oidc_django.backends.OidcAuthBackend',
 # )
 
 # Celery
