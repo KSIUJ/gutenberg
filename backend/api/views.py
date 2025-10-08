@@ -16,10 +16,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from api.exceptions import UnsupportedDocument, InvalidStatus
-from api.serializers import GutenbergJobSerializer, PrinterSerializer, PrintRequestSerializer, UserInfoSerializer, \
+from api.serializers import GutenbergJobSerializer, PrinterSerializer, UserInfoSerializer, \
     CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer, LoginSerializer, \
-        DeleteJobArtefactRequestSerializer, ChangeArtefactOrderRequestSerializer, JobArtefactSerializer, \
-            ChangePrintJobPropertiesRequestSerializer
+    DeleteJobArtefactRequestSerializer, ChangeArtefactOrderRequestSerializer, JobArtefactSerializer, \
+    ChangePrintJobPropertiesRequestSerializer
 from common.models import User
 from control.models import GutenbergJob, Printer, JobStatus, PrintingProperties, TwoSidedPrinting, JobArtefact, \
     JobArtefactType, JobType
@@ -174,8 +174,19 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         job.save()
         return job
 
-    def _change_properties(self, printer_with_perms = None, copies: int=None, pages_to_print: str=None,
-                           color: bool=None, two_sides: str=None, fit_to_page: bool=None, **_):
+    def _change_properties(
+        self,
+        printer_with_perms = None,
+        copies: int = None,
+        pages_to_print: str = None,
+        color: bool = None,
+        two_sides: str = None,
+        fit_to_page: bool = None,
+        n_up: int = None,
+        imposition_template: str = None,
+        orientation_requested: str = None,
+        **_,
+    ):
         job = self.get_object()
         if printer_with_perms is not None:
             job.printer = printer_with_perms
@@ -189,7 +200,12 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             job.properties.pages_to_print = pages_to_print
         if fit_to_page is not None:
             job.properties.fit_to_page = fit_to_page
-        # TODO: Add support for new properties here
+        if n_up is not None:
+            job.properties.n_up = n_up
+        if imposition_template is not None:
+            job.properties.imposition_template = imposition_template
+        if orientation_requested is not None:
+            job.properties.orientation_requested = orientation_requested
 
         self._validate_properties(job.printer.id, job.properties, job=job)
         job.properties.save()
