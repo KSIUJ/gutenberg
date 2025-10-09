@@ -54,4 +54,7 @@ CELERY_BROKER_URL = 'redis://redis:6379'
 
 # The hostname of the CUPS server.
 # This value will be used as the value of the -f argument for cups-client commands (lp, cancel, etc.).
-CUPS_SERVERNAME = 'cups:631'
+# The default value of '/run/cups/cups.sock' uses a UNIX socket mounted from the host to the container,
+# instead of a TCP connection.
+CUPS_SERVERNAME = '/run/cups/cups.sock'
+

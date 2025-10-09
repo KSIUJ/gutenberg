@@ -37,6 +37,10 @@ RUN apt-get update && apt-get install -y \
     git \
   && rm -rf /var/lib/apt/lists/*
 
+ENV GUTENBERG_USERNAME="gutenberg-docker"
+ENV GUTENBERG_UID="659"
+ENV GUTENBERG_GID="659"
+
 
 # setup_django target
 #   Syncs the uv project and copies all backend project files
@@ -164,68 +168,3 @@ COPY --from=collect_static /app/staticroot /usr/share/nginx/gutenberg/static
 COPY nginx/gutenberg.conf /etc/nginx/conf.d/gutenberg.conf
 COPY nginx/locations /etc/nginx/gutenberg-locations.d
 EXPOSE 80
-
-
-# run_cups target
-#   Runs the CUPS server.
-#
-# This target is based on olbat/cupsd
-FROM debian:${DEBIAN_VER}-slim AS run_cups
-
-# Install Packages (basic tools, cups, basic drivers, HP drivers).
-# See https://wiki.debian.org/CUPSDriverlessPrinting,
-#     https://wiki.debian.org/CUPSPrintQueues
-#     https://wiki.debian.org/CUPSQuickPrintQueues
-# Note: printer-driver-all has been removed from Debian testing,
-#       therefore printer-driver-* packages are manuall added.
-RUN apt-get update \
-&& apt-get install -y \
-  sudo \
-  whois \
-  usbutils \
-  cups \
-  cups-client \
-  cups-bsd \
-  cups-filters \
-  cups-browsed \
-  foomatic-db-engine \
-  foomatic-db-compressed-ppds \
-  openprinting-ppds \
-  hp-ppd \
-  printer-driver-hpcups \
-  printer-driver-brlaser \
-  printer-driver-c2050 \
-  printer-driver-c2esp \
-  printer-driver-cjet \
-  printer-driver-dymo \
-  printer-driver-escpr \
-  printer-driver-foo2zjs \
-  printer-driver-fujixerox \
-  printer-driver-m2300w \
-  printer-driver-min12xxw \
-  printer-driver-pnm2ppa \
-  printer-driver-indexbraille \
-  printer-driver-oki \
-  printer-driver-ptouch \
-  printer-driver-pxljr \
-  printer-driver-sag-gdi \
-  printer-driver-splix \
-  printer-driver-cups-pdf \
-  smbclient \
-  avahi-utils \
-&& apt-get clean \
-&& rm -rf /var/lib/apt/lists/*
-
-# Create a user without a password for printer operations and disable sudo password checking
-# The password is set in `docker-entrypoint.sh`.
-RUN useradd \
-  --groups=lp,lpadmin \
-  --create-home \
-  --home-dir=/home/gutenberg \
-  --shell=/bin/bash \
-  gutenberg \
-&& sed -i '/%sudo[[:space:]]/ s/ALL[[:space:]]*$/NOPASSWD:ALL/' /etc/sudoers
-
-COPY --chown=root:lp cups/cupsd.conf /etc/cups/cupsd.conf
-COPY cups/docker-entrypoint.sh /app-cups/docker-entrypoint.sh
-ENTRYPOINT ["/app-cups/docker-entrypoint.sh"]

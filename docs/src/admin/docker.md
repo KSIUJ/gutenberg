@@ -18,7 +18,6 @@ In summary:
 
 | Container name       | Description                                      |
 |:-------------------- |:------------------------------------------------ |
-| `gutenberg-cups`     | CUPS server for managing print jobs              |
 | `gutenberg-db`       | PostgreSQL database for storing application data |
 | `gutenberg-redis`    | Redis instance for caching and task queue        |
 | `gutenberg-backend`  | Django application server                        |
@@ -108,3 +107,50 @@ FROM run_nginx
 
 COPY path/to/myapp.conf /etc/nginx/gutenberg-locations.d/myapp.conf
 ```
+
+## Configuring CUPS access
+The `CUPS_SERVERNAME` setting controls how Gutenberg connects to CUPS.
+It can be a path to a CUPS socket file, an IP address, or a hostname.
+It will be used as the `-f` argument to commands provided by `cups-client`
+(`lp`, `cancel`, etc.).
+
+To use the CUPS server running on the host machine, you can mount the
+`/run/cups` directory from the host machine to the Docker containers for
+the backend and the Celery worker. The example `docker-compose.yml` file
+does this. The `CUPS_SERVERNAME` can then be set to `/run/cups/cups.sock`.
+
+> [!WARNING]
+> Docker Desktop might not allow mounting any files from the `/run` directory,
+> even if it is listed in *Resources* > *File sharing* > *Virtual file shares*.
+> Failing to bind the `/run/cups/cups.sock` socket will not result in an error,
+> Docker will silently create a new directory in that path.
+> 
+> This issue might be hard to overcome when using Docker Desktop, so we recommend
+> installing the Docker engine directly.
+
+CUPS performs permission checking when accessing CUPS via the socket file.
+It requires the name and UID of the system user calling the `lp` command
+in the Docker container to match a user on the host machine.
+The `run_backend` and `run_celery` targets in the `Dockerfile` use the
+`GUTENBERG_USERNAME`, `GUTENBERG_UID`, and `GUTENBERG_GID` environment
+variables to set the username, UID, and GID of the user in the Docker
+container. If they are not specified, the default username
+`gutenberg-docker` is used and the UID and GID are set to `659`.
+
+The same group and user need to be created on the host machine.
+This can be achieved using the commands:
+```bash
+sudo groupadd --system --gid 659 gutenberg-docker
+sudo useradd --system --groups lp,lpadmin gutenberg-docker --uid 659 --gid 659
+```
+
+> [!TIP]
+> If the Gutenberg user is not configured correctly, attempting to print
+> a document might result in an error like:
+> > lp: Unauthorized
+>
+> In such cases it can be helpful to inspect the host's CUPS server error
+> logs:
+> ```bash
+> less +G /var/log/cups/error_log
+> ```

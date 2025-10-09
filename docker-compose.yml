@@ -24,18 +24,6 @@ services:
     container_name: gutenberg-redis
     restart: unless-stopped
 
-  # TODO: Proxy the CUPS admin panel via Nginx.
-  #       Other routes, like the CUPS IPP endpoint, probably should not be proxied.
-  cups:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: run_cups
-    container_name: gutenberg-cups
-    restart: unless-stopped
-    secrets:
-      - gutenberg_cups_password
-
   backend:
     build:
       context: .
@@ -49,6 +37,9 @@ services:
         source: ./backend/gutenberg/settings/docker_settings.py
         target: /etc/gutenberg/docker_settings.py
         read_only: true
+      - type: bind
+        source: /run/cups/cups.sock
+        target: /run/cups/cups.sock
     depends_on:
       db:
         condition: service_healthy
@@ -71,8 +62,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-      cups:
-        condition: service_started
     volumes:
       - gutenberg_backend_logs:/var/log/gutenberg
       - gutenberg_backend_data:/var/lib/gutenberg
@@ -80,6 +69,9 @@ services:
         source: ./backend/gutenberg/settings/docker_settings.py
         target: /etc/gutenberg/docker_settings.py
         read_only: true
+      - type: bind
+        source: /run/cups/cups.sock
+        target: /run/cups/cups.sock
     restart: unless-stopped
     secrets:
       - gutenberg_postgres_password
@@ -125,5 +117,3 @@ secrets:
 #    file: ./secrets/redis_password.txt
   gutenberg_django_secret_key:
     file: ./secrets/django_secret_key.txt
-  gutenberg_cups_password:
-    file: ./secrets/cups_password.txt
