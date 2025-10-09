@@ -216,6 +216,16 @@ RUN apt-get update \
 && apt-get clean \
 && rm -rf /var/lib/apt/lists/*
 
+# Create a user without a password for printer operations and disable sudo password checking
+# The password is set in `docker-entrypoint.sh`.
+RUN useradd \
+  --groups=lp,lpadmin \
+  --create-home \
+  --home-dir=/home/gutenberg \
+  --shell=/bin/bash \
+  gutenberg \
+&& sed -i '/%sudo[[:space:]]/ s/ALL[[:space:]]*$/NOPASSWD:ALL/' /etc/sudoers
+
 COPY --chown=root:lp cups/cupsd.conf /etc/cups/cupsd.conf
 COPY cups/docker-entrypoint.sh /app-cups/docker-entrypoint.sh
-ENTRYPOINT ["/app-cups/docker-entrypoint.sh", "run-celery"]
+ENTRYPOINT ["/app-cups/docker-entrypoint.sh"]

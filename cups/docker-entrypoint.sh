@@ -3,12 +3,6 @@
 
 set -e
 
-useradd \
-  --groups=lp,lpadmin \
-  --create-home \
-  --home-dir=/home/gutenberg \
-  --shell=/bin/bash \
-  --password="$(mkpasswd gutenberg)" \
-  gutenberg
+echo "gutenberg:$(cat /run/secrets/gutenberg_cups_password)" | chpasswd
 
 /usr/sbin/cupsd -f

@@ -24,10 +24,6 @@ services:
     container_name: gutenberg-redis
     restart: unless-stopped
 
-  # TODO: Add a custom config which limits which ports and hosts CUPS can be accessed from.
-  #       Use either a custom target or a mount.
-  # TODO: Enable some authentication mechanism to prevent unauthorized access.
-  #       CUPS can currently be accessed from any host and with the default username and password.
   # TODO: Proxy the CUPS admin panel via Nginx.
   #       Other routes, like the CUPS IPP endpoint, probably should not be proxied.
   cups:
@@ -37,6 +33,8 @@ services:
       target: run_cups
     container_name: gutenberg-cups
     restart: unless-stopped
+    secrets:
+      - gutenberg_cups_password
 
   backend:
     build:
@@ -127,3 +125,5 @@ secrets:
 #    file: ./secrets/redis_password.txt
   gutenberg_django_secret_key:
     file: ./secrets/django_secret_key.txt
+  gutenberg_cups_password:
+    file: ./secrets/cups_password.txt
