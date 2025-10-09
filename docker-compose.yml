@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD_FILE: /run/secrets/gutenberg_postgres_password
     volumes:
       - gutenberg_postgres_data:/var/lib/postgresql/data
-    restart: always
+    restart: unless-stopped
     healthcheck:
       # Replace the values of -U and -d with the name of the user and database if changed.
       test: [ "CMD-SHELL", "pg_isready -U gutenberg -d gutenberg" ]
@@ -22,7 +22,7 @@ services:
   redis:
     image: redis:8.2-alpine
     container_name: gutenberg-redis
-    restart: always
+    restart: unless-stopped
 
   # TODO: Add a custom config which limits which ports and hosts CUPS can be accessed from.
   #       Use either a custom target or a mount.
@@ -33,7 +33,7 @@ services:
   cups:
     image: olbat/cupsd:stable-2025-08-18
     container_name: gutenberg-cups
-    restart: always
+    restart: unless-stopped
 
   backend:
     build:
@@ -53,7 +53,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-    restart: always
+    restart: unless-stopped
     secrets:
       - gutenberg_postgres_password
 #      - gutenberg_redis_password
@@ -79,7 +79,7 @@ services:
         source: ./backend/gutenberg/settings/docker_settings.py
         target: /etc/gutenberg/docker_settings.py
         read_only: true
-    restart: always
+    restart: unless-stopped
     secrets:
       - gutenberg_postgres_password
 #      - gutenberg_redis_password
@@ -106,7 +106,7 @@ services:
       - "3000:80"
     depends_on:
       - backend
-    restart: always
+    restart: unless-stopped
 
 volumes:
   gutenberg_postgres_data:
