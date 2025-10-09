@@ -1,24 +1,14 @@
-from .base import *
+from .docker_base import *
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = ''
+SECRET_KEY = read_docker_secret('gutenberg_django_secret_key')
 
 # https://docs.djangoproject.com/en/5.2/ref/settings/#allowed-hosts
-# Example value: [yoursite.example.com]
+# Example value: ['yoursite.example.com']
 ALLOWED_HOSTS = []
 
 # https://docs.djangoproject.com/en/5.2/ref/settings/#std-setting-CSRF_TRUSTED_ORIGINS
-# Example value: [https://yoursite.example.com]
+# Example value: ['https://yoursite.example.com']
 CSRF_TRUSTED_ORIGINS = []
-
-STATIC_ROOT = '/var/www/gutenberg/static'
-
-# This is a custom setting which controls how the index.html file is served for the SPA webapp.
-# All webapp routes are handled by the Django server to handle authentication.
-# If enabled, Django will instruct Nginx to serve the index.html file using the X-Accel-Redirect header.
-# If disabled, django.contrib.staticfiles will be used to serve the file.
-# See backend/printing/views.py
-NGINX_ACCEL_ENABLED=True
 
 # Admin e-mail addresses to send messages to when errors occur
 ADMINS = []
@@ -30,19 +20,11 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'gutenberg',
         'USER': 'gutenberg',
-        'PASSWORD': '',
-        'HOST': '127.0.0.1',
+        'PASSWORD': read_secret('gutenberg_postgres_password'),
+        'HOST': 'db',
         'PORT': '5432',
     }
 }
-
-# Logging
-LOGGING['handlers']['print_file']['filename'] = '/var/log/gutenberg/print.log'
-LOGGING['handlers']['django_file']['filename'] = '/var/log/gutenberg/django.log'
-
-# Printing
-# Directory to store the printed files in
-MEDIA_ROOT = '/srv/printing/'
 
 OIDC_APP_BASE_URL = 'https://yourapp.com/'
 
@@ -64,11 +46,15 @@ OIDC_SUPERUSER_ROLE = ('client', 'gutenberg-superuser')
 # Uncomment these lines to enable OpenID Connect authentication.
 # AUTHENTICATION_BACKENDS = (
 #     'django.contrib.auth.backends.ModelBackend',
-#     'ksi_oidc_django.backends.OidcAuthBackend',
+#     'kdi_oidc_django.backends.OidcAuthBackend',
 # )
 
 # Celery
-CELERY_BROKER_URL = 'redis://localhost:6379'
+CELERY_BROKER_URL = 'redis://redis:6379'
 
-USE_X_FORWARDED_HOST = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# The hostname of the CUPS server.
+# This value will be used as the value of the -f argument for cups-client commands (lp, cancel, etc.).
+# The default value of '/run/cups/cups.sock' uses a UNIX socket mounted from the host to the container,
+# instead of a TCP connection.
+CUPS_SERVERNAME = '/run/cups/cups.sock'
+

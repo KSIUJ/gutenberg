@@ -12,6 +12,8 @@ dependencies = [
     "python-magic>=0.4.27",
     "redis>=6.4.0",
     "ksi-oidc-django>=1.0.0",
+    "gunicorn==23.0.0",
+    "psycopg[binary]==3.2.9",
 ]
 
 [tool.uv.sources]

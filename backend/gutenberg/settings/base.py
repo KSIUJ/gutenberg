@@ -109,9 +109,10 @@ USE_L10N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/1.11/howto/static-files/
-
+# https://docs.djangoproject.com/en/1.11/howto/static-files/=
 STATIC_URL = '/static/'
+# This is where collectstatic will put all static files
+STATIC_ROOT = os.path.join(BASE_DIR, "staticroot")
 
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
@@ -123,6 +124,13 @@ STATICFILES_DIRS = [
 ]
 
 GUTENBERG_SPA_HTML_DIR = os.path.join(BASE_DIR, '../webapp/.output/html')
+
+# This is a custom setting which controls how the index.html file is served for the SPA webapp.
+# All webapp routes are handled by the Django server to handle authentication.
+# If enabled, Django will instruct Nginx to serve the index.html file using the X-Accel-Redirect header.
+# If disabled, django.contrib.staticfiles will be used to serve the file.
+# See backend/printing/views.py
+NGINX_ACCEL_ENABLED=False
 
 # Logging
 LOGGING = {
@@ -205,10 +213,12 @@ MEDIA_URL = '/media/'
 # Format of date to append to each filename
 PRINT_DATE_FORMAT = '%Y-%m-%dT%H-%M-%S-%f'
 
-OIDC_RP_SIGN_ALGO = 'RS256'
-OIDC_RP_SCOPES = 'openid email'
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
 OIDC_SSO_CHECK_COOLDOWN_SECONDS = 300
+
+# The hostname of the CUPS server.
+# This value will be used as the value of the -h argument for cups-client commands (lp, cancel, etc.).
+CUPS_SERVERNAME = '/run/cups/cups.sock'

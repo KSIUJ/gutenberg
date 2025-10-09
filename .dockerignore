@@ -1,48 +1,30 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Django stuff:
-db.sqlite3
-*.log.*
-*.log
 /backend/gutenberg/settings/docker_settings.py
 /backend/gutenberg/settings/local_settings.py
 /backend/gutenberg/settings/production_settings.py
 
-# uv
-.venv
-.python-version
+/backend/.venv
+/backend/.python-version
 
 # celery beat schedule file
-celerybeat-schedule
-celerybeat-schedule-*
+/backend/celerybeat-schedule
 
 # Gutenberg
 # Upload directory (local_settings only)
 /backend/print/
 
-# Unix Desktop Services Store
-.DS_Store
-
 # Webapp
-node_modules
-/dist
+/webapp/node_modules
+/webapp/dist
+/webapp/.nuxt
+/webapp/.output
 
 # local env files
-.env.local
-.env.*.local
-
-# Log files
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+/.env.local
+/.env.*.local
 
 # Editor directories and files
-.idea
-.vscode
+/.idea
+/.vscode
 *.suo
 *.ntvs*
 *.njsproj
@@ -50,6 +32,6 @@ pnpm-debug.log*
 *.sw?
 
 # Docker Compose secrets
-# SECURITY: Never remove this entry from .gitignore, even if it is no longer used,
+# SECURITY: Never remove this entry from .dockerignore, even if it is no longer used,
 #           to avoid accidentally exposing secrets previously stored in the repo.
 /secrets

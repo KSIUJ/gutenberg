@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from django.utils import timezone
+from django.conf import settings
 
 from control.models import GutenbergJob, TwoSidedPrinting, JobStatus
 from printing.utils import JobCanceledException, TASK_TIMEOUT_S, PRINTING_TIMEOUT_S, handle_cancellation
@@ -52,9 +53,13 @@ class PrinterBackend(ABC):
 
 
 class LocalCupsPrinter(PrinterBackend):
+    common_options = ['-h', settings.CUPS_SERVERNAME]
+
     def check_status(self, job: GutenbergJob, backend_job_id: Any) -> bool:
         output = subprocess.check_output(
-            ['lpstat', '-l'], stderr=subprocess.STDOUT, timeout=TASK_TIMEOUT_S
+            ['lpstat'] + self.common_options + ['-l'],
+            stderr=subprocess.STDOUT,
+            timeout=TASK_TIMEOUT_S,
         )
         output_lines = output.decode('utf-8', errors='ignore').splitlines()
         for idx, val in enumerate(output_lines):
@@ -93,15 +98,21 @@ class LocalCupsPrinter(PrinterBackend):
     def submit_job(self, job: GutenbergJob, file_path: str) -> Any:
         cups_name = job.printer.localprinterparams.cups_printer_name
         output = subprocess.check_output(
-            ['lp', file_path] + self._cups_params(job), stderr=subprocess.STDOUT, timeout=TASK_TIMEOUT_S).decode(
-            'utf-8', errors='ignore')
+            ['lp'] + self.common_options + [file_path] + self._cups_params(job),
+            stderr=subprocess.STDOUT,
+            timeout=TASK_TIMEOUT_S,
+        ).decode('utf-8', errors='ignore')
         mt = re.search(re.escape(cups_name) + r'-([^ ]+)', output)
         if mt:
             return '{0}-{1}'.format(cups_name, mt.group(1))
         raise ValueError('Invalid lp output: {}'.format(output))
 
     def cancel_job(self, job: GutenbergJob, backend_job_id: Any):
-        subprocess.check_output(['cancel', backend_job_id], stderr=subprocess.STDOUT, timeout=TASK_TIMEOUT_S)
+        subprocess.check_output(
+            ['cancel'] + self.common_options + [backend_job_id],
+            stderr=subprocess.STDOUT,
+            timeout=TASK_TIMEOUT_S,
+        )
 
 
 class DisabledPrinter(PrinterBackend):
