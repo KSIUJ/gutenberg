@@ -1,10 +1,13 @@
+ARG DEBIAN_VER=trixie
+ARG ALPINE_VER=alpine3.22
+
 # build_webapp target
 #   Builds the static files for the web app
 #
 #   outputs:
 #   - /app/webapp/.output/html - the generated HTML files for the SPA
 #   - /app/webapp/.output/public - the generated static files for the SPA
-FROM node:22-alpine AS build_webapp
+FROM node:22-${ALPINE_VER} AS build_webapp
 
 # https://pnpm.io/docker
 ENV PNPM_HOME="/pnpm"
@@ -22,7 +25,7 @@ RUN pnpm run build
 
 # setup_base target
 #   Install the binaries required for all Python images including Python and uv
-FROM ghcr.io/astral-sh/uv:python3.13-trixie-slim AS setup_base
+FROM ghcr.io/astral-sh/uv:python3.13-${DEBIAN_VER}-slim AS setup_base
 
 WORKDIR /app/backend
 
@@ -152,7 +155,7 @@ VOLUME ["/var/log/gutenberg"]
 #   - /etc/nginx/conf.d
 #   - /etc/nginx/gutenberg-locations.d
 #   As described in https://ksiuj.github.io/gutenberg/admin/docker.html
-FROM nginx:alpine AS run_nginx
+FROM nginx:1.29-${ALPINE_VER} AS run_nginx
 
 RUN rm /etc/nginx/conf.d/default.conf
 COPY --from=build_webapp /app/webapp/.output/html /usr/share/nginx/gutenberg/webapp_html
@@ -161,3 +164,58 @@ COPY --from=collect_static /app/staticroot /usr/share/nginx/gutenberg/static
 COPY nginx/gutenberg.conf /etc/nginx/conf.d/gutenberg.conf
 COPY nginx/locations /etc/nginx/gutenberg-locations.d
 EXPOSE 80
+
+
+# run_cups target
+#   Runs the CUPS server.
+#
+# This target is based on olbat/cupsd
+FROM debian:${DEBIAN_VER}-slim AS run_cups
+
+# Install Packages (basic tools, cups, basic drivers, HP drivers).
+# See https://wiki.debian.org/CUPSDriverlessPrinting,
+#     https://wiki.debian.org/CUPSPrintQueues
+#     https://wiki.debian.org/CUPSQuickPrintQueues
+# Note: printer-driver-all has been removed from Debian testing,
+#       therefore printer-driver-* packages are manuall added.
+RUN apt-get update \
+&& apt-get install -y \
+  sudo \
+  whois \
+  usbutils \
+  cups \
+  cups-client \
+  cups-bsd \
+  cups-filters \
+  cups-browsed \
+  foomatic-db-engine \
+  foomatic-db-compressed-ppds \
+  openprinting-ppds \
+  hp-ppd \
+  printer-driver-hpcups \
+  printer-driver-brlaser \
+  printer-driver-c2050 \
+  printer-driver-c2esp \
+  printer-driver-cjet \
+  printer-driver-dymo \
+  printer-driver-escpr \
+  printer-driver-foo2zjs \
+  printer-driver-fujixerox \
+  printer-driver-m2300w \
+  printer-driver-min12xxw \
+  printer-driver-pnm2ppa \
+  printer-driver-indexbraille \
+  printer-driver-oki \
+  printer-driver-ptouch \
+  printer-driver-pxljr \
+  printer-driver-sag-gdi \
+  printer-driver-splix \
+  printer-driver-cups-pdf \
+  smbclient \
+  avahi-utils \
+&& apt-get clean \
+&& rm -rf /var/lib/apt/lists/*
+
+COPY --chown=root:lp cups/cupsd.conf /etc/cups/cupsd.conf
+COPY cups/docker-entrypoint.sh /app-cups/docker-entrypoint.sh
+ENTRYPOINT ["/app-cups/docker-entrypoint.sh", "run-celery"]
