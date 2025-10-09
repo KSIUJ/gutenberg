@@ -2,7 +2,6 @@ import datetime
 import logging
 import os
 import shutil
-import subprocess
 import tempfile
 from typing import Optional
 
@@ -145,8 +144,6 @@ def print_file(job_id):
                     shutil.copyfile(imposition_result.output_file, os.path.join(job_tmpdir, f'{idx:03}_output.pdf'))
                     sum_num_pages += imposition_result.media_sheet_page_count
                     handle_cancellation(job)
-
-                    subprocess.run(["dolphin", artefact_tmpdir])
             job.status = JobStatus.PRINTING
             job.status_reason = ''
             job.date_processed = timezone.now()
