@@ -55,7 +55,6 @@ case "$1" in
     runuser -u "$GUTENBERG_USERNAME" -- env UV_CACHE_DIR=/app/.cache/uv uv run python manage.py migrate
 
     # Run gunicorn as $GUTENBERG_USERNAME
-    # TODO: Replace --access-logfile with proper logging
     runuser -u "$GUTENBERG_USERNAME" -- env UV_CACHE_DIR=/app/.cache/uv uv run gunicorn gutenberg.wsgi:application --bind 0.0.0.0:8000 --access-logfile -
     ;;
  run-celery)
