@@ -22,7 +22,7 @@ RUN pnpm run build
 
 # setup_base target
 #   Install the binaries required for all Python images including Python and uv
-FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS setup_base
+FROM ghcr.io/astral-sh/uv:python3.13-trixie-slim AS setup_base
 
 WORKDIR /app/backend
 
@@ -31,6 +31,7 @@ WORKDIR /app/backend
 RUN apt-get update && apt-get install -y \
     libmagic1 \
     libpq-dev \
+    git \
   && rm -rf /var/lib/apt/lists/*
 
 
@@ -100,7 +101,7 @@ FROM setup_base AS run_celery
 # Making `run_celery` extend `setup_django` instead of copying files from it would work, but would usually be way
 # slower, because the `apt-get install` command would run after every change in the `backend` directory.
 #
-# TODO: Consider installing some fonts recommended for libreoffice despite installing --no-install-recommends.
+# The fonts are recomended dependencies of the `libreoffice` package.
 # TIP:  You can use the command
 #       > apt-cache depends libreoffice
 #       to check the required, recommended (installed unless --no-install-recommends is enabled) and suggested
@@ -122,6 +123,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bubblewrap \
     cups-client \
     libreoffice \
+    fonts-crosextra-caladea fonts-crosextra-carlito \
+    fonts-dejavu \
+    fonts-linuxlibertine \
+    fonts-noto-core fonts-noto-extra fonts-noto-mono fonts-noto-ui-core \
+    fonts-sil-gentium-basic \
+    fonts-liberation fonts-liberation-sans-narrow \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=setup_django /app/backend /app/backend/
