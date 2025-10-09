@@ -1,5 +1,5 @@
 ARG DEBIAN_VER=trixie
-ARG ALPINE_VER=alpine3.22
+ARG ALPINE_VER=3.22
 
 # build_webapp target
 #   Builds the static files for the web app
@@ -7,7 +7,7 @@ ARG ALPINE_VER=alpine3.22
 #   outputs:
 #   - /app/webapp/.output/html - the generated HTML files for the SPA
 #   - /app/webapp/.output/public - the generated static files for the SPA
-FROM node:22-${ALPINE_VER} AS build_webapp
+FROM node:22-alpine${ALPINE_VER} AS build_webapp
 
 # https://pnpm.io/docker
 ENV PNPM_HOME="/pnpm"
@@ -21,6 +21,25 @@ RUN pnpm install --frozen-lockfile
 
 COPY ./webapp /app/webapp/
 RUN pnpm run build
+
+
+# build_docs target
+#   Build the static files for the self-hosted docs
+#
+#   outputs:
+#   - /app/docs/book
+FROM rust:1.90-alpine${ALPINE_VER} AS build_docs
+
+WORKDIR /app/docs
+
+# Install cargo-binstall and then use it to install other crates
+RUN apk add curl
+RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | sh
+
+RUN cargo binstall mdbook mdbook-mermaid mdbook-alerts
+
+COPY ./docs /app/docs/
+RUN mdbook build
 
 
 # setup_base target
@@ -151,6 +170,7 @@ VOLUME ["/var/log/gutenberg"]
 #   build inputs:
 #   - /app/webapp/.output/html from build_webapp
 #   - /app/staticroot from collect_static
+#   - /app/docs/book from build_docs
 #   depends on run_backend for server on port 8000
 #   exposes port 80 for public access
 #
@@ -158,12 +178,13 @@ VOLUME ["/var/log/gutenberg"]
 #   - /etc/nginx/conf.d
 #   - /etc/nginx/gutenberg-locations.d
 #   As described in https://ksiuj.github.io/gutenberg/admin/docker.html
-FROM nginx:1.29-${ALPINE_VER} AS run_nginx
+FROM nginx:1.29-alpine${ALPINE_VER} AS run_nginx
 
 RUN rm /etc/nginx/conf.d/default.conf
 COPY --from=build_webapp /app/webapp/.output/html /usr/share/nginx/gutenberg/webapp_html
 # /app/staticroot is the value of STATIC_ROOT in docker_base_settings.py
 COPY --from=collect_static /app/staticroot /usr/share/nginx/gutenberg/static
+COPY --from=build_docs /app/docs/book /usr/share/nginx/gutenberg/docs
 COPY nginx/gutenberg.conf /etc/nginx/conf.d/gutenberg.conf
 COPY nginx/locations /etc/nginx/gutenberg-locations.d
 EXPOSE 80
