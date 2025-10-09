@@ -39,8 +39,8 @@ For example:
 SECRET_KEY = 'n7+3u12_59wy_kzvecb^w^jrpi(m#(gl8^qe92kvclkd9!=-h)'
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 CSRF_TRUSTED_ORIGINS = [
-	'http://127.0.0.1:3000',
-	'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:3000',
 ]
 ```
 After saving the file, you can run all the containers with:
@@ -51,6 +51,21 @@ docker compose up --build
 ## docker-compose.yml
 The `docker-compose.yml` file provides an example Docker Compose configuration, which references the local `Dockerfile`
 to build the required Docker images. You might need to modify it to fit your deployment.
+
+Two secrets need to be provided for Docker Compose: `gutenberg_postgres_password` and
+`gutenberg_django_secret_key`. They should be randomly generated strings and should be kept secret.
+Please make sure to never commit them in a Git repository. The `openssl` command can be used
+to generate the secrets:
+
+```bash
+# Create a secrets directory with a `.gitignore` file
+mkdir -p secrets
+printf "# Avoid publishing any secrets stored in this folder\n*\n" > secrets/.gitignore
+
+# Generate the secrets
+openssl rand -base64 32 > ./secrets/postgres_password.txt
+openssl rand -base64 32 > ./secrets/django_secret_key.txt
+```
 
 ## Creating a superuser account
 After starting all Docker containers, the command below can be used to create a superuser account.

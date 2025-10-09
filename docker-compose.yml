@@ -18,7 +18,9 @@ services:
     secrets:
       - gutenberg_postgres_password
 
-  # TODO: Add a password for an extra security.
+  # SECURITY: The Redis image does not enable authentication by default.
+  # This container should not be exposed to the internet, it should only be accessible
+  # in the internal Docker-managed network.
   redis:
     image: redis:8.2-alpine3.22
     container_name: gutenberg-redis
@@ -48,7 +50,6 @@ services:
     restart: unless-stopped
     secrets:
       - gutenberg_postgres_password
-#      - gutenberg_redis_password
       - gutenberg_django_secret_key
 
   celery:
@@ -75,7 +76,6 @@ services:
     restart: unless-stopped
     secrets:
       - gutenberg_postgres_password
-#      - gutenberg_redis_password
       - gutenberg_django_secret_key
 
     # The cap_add SYS_ADMIN and privileged settings allow bubblewrap to run inside the container.
@@ -113,7 +113,5 @@ volumes:
 secrets:
   gutenberg_postgres_password:
     file: ./secrets/postgres_password.txt
-#  gutenberg_redis_password:
-#    file: ./secrets/redis_password.txt
   gutenberg_django_secret_key:
     file: ./secrets/django_secret_key.txt
