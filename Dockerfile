@@ -126,7 +126,6 @@ FROM setup_base AS run_celery
 RUN apt-get update && apt-get install -y --no-install-recommends \
     imagemagick \
     ghostscript \
-    pdftk \
     bubblewrap \
     cups-client \
     libreoffice \
