@@ -1,8 +1,11 @@
-# Gutenberg 3.2
+# Gutenberg
 
 Office printer gateway: print documents via web GUI or driverless IPP.
 
 Made by [KSI UJ](http://ksi.ii.uj.edu.pl). Powered by Django, Celery and VueJS.
+
+> [!NOTE] The `master` branch contains the latest development version.
+> Check out the *Releases* page for stable versions.
 
 ## Features
 
