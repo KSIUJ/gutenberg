@@ -4,6 +4,7 @@ The changes below are formatted according to [keep a changelog].
 See also [Creating new releases] for instructions on how to create a new release.
 
 ## [Unreleased]
+- Add autocomplete for CUPS printer names in Django Admin [#127]
 - ...
 
 ## [4.0.0-rc1] - 2025-10-10 [Release candidate]
@@ -40,6 +41,7 @@ The previous non-dependency commit was made on [2022-08-26](https://github.com/K
 [#115]: https://github.com/KSIUJ/gutenberg/pull/115
 [#120]: https://github.com/KSIUJ/gutenberg/pull/120
 [#122]: https://github.com/KSIUJ/gutenberg/pull/122
+[#127]: https://github.com/KSIUJ/gutenberg/pull/127
 
 [keep a changelog]: https://keepachangelog.com/en/1.1.0/
 [OpenID Connect chapter]: https://ksiuj.github.io/gutenberg/admin/openid-connect.html
