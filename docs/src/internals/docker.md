@@ -1,18 +1,30 @@
 # Docker configuration
 ## Dockerfile overview
-The Dockerfile defines 3 final and some intermediate targets.
+The Dockerfile defines three final and some intermediate targets.
 The final targets are `run_nginx`, `run_backend` and `run_celery`.
 All build targets are described in comments in the Dockerfile itself.
 The graph below visualizes the build-time layer dependencies.
+
+The images are based on Alpine Linux or on Debian. The variables `DEBIAN_VER` and `ALPINE_VER`
+are used to select versions of the base images. The same versions should albo be used
+when specifying image versions in `docker-compose.yml`. Using common versions let's
+Docker reduce the disk space used by the images.
 
 ## Targets in Dockerfile
 - A solid line from `a` to `b` represents the `FROM a AS b` instruction.
 - A dashed line from `a` to `b` represents `COPY --from a` as a layer of target `b`. 
 ```mermaid
 flowchart TD
-    node{{"`_node..._`"}}
-    uv{{"`_uv:python..._`"}}
-    nginx{{"`_nginx..._`"}}
+    nginx{{"`_nginx..._
+        (alpine)`"}}
+    rust{{"`_rust..._
+        (alpine)`"}}
+    node{{"`_node..._
+        (alpine)`"}}
+    uv{{"`_uv:python..._
+        (debian)`"}}
+        
+    rust --> build_docs
     
     node --> build_webapp
 
@@ -21,14 +33,15 @@ flowchart TD
 
     setup_django --> collect_static
 
-    setup_django --> run_backend([run_backend])
+    setup_django ---> run_backend([run_backend])
 
-    setup_base --> run_celery([run_celery])
+    setup_base ----> run_celery([run_celery])
     setup_django -. copy /app/backend .-> run_celery
 
+    nginx --> run_nginx
+    build_docs -. "copy /app/docs/book" ..-> run_nginx([run_nginx])
     build_webapp -. "copy /app/webapp/.output/html" .-> run_nginx([run_nginx])
     build_webapp -. "copy /app/webapp/.output/public" .-> collect_static
-    nginx --> run_nginx
     collect_static -. copy /app/staticroot .-> run_nginx([run_nginx])
 ```
 
@@ -40,6 +53,12 @@ the settings. All the settings are part of the `backend/gutenberg/settings` modu
 flowchart LR
 
 base[base.py]
+base ---> local(["`local_settings.py
+         _(user provided_,
+         _not used in Docker)_`"])
+base ---> production(["`production_settings.py
+         _(user provided_,
+         _not used in Docker)_`"])
 base --> docker_base[docker_base.py]
 docker_base --> docker_settings(["`docker_settings.py
                 _(user provided)_`"])

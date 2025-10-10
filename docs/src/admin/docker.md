@@ -98,9 +98,12 @@ server {
 The files in the `gutenberg-locations.d` define [`location`](https://nginx.org/en/docs/http/ngx_http_core_module.html#location)
 directives for different endpoints which will be available under the Gutenberg domain.
 
-Gutenberg adds a singe file to this folder, `gutenberg-app.conf` which define the handlers for the endpoints
-`/static/`, `/@webapp-html/` for internal use and a catch-all `location /` directive which proxies all requests to
-the Django application server.
+Gutenberg adds two files to this folder:
+- `gutenberg-app.conf` which defines the handlers for the endpoints
+    `/static/`, `/@webapp-html/` for internal use and a catch-all `location /` directive
+    which proxies all requests to the Django application server.
+- `gutenberg-docs.conf` which defines the handlers for the `/docs/` endpoint
+    which serves the mdbook documentation.
 
 ### Extending the NGINX configuration
 You can make use of the `include` directives described above to extend Gutenberg's default NGINX image with your own
