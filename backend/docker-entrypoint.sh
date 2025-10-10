@@ -61,7 +61,7 @@ case "$1" in
     setup_permissions
 
     # Run Celery as "$GUTENBERG_USERNAME"
-    runuser -u "$GUTENBERG_USERNAME" -- env UV_CACHE_DIR=/app/.cache/uv uv run celery -A gutenberg worker -l INFO
+    runuser -u "$GUTENBERG_USERNAME" -- env UV_CACHE_DIR=/app/.cache/uv uv run celery -A gutenberg worker -P threads -l INFO
     ;;
  *)
     echo "Error: Missing or invalid first argument to docker-entrypoint.sh: '$1'."
