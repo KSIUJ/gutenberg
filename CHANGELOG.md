@@ -1,5 +1,7 @@
 # Changelog
-The changes below are formatted according to [keep a changelog](https://keepachangelog.com/en/1.1.0/).
+The changes below are formatted according to [keep a changelog].
+
+See also [Creating new releases] for instructions on how to create a new release.
 
 ## [Unreleased]
 - ...
@@ -39,4 +41,6 @@ The previous non-dependency commit was made on [2022-08-26](https://github.com/K
 [#120]: https://github.com/KSIUJ/gutenberg/pull/120
 [#122]: https://github.com/KSIUJ/gutenberg/pull/122
 
+[keep a changelog]: https://keepachangelog.com/en/1.1.0/
 [OpenID Connect chapter]: https://ksiuj.github.io/gutenberg/admin/openid-connect.html
+[Creating new releases]: https://ksiuj.github.io/gutenberg/internals/creating-new-releases.html
