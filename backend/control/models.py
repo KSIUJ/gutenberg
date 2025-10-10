@@ -1,5 +1,5 @@
 import re
-from math import log2
+from math import isqrt
 
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
@@ -194,9 +194,11 @@ def validate_pages_to_print(value):
 
 
 def validate_n_up(value: int):
-    divide_count = round(log2(value))
-    if 2 ** divide_count != value:
-        raise ValueError("n_up value must be a power of 2")
+    if isqrt(value) ** 2 == value:
+        return
+    if value%2 == 0 and 2 * (isqrt(value//2) ** 2) == value:
+        return
+    raise ValueError("n must be a perfect square or a perfect square times 2")
 
 
 class PrintingProperties(models.Model):

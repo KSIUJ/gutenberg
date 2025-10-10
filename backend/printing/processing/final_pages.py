@@ -39,11 +39,12 @@ class FinalPageProcessor:
         self.work_dir = work_dir
         self.fit_to_page = fit_to_page
 
-        short_parts = isqrt(n)
-        if short_parts ** 2 == n:
+        if isqrt(n) ** 2 == n:
+            short_parts = isqrt(n)
             long_parts = short_parts
             self.final_page_orientation = input_orientation
-        elif 2 * (short_parts ** 2) == n:
+        elif n%2 == 0 and 2 * (isqrt(n//2) ** 2) == n:
+            short_parts = isqrt(n//2)
             long_parts = 2 * short_parts
             self.final_page_orientation = input_orientation.rotate()
         else:
