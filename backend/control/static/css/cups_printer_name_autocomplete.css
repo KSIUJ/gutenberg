@@ -1,0 +1,21 @@
+.cups-printer-list-autocomplete {
+    display: block;
+}
+
+.cups-printer-list-autocomplete .autocomplete-dropdown ul {
+    margin-left: 0;
+}
+
+.cups-printer-list-autocomplete:not(:focus-within) .autocomplete-dropdown {
+    display: none;
+}
+
+.cups-printer-list-autocomplete li .autocomplete-button {
+    color: var(--link-fg);
+    cursor: pointer;
+    user-select: none;
+}
+
+.cups-printer-list-autocomplete li .autocomplete-button:hover, .cups-printer-list-autocomplete li .autocomplete-button:focus {
+    color: var(--link-hover-color);
+}

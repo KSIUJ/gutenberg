@@ -1,5 +1,6 @@
 from django.contrib import admin
 
+from control.forms import LocalPrinterParamsForm
 # Register your models here.
 from control.models import GutenbergJob, PrintingProperties, PrinterPermissions, LocalPrinterParams, Printer, \
     JobArtefact
@@ -22,6 +23,7 @@ class GutenbergJobAdmin(admin.ModelAdmin):
 
 class LocalPrinterParamsInline(admin.StackedInline):
     model = LocalPrinterParams
+    form = LocalPrinterParamsForm
 
 
 class PrinterPermissionsAdmin(admin.TabularInline):

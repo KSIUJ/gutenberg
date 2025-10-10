@@ -5,8 +5,8 @@ import time
 from abc import ABC, abstractmethod
 from typing import Any
 
-from django.utils import timezone
 from django.conf import settings
+from django.utils import timezone
 
 from control.models import GutenbergJob, TwoSidedPrinting, JobStatus
 from printing.utils import JobCanceledException, TASK_TIMEOUT_S, PRINTING_TIMEOUT_S, handle_cancellation
@@ -113,6 +113,15 @@ class LocalCupsPrinter(PrinterBackend):
             stderr=subprocess.STDOUT,
             timeout=TASK_TIMEOUT_S,
         )
+
+    @staticmethod
+    def list_cups_printer_names():
+        try:
+            result = subprocess.check_output(['lpstat'] + LocalCupsPrinter.common_options + ['-e'], text=True)
+            return [line.strip() for line in result.splitlines() if line.strip()]
+        except subprocess.CalledProcessError as error:
+            logger.error("Failed to list printers in CUPS using lpstat", error)
+            return []
 
 
 class DisabledPrinter(PrinterBackend):
