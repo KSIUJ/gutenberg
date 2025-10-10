@@ -1,0 +1,25 @@
+<div class="cups-printer-list-autocomplete">
+    <input
+        class="vTextField"
+        type="text"
+        name="{{ widget.name }}"
+        value="{{ widget.value|default_if_none:'' }}"
+        {% include "django/forms/widgets/attrs.html" %}
+        autocomplete="off"
+    >
+
+    {% if printer_names %}
+    <div class="autocomplete-dropdown">
+        <ul>
+            {% for name in printer_names %}
+            <li data-value="{{ name }}"><div tabindex="0" class="autocomplete-button" role="button">{{ name }}</div></li>
+            {% endfor %}
+        </ul>
+        <div class="autocomplete-hidden">
+            Found {{ printer_names|length }} CUPS printers
+        </div>
+    </div>
+    {% else %}
+    <p class="empty-message">No CUPS printer found</p>
+    {% endif %}
+</div>
