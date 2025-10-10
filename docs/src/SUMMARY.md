@@ -18,3 +18,4 @@
 - [Web app overview](internals/webapp-overview.md)
 - [Document processing](internals/document-processing.md)
 - [Docker configuration](./internals/docker.md)
+- [Creating new releases](internals/creating-new-releases.md)
