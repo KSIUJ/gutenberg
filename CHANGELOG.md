@@ -6,7 +6,7 @@ See also [Creating new releases] for instructions on how to create a new release
 ## [Unreleased]
 - ...
 
-## [4.0.0-rc0] - 2025-10-10 [Release candidate]
+## [4.0.0-rc1] - 2025-10-10 [Release candidate]
 ### Added
 - Create documentation and host it using mdbook [#97]
 - Created official Docker and Docker Compose configuration [#91]
@@ -27,8 +27,8 @@ See also [Creating new releases] for instructions on how to create a new release
 This document only keeps track of changes made since 2025-07-24.
 The previous non-dependency commit was made on [2022-08-26](https://github.com/KSIUJ/gutenberg/commit/9bb5d09e1ca69756a5930d3be214f52598e40797)
 
-[unreleased]: https://github.com/KSIUJ/gutenberg/compare/v4.0.0-rc0...HEAD
-[4.0.0-rc0]: https://github.com/KSIUJ/gutenberg/releases/tag/v4.0.0-rc0
+[unreleased]: https://github.com/KSIUJ/gutenberg/compare/v4.0.0-rc1...HEAD
+[4.0.0-rc1]: https://github.com/KSIUJ/gutenberg/releases/tag/v4.0.0-rc1
 
 [#80]: https://github.com/KSIUJ/gutenberg/pull/80
 [#86]: https://github.com/KSIUJ/gutenberg/pull/86
