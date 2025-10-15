@@ -5,6 +5,8 @@ See also [Creating new releases] for instructions on how to create a new release
 
 ## [Unreleased]
 - Add autocomplete for CUPS printer names in Django Admin [#127]
+- Add Django cache configuration in the example setting files [#130]
+- Use LibreOffice's CLI directly instead of using `unoconv` [#130]
 - ...
 
 ## [4.0.0-rc1] - 2025-10-10 [Release candidate]
@@ -25,8 +27,8 @@ See also [Creating new releases] for instructions on how to create a new release
   Please see the [OpenID Connect chapter] in the Gutenberg docs for more information.
 
 ## Previous releases
-This document only keeps track of changes made since 2025-07-24.
-The previous non-dependency commit was made on [2022-08-26](https://github.com/KSIUJ/gutenberg/commit/9bb5d09e1ca69756a5930d3be214f52598e40797)
+This document only keeps track of changes made after 2025-07-24.
+The previous significant commit was made on [2022-08-26](https://github.com/KSIUJ/gutenberg/commit/9bb5d09e1ca69756a5930d3be214f52598e40797)
 
 [unreleased]: https://github.com/KSIUJ/gutenberg/compare/v4.0.0-rc1...HEAD
 [4.0.0-rc1]: https://github.com/KSIUJ/gutenberg/releases/tag/v4.0.0-rc1
@@ -42,6 +44,7 @@ The previous non-dependency commit was made on [2022-08-26](https://github.com/K
 [#120]: https://github.com/KSIUJ/gutenberg/pull/120
 [#122]: https://github.com/KSIUJ/gutenberg/pull/122
 [#127]: https://github.com/KSIUJ/gutenberg/pull/127
+[#130]: https://github.com/KSIUJ/gutenberg/pull/130
 
 [keep a changelog]: https://keepachangelog.com/en/1.1.0/
 [OpenID Connect chapter]: https://ksiuj.github.io/gutenberg/admin/openid-connect.html
