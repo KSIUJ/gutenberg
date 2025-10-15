@@ -89,7 +89,7 @@ RUN mkdir /var/log/gutenberg
 COPY --from=build_webapp /app/webapp/.output/public /app/webapp_public/
 # collectstatic puts the collected static files into STATIC_ROOT,
 # configured in docker_base_settings.py as /app/staticroot
-RUN uv run python manage.py collectstatic --noinput
+RUN uv run --frozen python manage.py collectstatic --noinput
 
 
 # run_backend target
