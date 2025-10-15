@@ -4,17 +4,16 @@ The changes below are formatted according to [keep a changelog].
 See also [Creating new releases] for instructions on how to create a new release.
 
 ## [Unreleased]
-- Add autocomplete for CUPS printer names in Django Admin [#127]
-- Add Django cache configuration in the example setting files [#130]
-- Use LibreOffice's CLI directly instead of using `unoconv` [#130]
 - ...
 
-## [4.0.0-rc1] - 2025-10-10 [Release candidate]
+## [4.0.0-rc2] - 2025-10-15 [Release candidate]
 ### Added
 - Create documentation and host it using mdbook [#97]
 - Created official Docker and Docker Compose configuration [#91]
 - Host documentation next to the webapp in Docker [#120]
 - Add N-up and booklet options to the print settings [#115] [#122]
+- Add Django cache configuration in the example setting files [#130]
+- Add autocomplete for CUPS printer names in Django Admin [#127]
 
 ### Changed
 - Migrate to the uv package manager [#80]
@@ -23,15 +22,16 @@ See also [Creating new releases] for instructions on how to create a new release
 - Changed OpenID Connect backend and settings format [#109]
     - The client needs to be configured again
     - The names of the groups synced from Keycloak roles have changed.
-  
+
   Please see the [OpenID Connect chapter] in the Gutenberg docs for more information.
+- Use LibreOffice's CLI directly instead of using `unoconv` [#130]
 
 ## Previous releases
 This document only keeps track of changes made after 2025-07-24.
 The previous significant commit was made on [2022-08-26](https://github.com/KSIUJ/gutenberg/commit/9bb5d09e1ca69756a5930d3be214f52598e40797)
 
-[unreleased]: https://github.com/KSIUJ/gutenberg/compare/v4.0.0-rc1...HEAD
-[4.0.0-rc1]: https://github.com/KSIUJ/gutenberg/releases/tag/v4.0.0-rc1
+[unreleased]: https://github.com/KSIUJ/gutenberg/compare/v4.0.0-rc2...HEAD
+[4.0.0-rc2]: https://github.com/KSIUJ/gutenberg/releases/tag/v4.0.0-rc2
 
 [#80]: https://github.com/KSIUJ/gutenberg/pull/80
 [#86]: https://github.com/KSIUJ/gutenberg/pull/86
