@@ -3,8 +3,7 @@ from rest_framework import serializers
 from common.models import User
 from control.models import GutenbergJob, Printer, TwoSidedPrinting, validate_pages_to_print, validate_n_up, \
     ImpositionTemplate, OrientationRequested, JobArtefact
-from gutenberg.celery import app
-from printing.processing.converter import get_formats_supported_by_workers
+from gutenberg.worker_capabilities import get_formats_supported_by_workers
 
 
 class GutenbergJobSerializer(serializers.ModelSerializer):
@@ -23,7 +22,7 @@ class GutenbergJobSerializer(serializers.ModelSerializer):
 
 def _get_supported_extensions_default():
     return ",".join(sorted(
-        get_formats_supported_by_workers(app).extensions,
+        get_formats_supported_by_workers()["extensions"],
     ))
 
 

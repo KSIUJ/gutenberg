@@ -3,7 +3,6 @@ import shutil
 import subprocess
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime, timedelta
 from itertools import chain
 from typing import List
 
@@ -319,52 +318,3 @@ def get_own_supported_formats(state) -> dict:
         "mime_types": list(chain.from_iterable(conv.supported_types for conv in CONVERTERS_LOCAL)),
         "extensions": list(chain.from_iterable(conv.supported_extensions for conv in CONVERTERS_LOCAL)),
     }
-
-
-@dataclass
-class SupportedFormats:
-    mime_types: List[str]
-    extensions: List[str]
-    next_check: datetime
-
-
-_cached_supported_formats: SupportedFormats = SupportedFormats([], [], datetime.now())
-def get_formats_supported_by_workers(celery_app) -> SupportedFormats:
-    """
-    Query all Celery workers for their supported document MIME types and filename extensions.
-    The response is temporarily cached in memory.
-    """
-
-    global _cached_supported_formats
-    if datetime.now() >= _cached_supported_formats.next_check:
-        logger.debug("Refreshing supported document formats")
-        try:
-            responses = celery_app.control.broadcast("gutenberg_get_supported_formats", reply=True, timeout=1)
-            if len(responses) == 0:
-                logger.warning("Got no response from workers when refreshing supported document formats")
-                _cached_supported_formats.next_check = datetime.now() + timedelta(seconds=10)
-            else:
-                logger.info(f"Received {len(responses)} responses from workers: {str(responses)}")
-                worker_responses = [worker_response for response in responses for worker_response in response.values()]
-
-                # The `sorted` calls are used to keep the formats ordered in the order they appear in `CONVERTERS_LOCAL`.
-                # This keeps related formats grouped together.
-                #
-                # All elements of the intersection must, by definition, also be present in the list in the first response,
-                # so the `.index(x)` call should not fail.
-                _cached_supported_formats = SupportedFormats(
-                    mime_types=sorted(
-                        set.intersection(*[set(response["mime_types"]) for response in worker_responses]),
-                        key=lambda x: worker_responses[0]["mime_types"].index(x),
-                    ),
-                    extensions=sorted(
-                        set.intersection(*[set(response["extensions"]) for response in worker_responses]),
-                        key=lambda x: worker_responses[0]["extensions"].index(x),
-                    ),
-                    next_check = datetime.now() + timedelta(minutes=30)
-                )
-        except Exception as e:
-            logger.error(f"Failed to refresh supported document formats: {e}", exec_info=True)
-            _cached_supported_formats.next_check = datetime.now() + timedelta(seconds=30)
-
-    return _cached_supported_formats

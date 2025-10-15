@@ -61,6 +61,7 @@ case "$1" in
     setup_permissions
 
     # Run Celery as "$GUTENBERG_USERNAME"
+    # FIXME: Maybe run celery beat too? There is the `-B` flag which could be used here
     runuser -u "$GUTENBERG_USERNAME" -- env UV_CACHE_DIR=/app/.cache/uv uv run celery -A gutenberg worker -P threads -l INFO
     ;;
  *)
