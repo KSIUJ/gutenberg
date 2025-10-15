@@ -60,9 +60,8 @@ case "$1" in
  run-celery)
     setup_permissions
 
-    # Run Celery as "$GUTENBERG_USERNAME"
-    # FIXME: Maybe run celery beat too? There is the `-B` flag which could be used here
-    runuser -u "$GUTENBERG_USERNAME" -- env UV_CACHE_DIR=/app/.cache/uv uv run --frozen celery -A gutenberg worker -P threads -l INFO
+    # Run Celery as "$GUTENBERG_USERNAME
+    runuser -u "$GUTENBERG_USERNAME" -- env UV_CACHE_DIR=/app/.cache/uv uv run --frozen celery -A gutenberg worker -B -P threads -l INFO
     ;;
  *)
     echo "Error: Missing or invalid first argument to docker-entrypoint.sh: '$1'."
