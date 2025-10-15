@@ -36,6 +36,13 @@ DATABASES = {
     }
 }
 
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379",
+    }
+}
+
 # Logging
 LOGGING['handlers']['print_file']['filename'] = '/var/log/gutenberg/print.log'
 LOGGING['handlers']['django_file']['filename'] = '/var/log/gutenberg/django.log'

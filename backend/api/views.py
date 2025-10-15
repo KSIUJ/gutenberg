@@ -23,8 +23,9 @@ from api.serializers import GutenbergJobSerializer, PrinterSerializer, UserInfoS
 from common.models import User
 from control.models import GutenbergJob, Printer, JobStatus, PrintingProperties, TwoSidedPrinting, JobArtefact, \
     JobArtefactType, JobType
+from gutenberg.worker_capabilities import get_formats_supported_by_workers
 from printing.printing import print_file
-from printing.processing.converter import detect_file_format, SUPPORTED_FILE_FORMATS
+from printing.processing.converter import detect_file_format
 
 logger = logging.getLogger('gutenberg.api.printing')
 
@@ -217,7 +218,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         job.next_document_number += 1
         job.save()
         file_type = detect_file_format(artefact.file.path)
-        if file_type not in SUPPORTED_FILE_FORMATS:
+        if file_type not in get_formats_supported_by_workers()["mime_types"]:
             raise UnsupportedDocumentError("Unsupported file type: {}".format(file_type))
         artefact.mime_type = file_type
         artefact.save()

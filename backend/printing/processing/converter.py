@@ -7,6 +7,7 @@ from itertools import chain
 from typing import List
 
 import magic
+from celery.worker.control import control_command
 from pypdf import PdfReader
 
 from printing.processing.pages import PageSize, PageOrientation
@@ -176,12 +177,34 @@ class DocConverter(EarlyConverter):
 
     def convert_to_pdf(self, input_file: str) -> str:
         out = os.path.join(self.work_dir, 'converted.pdf')
-        self.run_in_sandbox(['unoconv', '-o', out, input_file])
+
+        # LibreOffice only allows specifying the output directory, not the output file name.
+        # To make sure that the resulting file is identified correctly, we create an empty directory
+        # and search for the resulting file there.
+        out_dir = os.path.join(self.work_dir, 'converter_out')
+        os.makedirs(out_dir)
+        self.run_in_sandbox(['libreoffice', '--headless', '--convert-to', 'pdf', '--outdir', out_dir, input_file])
+
+        output_files = [os.path.join(out_dir, entry) for entry in os.listdir(out_dir)]
+        if len(output_files) == 0:
+            raise Exception("Missing PDF after conversion by LibreOffice")
+        if len(output_files) > 1:
+            raise Exception("LibreOffice generated multiple files during conversion")
+        libreoffice_out = output_files[0]
+        if not os.path.isfile(libreoffice_out):
+            raise Exception("Output from LibreOffice conversion is not a file")
+        if  os.path.splitext(libreoffice_out)[1] != '.pdf':
+            raise Exception("Output from LibreOffice conversion is not a PDF")
+
+        # The `move` is here mostly to ensure that the output file has a standard name
+        # and thus will not contain spaces or other unexpected characters.
+        shutil.move(libreoffice_out, out)
+        os.rmdir(out_dir)
         return out
 
     @classmethod
     def is_available(cls):
-        return cls.binary_exists('unoconv')
+        return cls.binary_exists('libreoffice')
 
 
 class PwgRasterConverter(EarlyConverter):
@@ -240,13 +263,14 @@ class PdfConverter(EarlyConverter):
 
 
 CONVERTERS_ALL = [ImageConverter, DocConverter, PwgRasterConverter, PdfConverter, PostScriptConverter]
-CONVERTERS = [conv for conv in CONVERTERS_ALL if conv.is_available()]
-SUPPORTED_FILE_FORMATS = list(chain.from_iterable(conv.supported_types for conv in CONVERTERS))
-SUPPORTED_EXTENSIONS = list(chain.from_iterable(conv.supported_extensions for conv in CONVERTERS))
+"""
+Converters supported by the current worker.
+"""
+CONVERTERS_LOCAL = [conv for conv in CONVERTERS_ALL if conv.is_available()]
 
 def _create_converter_map() -> dict[str, type[Converter]]:
     result:  dict[str, type[Converter]] = dict()
-    for conv_class in CONVERTERS:
+    for conv_class in CONVERTERS_LOCAL:
         for input_type in conv_class.supported_types:
             if input_type in result:
                 # If multiple converters for the same input type are available, use the first one
@@ -281,3 +305,16 @@ def get_converter(input_type: str, work_dir: str) -> Converter:
         raise NoConverterAvailableError(
             "Unable to convert {} - no converter available".format(input_type))
     return conv_class(work_dir)
+
+
+@control_command(name="gutenberg_get_supported_formats")
+def get_own_supported_formats(state) -> dict:
+    """
+    A Celery command to get the document formats supported by the current worker.
+    `get_formats_supported_by_workers` uses this command.
+    """
+
+    return {
+        "mime_types": list(chain.from_iterable(conv.supported_types for conv in CONVERTERS_LOCAL)),
+        "extensions": list(chain.from_iterable(conv.supported_extensions for conv in CONVERTERS_LOCAL)),
+    }

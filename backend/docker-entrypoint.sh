@@ -52,16 +52,16 @@ case "$1" in
     setup_permissions
 
     # Run migrations as $GUTENBERG_USERNAME
-    runuser -u "$GUTENBERG_USERNAME" -- env UV_CACHE_DIR=/app/.cache/uv uv run python manage.py migrate
+    runuser -u "$GUTENBERG_USERNAME" -- env UV_CACHE_DIR=/app/.cache/uv uv run --frozen python manage.py migrate
 
     # Run gunicorn as $GUTENBERG_USERNAME
-    runuser -u "$GUTENBERG_USERNAME" -- env UV_CACHE_DIR=/app/.cache/uv uv run gunicorn gutenberg.wsgi:application --bind 0.0.0.0:8000 --access-logfile -
+    runuser -u "$GUTENBERG_USERNAME" -- env UV_CACHE_DIR=/app/.cache/uv uv run --frozen gunicorn gutenberg.wsgi:application --bind 0.0.0.0:8000 --access-logfile -
     ;;
  run-celery)
     setup_permissions
 
-    # Run Celery as "$GUTENBERG_USERNAME"
-    runuser -u "$GUTENBERG_USERNAME" -- env UV_CACHE_DIR=/app/.cache/uv uv run celery -A gutenberg worker -P threads -l INFO
+    # Run Celery as "$GUTENBERG_USERNAME
+    runuser -u "$GUTENBERG_USERNAME" -- env UV_CACHE_DIR=/app/.cache/uv uv run --frozen celery -A gutenberg worker -B -P threads -l INFO
     ;;
  *)
     echo "Error: Missing or invalid first argument to docker-entrypoint.sh: '$1'."
