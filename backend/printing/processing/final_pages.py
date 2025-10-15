@@ -65,7 +65,6 @@ class FinalPageProcessor:
 
     def run_in_sandbox(self, command: List[str]) -> str:
         sandboxed_command = [SANDBOX_PATH, self.work_dir] + command
-        print("Running command", " ".join(sandboxed_command))
         return subprocess.check_output(
             sandboxed_command,
             text=True,

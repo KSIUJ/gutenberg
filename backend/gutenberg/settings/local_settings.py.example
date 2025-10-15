@@ -15,6 +15,13 @@ DATABASES = {
     }
 }
 
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379",
+    }
+}
+
 OIDC_APP_BASE_URL = 'https://yourapp.com/'
 
 # Set user's Django groups to the roles from the access token claims.
