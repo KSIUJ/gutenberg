@@ -27,6 +27,10 @@ version, consider linking to relevant Gutenberg documentation.
 Create a new pull request with the name `Release vX.Y.Z-rcN`, which contains the following
 changes:
 - Update the package version in `backend/pyproject.toml`.
+- Run:
+  ```bash
+  cd backend && uv sync --upgrade
+  ```
 - In the CHANGELOG.md file:
   - Move the changes from the **[Unreleased]** section to a new
       section with the header `## [X.Y.Z] - YYYY-MM-DD` or
