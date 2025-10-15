@@ -178,12 +178,34 @@ class DocConverter(EarlyConverter):
 
     def convert_to_pdf(self, input_file: str) -> str:
         out = os.path.join(self.work_dir, 'converted.pdf')
-        self.run_in_sandbox(['unoconv', '-o', out, input_file])
+
+        # LibreOffice only allows specifying the output directory, not the output file name.
+        # To make sure that the resulting file is identified correctly, we create an empty directory
+        # and search for the resulting file there.
+        out_dir = os.path.join(self.work_dir, 'converter_out')
+        os.makedirs(out_dir)
+        self.run_in_sandbox(['libreoffice', '--headless', '--convert-to', 'pdf', '--outdir', out_dir, input_file])
+
+        output_files = [os.path.join(out_dir, entry) for entry in os.listdir(out_dir)]
+        if len(output_files) == 0:
+            raise Exception("Missing PDF after conversion by LibreOffice")
+        if len(output_files) > 1:
+            raise Exception("LibreOffice generated multiple files during conversion")
+        libreoffice_out = output_files[0]
+        if not os.path.isfile(libreoffice_out):
+            raise Exception("Output from LibreOffice conversion is not a file")
+        if  os.path.splitext(libreoffice_out)[1] != '.pdf':
+            raise Exception("Output from LibreOffice conversion is not a PDF")
+
+        # The `move` is here mostly to ensure that the output file has a standard name
+        # and thus will not contain spaces or other unexpected characters.
+        shutil.move(libreoffice_out, out)
+        os.rmdir(out_dir)
         return out
 
     @classmethod
     def is_available(cls):
-        return cls.binary_exists('unoconv')
+        return cls.binary_exists('libreoffice')
 
 
 class PwgRasterConverter(EarlyConverter):

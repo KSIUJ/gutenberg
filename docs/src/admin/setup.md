@@ -7,10 +7,15 @@
 - Printer: make printing available for server network
 - Linux server: install drivers, configure CUPS
 - Linux server: test `lp` command
-- Check if you have following commands available: `convert` (`imagemagick`),
-  `unoconv`, `gs` (`ghostscript`), and `bbwrap` (`bubblewrap`)
-    - Debian/Ubuntu: `sudo apt install imagemagick unoconv ghostscript bubblewrap`
-    - Arch Linux: `sudo pacman -S imagemagick unoconv ghostscript bubblewrap`
+- Check if you have the following commands available:
+  - `libreoffice` for printing .docx and .odt. A no-GUI version is enough,
+  - `convert` (package `imagemagick`) for printing image files,
+  - `gs` (package `ghostscript`),
+  - `bbwrap` (package `bubblewrap`).
+  
+  To install them:
+  - Debian/Ubuntu: `sudo apt install libreoffice-core-nogui libreoffice-writer-nogui imagemagick ghostscript bubblewrap`
+  - Arch Linux: `sudo pacman -S libreoffice-still imagemagick ghostscript bubblewrap`
 - Gutenberg uses `uv` as the Python project manager.
   See https://docs.astral.sh/uv/getting-started/installation/ for installation instructions.
 - You will also need to have `yarn` or `npm` to build the web interface.

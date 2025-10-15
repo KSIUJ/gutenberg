@@ -133,7 +133,9 @@ FROM setup_base AS run_celery
 #       to check the required, recommended (installed unless --no-install-recommends is enabled) and suggested
 #       (not installed by default) dependencies of the package.
 #
-# This step installs only cups-client (for the lp and cancel commands), not cups (which depends on cups-client).
+# This step installs only `cups-client` (for the `lp` and cancel commands) and `cups-filters` (only for the
+# `image/pwg-raster` to PDF conversion), not `cups` (which depends on `cups-client` and `cups-filters`).
+#
 # This means that the container can only be used with an external CUPS server.
 # If needed, the user can deploy https://hub.docker.com/r/olbat/cupsd as a separate container.
 # NOTE: The size of cups vs cups-client is not a problem, cups instead of cups-client increases the image size by about
@@ -147,11 +149,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ghostscript \
     bubblewrap \
     cups-client \
-    libreoffice \
+    cups-filters \
+    libreoffice-core-nogui libreoffice-writer-nogui \
     fonts-crosextra-caladea fonts-crosextra-carlito \
     fonts-dejavu \
     fonts-linuxlibertine \
-    fonts-noto-core fonts-noto-extra fonts-noto-mono fonts-noto-ui-core \
+    fonts-noto-core fonts-noto-mono \
     fonts-sil-gentium-basic \
     fonts-liberation fonts-liberation-sans-narrow \
   && rm -rf /var/lib/apt/lists/*
