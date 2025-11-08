@@ -6,14 +6,14 @@ readme = "README.md"
 requires-python = "~=3.13.0"
 dependencies = [
     "celery>=5.5.3",
-    "django>=5.2.6",
+    "django>=5.2.8",
     "djangorestframework>=3.16.1",
     "pypdf",
     "python-magic>=0.4.27",
-    "redis>=6.4.0",
+    "redis>=6.4.0", # TODO: Update
     "ksi-oidc-django>=1.0.0",
     "gunicorn>=23.0.0",
-    "psycopg[binary]>=3.2.10",
+    "psycopg[binary]>=3.2.12",
 ]
 
 [tool.uv.sources]
