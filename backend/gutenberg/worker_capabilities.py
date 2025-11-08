@@ -1,9 +1,10 @@
 import logging
 from time import sleep
 
-from celery import shared_task
 from celery.app.control import flatten_reply
 from django.core.cache import cache
+
+from celery import shared_task
 
 logger = logging.getLogger('gutenberg.main')
 
@@ -24,12 +25,12 @@ def update_supported_document_formats() -> dict:
     sleep(1)
     # NOTE: This method always blocks for 3 seconds
     replies = app.control.broadcast("gutenberg_get_supported_formats", reply=True, timeout=3)
-    replies = list(flatten_reply(replies).values())
+    replies = [reply for reply in flatten_reply(replies).values() if "error" not in reply]
     if len(replies) == 0:
-        logger.warning("Got no replies from workers when refreshing supported document formats")
+        logger.warning("Got no valid replies from workers when refreshing supported document formats")
         supported_formats = { "mime_types": [], "extensions": [] }
     else:
-        logger.debug(f"Received {len(replies)} replies from workers: {str(replies)}")
+        logger.debug(f"Received {len(replies)} valid replies from workers: {str(replies)}")
 
         # The `sorted` calls are used to keep the formats ordered in the order they appear in `CONVERTERS_LOCAL`.
         # This keeps related formats grouped together.
