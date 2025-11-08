@@ -3,11 +3,9 @@ import shutil
 import subprocess
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from itertools import chain
 from typing import List
 
 import magic
-from celery.worker.control import control_command
 from pypdf import PdfReader
 
 from printing.processing.pages import PageSize, PageOrientation
@@ -305,16 +303,3 @@ def get_converter(input_type: str, work_dir: str) -> Converter:
         raise NoConverterAvailableError(
             "Unable to convert {} - no converter available".format(input_type))
     return conv_class(work_dir)
-
-
-@control_command(name="gutenberg_get_supported_formats")
-def get_own_supported_formats(state) -> dict:
-    """
-    A Celery command to get the document formats supported by the current worker.
-    `get_formats_supported_by_workers` uses this command.
-    """
-
-    return {
-        "mime_types": list(chain.from_iterable(conv.supported_types for conv in CONVERTERS_LOCAL)),
-        "extensions": list(chain.from_iterable(conv.supported_extensions for conv in CONVERTERS_LOCAL)),
-    }

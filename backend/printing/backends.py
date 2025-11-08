@@ -115,12 +115,12 @@ class LocalCupsPrinter(PrinterBackend):
         )
 
     @staticmethod
-    def list_cups_printer_names():
+    def list_cups_printer_names() -> list[str]:
         try:
             result = subprocess.check_output(['lpstat'] + LocalCupsPrinter.common_options + ['-e'], text=True)
             return [line.strip() for line in result.splitlines() if line.strip()]
-        except subprocess.CalledProcessError as error:
-            logger.error("Failed to list printers in CUPS using lpstat", error)
+        except Exception as error:
+            logger.error(f"Failed to list printers in CUPS using lpstat: {str(error)}", exc_info=True)
             return []
 
 
