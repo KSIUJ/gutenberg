@@ -4,6 +4,11 @@ version = "4.0.0-rc3"
 description = "Office printer gateway: print documents via web GUI or driverless IPP"
 readme = "README.md"
 requires-python = "~=3.13.0"
+[tool.setuptools]
+packages = ["api", "common", "control", "gutenberg", "ipp", "printing"]
+
+[tool.setuptools.package-data]
+"*" = ["*.txt", "*.rst", "*.md"]
 dependencies = [
     "celery>=5.5.3",
     "django>=5.2.8",

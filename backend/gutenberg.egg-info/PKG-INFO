@@ -1,0 +1,6 @@
+Metadata-Version: 2.4
+Name: gutenberg
+Version: 4.0.0rc3
+Summary: Office printer gateway: print documents via web GUI or driverless IPP
+Requires-Python: ~=3.13.0
+Description-Content-Type: text/markdown
