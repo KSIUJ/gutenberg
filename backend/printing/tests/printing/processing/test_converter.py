@@ -782,6 +782,6 @@ class TestPerformanceConstraints:
         start_time = time.time()
         converter.preprocess('/path/to/image.jpg')
         elapsed = time.time() - start_time
-        
+            
         # With mocked subprocess, should be nearly instant
         assert elapsed < 1.0
