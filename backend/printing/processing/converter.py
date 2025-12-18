@@ -272,7 +272,7 @@ def _create_converter_map() -> dict[str, type[Converter]]:
         for input_type in conv_class.supported_types:
             if input_type in result:
                 # If multiple converters for the same input type are available, use the first one
-                pass
+                continue
             result[input_type] = conv_class
     return result
 
