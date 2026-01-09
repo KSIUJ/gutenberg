@@ -1,0 +1,17 @@
+[pytest]
+DJANGO_SETTINGS_MODULE = "gutenberg.settings.test_settings"
+python_files = ["test_*.py", "tests.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+strict_markers = true
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "samples: marks tests that require sample files",
+    "integration: marks integration tests",
+]
+
+addopts = [
+    "-v",
+    "--tb=short",
+]
