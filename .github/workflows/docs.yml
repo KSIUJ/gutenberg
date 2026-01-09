@@ -34,7 +34,6 @@ jobs:
         run: >
           cargo binstall -y
           mdbook
-          mdbook-alerts
           mdbook-mermaid
 
       - name: Build book

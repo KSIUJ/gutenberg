@@ -22,6 +22,5 @@ in the `docs` directory.
 The book has been created using [mdBook](https://rust-lang.github.io/mdBook/index.html).
 These mdBook plugins are also installed:
 - [`mdbook-mermaid`](https://github.com/badboy/mdbook-mermaid)
-- [`mdbook-alerts`](https://github.com/lambdalisue/rs-mdbook-alerts)
 
 To contribute, fork this repository and create a pull request with your changes.

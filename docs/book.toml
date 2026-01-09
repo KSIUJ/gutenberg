@@ -6,8 +6,6 @@ title = "Gutenberg documentation"
 [build]
 build-dir = "book"
 
-[preprocessor.alerts]
-
 [preprocessor.mermaid]
 command = "mdbook-mermaid"
 
