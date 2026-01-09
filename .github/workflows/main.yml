@@ -33,7 +33,7 @@ jobs:
 
     - name: Run tests
       working-directory: backend
-      run: uv run manage.py test
+      run: uv run pytest
 
   test_webapp:
     runs-on: ubuntu-latest

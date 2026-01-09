@@ -70,7 +70,14 @@ ENV GUTENBERG_GID="659"
 FROM setup_base AS setup_django
 
 COPY ./backend/pyproject.toml ./backend/uv.lock /app/backend/
-RUN uv sync --no-managed-python
+# If a build system is specified in pyproject.toml then by
+# default `uv sync` would invoke the build system, which fails
+# if the package source is not available.
+# The `--no-install-project` flag prevents the build command from
+# running.
+# Running `uv sync` before copying the backend source is preferable,
+# because it allows caching when the `pyproject.toml` file has not changed.
+RUN uv sync --no-managed-python --frozen --no-install-project
 COPY ./backend /app/backend/
 
 
