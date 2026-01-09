@@ -36,7 +36,7 @@ WORKDIR /app/docs
 RUN apk add curl
 RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | sh
 
-RUN cargo binstall mdbook mdbook-mermaid mdbook-alerts
+RUN cargo binstall mdbook@0.5.2 mdbook-mermaid@0.17.0
 
 COPY ./docs /app/docs/
 RUN mdbook build
