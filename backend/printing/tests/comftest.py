@@ -22,3 +22,4 @@ if not settings.configured:
         SECRET_KEY='test-secret-key',
     )
     django.setup()
+    

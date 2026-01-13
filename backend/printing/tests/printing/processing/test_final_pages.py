@@ -32,6 +32,8 @@ def mock_page_sizes():
     sizes = MagicMock(spec=PageSizes)
     portrait = PageSize(width_mm=210, height_mm=297)
     landscape = PageSize(width_mm=297, height_mm=210)
+    square = PageSize(width_mm=250, height_mm=250)
+    veryFreakyPage = PageSize(width_mm=1, height_mm=4000)
     sizes.get.side_effect = lambda orient: portrait if orient == PageOrientation.PORTRAIT else landscape
     return sizes
 
@@ -50,13 +52,33 @@ class TestFinalPageProcessor:
         with pytest.raises(ValueError):
             FinalPageProcessor("/tmp", 3, mock_page_sizes, PageOrientation.PORTRAIT, True)
 
-    def test_pages_to_print_iter_none(self):
-        it = FinalPageProcessor._create_pages_to_print_iter(None, 3)
-        assert list(it) == [0, 1, 2]
+        
 
     def test_pages_to_print_iter_range(self):
         it = FinalPageProcessor._create_pages_to_print_iter("1-2,4-5", 10)
         assert list(it) == [0, 1, 3, 4]
+        it = FinalPageProcessor._create_pages_to_print_iter(None, 3)
+        assert list(it) == [0, 1, 2]
+        it = FinalPageProcessor._create_pages_to_print_iter("", 2)
+        assert list(it) == [0, 1]
+        it = FinalPageProcessor._create_pages_to_print_iter("3-5", 4)
+        assert list(it) == [2, 3]
+        it = FinalPageProcessor._create_pages_to_print_iter("2,4,6", 5)
+        assert list(it) == [1, 3]
+        it = FinalPageProcessor._create_pages_to_print_iter("7-10", 5)
+        assert list(it) == []
+        it = FinalPageProcessor._create_pages_to_print_iter("abc", 5)
+        assert list(it) == []
+        it = FinalPageProcessor._create_pages_to_print_iter("5-3", 5)
+        assert list(it) == []
+        it = FinalPageProcessor._create_pages_to_print_iter("0,-1", 5)
+        assert list(it) == []
+        it = FinalPageProcessor._create_pages_to_print_iter("1,2,2,3", 3)
+        assert list(it) == [0, 1, 2]
+        it = FinalPageProcessor._create_pages_to_print_iter(" 1 , 3 - 4 ", 4)
+        assert list(it) == [0, 2, 3]
+        it = FinalPageProcessor._create_pages_to_print_iter("2-3,10", 10)
+        assert list(it) == [1, 2, 9]
 
     @patch("printing.processing.final_pages.PdfReader")
     @patch("printing.processing.final_pages.PdfWriter")

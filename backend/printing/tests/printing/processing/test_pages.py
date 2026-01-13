@@ -2,6 +2,7 @@ import os
 import sys
 import tempfile
 import unittest
+import pytest
 from unittest.mock import Mock, patch, MagicMock, call
 from dataclasses import dataclass
 
@@ -40,9 +41,9 @@ def test_page_size_rotated():
     assert rotated_ps.width_mm == 200
     assert rotated_ps.height_mm == 100
 
-def test_page_size_width_pt():
+def test_page_size_width_height_pt():
     ps = PageSize(width_mm=25.4, height_mm=50.8)
-    assert abs(ps.width_pt() - 72) < 0.01  
+    assert ps.width_pt() == pytest.approx(72, abs=0.01)  
     assert abs(ps.height_pt() - 144) < 0.01
 
 def test_page_sizes_get():
@@ -56,5 +57,3 @@ def test_page_sizes_get():
 def test_page_orientation_rotate():
     assert PageOrientation.PORTRAIT.rotate() == PageOrientation.LANDSCAPE
     assert PageOrientation.LANDSCAPE.rotate() == PageOrientation.PORTRAIT
-
-    
