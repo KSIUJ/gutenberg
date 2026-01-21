@@ -20,7 +20,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'gutenberg',
         'USER': 'gutenberg',
-        'PASSWORD': read_secret('gutenberg_postgres_password'),
+        'PASSWORD': read_docker_secret('gutenberg_postgres_password'),
         'HOST': 'db',
         'PORT': '5432',
     }
