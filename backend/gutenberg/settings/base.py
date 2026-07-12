@@ -120,10 +120,10 @@ STATICFILES_FINDERS = [
 ]
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, '../webapp/.output/public'),
+    os.path.join(BASE_DIR, '../webapp/.output/site/static/'),
 ]
 
-GUTENBERG_SPA_HTML_DIR = os.path.join(BASE_DIR, '../webapp/.output/html')
+GUTENBERG_SPA_HTML_DIR = os.path.join(BASE_DIR, '../webapp/.output/site/html')
 
 # This is a custom setting which controls how the index.html file is served for the SPA webapp.
 # All webapp routes are handled by the Django server to handle authentication.

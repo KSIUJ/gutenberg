@@ -86,14 +86,14 @@ COPY ./backend /app/backend/
 #
 #   extends: setup_django
 #   build inputs:
-#   - /app/webapp/.output/public from build_webapp
+#   - /app/webapp/.output/site/static from build_webapp
 #   build outputs:
 #   - /app/staticroot - collected static files
 FROM setup_django AS collect_static
 
 ENV DJANGO_SETTINGS_MODULE=gutenberg.settings.docker_base
 RUN mkdir /var/log/gutenberg
-COPY --from=build_webapp /app/webapp/.output/public /app/webapp_public/
+COPY --from=build_webapp /app/webapp/.output/site/static /app/webapp_public/
 # collectstatic puts the collected static files into STATIC_ROOT,
 # configured in docker_base_settings.py as /app/staticroot
 RUN uv run --frozen python manage.py collectstatic --noinput
@@ -178,7 +178,7 @@ VOLUME ["/var/log/gutenberg"]
 #   Runs the NGINX proxy.
 #
 #   build inputs:
-#   - /app/webapp/.output/html from build_webapp
+#   - /app/webapp/.output/site/html from build_webapp
 #   - /app/staticroot from collect_static
 #   - /app/docs/book from build_docs
 #   depends on run_backend for server on port 8000
@@ -191,7 +191,7 @@ VOLUME ["/var/log/gutenberg"]
 FROM nginx:1.29-alpine${ALPINE_VER} AS run_nginx
 
 RUN rm /etc/nginx/conf.d/default.conf
-COPY --from=build_webapp /app/webapp/.output/html /usr/share/nginx/gutenberg/webapp_html
+COPY --from=build_webapp /app/webapp/.output/site/html /usr/share/nginx/gutenberg/webapp_html
 # /app/staticroot is the value of STATIC_ROOT in docker_base_settings.py
 COPY --from=collect_static /app/staticroot /usr/share/nginx/gutenberg/static
 COPY --from=build_docs /app/docs/book /usr/share/nginx/gutenberg/docs

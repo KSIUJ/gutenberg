@@ -4,7 +4,7 @@ The changes below are formatted according to [keep a changelog].
 See also [Creating new releases] for instructions on how to create a new release.
 
 ## [Unreleased]
-- ...
+- Change the layout of `/webapp/.output` in webapp builds. [#170]
 
 ## [4.0.0-rc3] - 2025-11-09 [Release candidate]
 ### Added
@@ -45,6 +45,7 @@ The previous significant commit was made on [2022-08-26](https://github.com/KSIU
 [#122]: https://github.com/KSIUJ/gutenberg/pull/122
 [#127]: https://github.com/KSIUJ/gutenberg/pull/127
 [#130]: https://github.com/KSIUJ/gutenberg/pull/130
+[#170]: https://github.com/KSIUJ/gutenberg/pull/170
 
 [keep a changelog]: https://keepachangelog.com/en/1.1.0/
 [OpenID Connect chapter]: https://ksiuj.github.io/gutenberg/admin/openid-connect.html
