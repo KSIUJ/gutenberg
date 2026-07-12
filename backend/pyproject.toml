@@ -4,15 +4,15 @@ version = "4.0.0-rc3"
 description = "Office printer gateway: print documents via web GUI or driverless IPP"
 requires-python = "~=3.13.0"
 dependencies = [
-    "celery>=5.5.3",
+    "celery>=5.6.3",
     "django>=5.2.8",
-    "djangorestframework>=3.16.1",
-    "pypdf>=6.1.3",
+    "djangorestframework>=3.17.1",
+    "pypdf>=6.14.2",
     "python-magic>=0.4.27",
-    "redis>=7.0.1",
+    "redis>=8.0.1",
     "ksi-oidc-django>=1.0.0",
-    "gunicorn>=23.0.0",
-    "psycopg[binary]>=3.2.12",
+    "gunicorn>=26.0.0",
+    "psycopg[binary]>=3.3.4",
 ]
 
 [dependency-groups]
@@ -24,5 +24,3 @@ dev = [
 
 [tool.uv.sources]
 ksi-oidc-django = { git = "https://github.com/KSIUJ/ksi-oidc-python", subdirectory="django", tag="django-v1.0.0" }
-# Use pypdf from pip after https://github.com/py-pdf/pypdf/issues/3487 is resolved.
-# Versions from v5.5.0 have a regression bug described in the issue.
