@@ -3,7 +3,9 @@ name: Gutenberg
 on:
   push:
     branches:
-      - master
+      - main
+      # Test mdbook builds on pre-release branches but do not publish
+      - 'release/*'
 
 jobs:
   deploy_mdbook:
@@ -41,9 +43,13 @@ jobs:
         run: mdbook build
 
       - name: Upload GitHub Pages Artifact
+        # Skip deployment on release branches
+        if: github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./docs/book
 
       - name: Deploy to GitHub Pages
+        # Skip deployment on release branches
+        if: github.ref == 'refs/heads/main'
         uses: actions/deploy-pages@v4

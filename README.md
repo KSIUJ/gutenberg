@@ -5,8 +5,11 @@ Office printer gateway: print documents via web GUI or driverless IPP.
 Made by [KSI UJ](http://ksi.ii.uj.edu.pl). Powered by Django, Celery and VueJS.
 
 > [!NOTE]
-> The `master` branch contains the latest development version.
-> Check out the *Releases* page for stable versions.
+> The `main` branch contains the latest development version. \
+> The source of the latest stable version can be found on the `main`
+> branch. \
+> The documentation at https://ksiuj.github.io/gutenberg is for the
+> latest stable version.
 
 The changelog is available in the file [CHANGELOG.md](./CHANGELOG.md).
 

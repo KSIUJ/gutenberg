@@ -23,27 +23,54 @@ Please pay extra attention to documenting the breaking changes in the changelog.
 the changes that need to be made in the deployment when upgrading from the previous stable
 version, consider linking to relevant Gutenberg documentation.
 
-## Creating a new release or release candidate
-Create a new pull request with the name `Release vX.Y.Z-rcN`, which contains the following
-changes:
-- Update the package version in `backend/pyproject.toml`.
+## Releasing new versions
+Create a new branch `release/vX.Y.Z` from `develop`.
+Create a pull request **targeting `main`** (**not `develop`!**) for this branch.
+
+### Creating release candidates
+- Update the package version in `backend/pyproject.toml`, including the pre-release 
+    suffix (`X.Y.Z-rcN`).
 - Run:
   ```bash
   cd backend && uv sync --upgrade
   ```
 - In the CHANGELOG.md file:
   - Move the changes from the **[Unreleased]** section to a new
-      section with the header `## [X.Y.Z] - YYYY-MM-DD` or
-      `## [X.Y.Z-rcN] - YYYY-MM-DD [Release candidate]` where  `YYYY-MM-DD` is the date
+      section with the header  `## [X.Y.Z-rcN] - YYYY-MM-DD [Release candidate]`
+  - where  `YYYY-MM-DD` is the date
       of the release.
   - If there already exists a header for a previous release candidate for the new
-      version, update it instead. 
-  - Add an appropriate URL for the `[X.Y.Z]` or `[X.Y.Z-rcN]` link at the end of the file.
+      version, update it instead.
+  - Add an appropriate URL for the `[X.Y.Z-rcN]` link at the end of the file.
   - Update the `[unreleased]` link at the end of the file to compare only changes made
       since the release candidate tag.
+  - Create a new GitHub Release with the tag `vX.Y.Z-rcN` on the `release/vX.Y.Z` branch.
 
-After merging the pull request, create a new GitHub Release with the tag `vX.Y.Z` or 
-`vX.Y.Z-rcN`.
+### Adding fixes to a release branch
+To make fixes in a pre-release version,
+either commit them directly to the `release/vX.Y.Z` branch or create a new branch
+based on `release/vX.Y.Z` and then squash merge it back to the release branch.
+
+The changes can be cherry-picked into `develop`.
+
+After making such fixes, the steps for creating release candidates can be repeated
+with the next pre-release number.
+
+### Finalizing a release
+- Update the package version in `backend/pyproject.toml` (remove the pre-release suffix)
+- Run:
+  ```bash
+  cd backend && uv sync --upgrade
+  ```
+- In the CHANGELOG.md file:
+    - Move the changes from the **[Unreleased]** section if there are still any.
+    - Replace the pre-release section header with `## [X.Y.Z] - YYYY-MM-DD`.
+    - Add an appropriate URL for the `[X.Y.Z]` link at the end of the file.
+    - Update the `[unreleased]` link at the end of the file to compare only changes made
+      since the release candidate tag.
+- Merge the release branch into `main` using the **merge commit** method.
+- Create a new GitHub Release with the tag `vX.Y.Z` on the `main` branch.
+- Finally, merge the `main` branch into `develop` (using fast-forward if possible).
 
 [keep a changelog]: https://keepachangelog.com/en/1.1.0/
 [semantic versioning]: (https://semver.org/lang/pl/spec/v2.0.0.html)
