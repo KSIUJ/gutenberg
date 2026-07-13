@@ -221,7 +221,7 @@ class TestImageConverter:
         assert result.orientation == PageOrientation.PORTRAIT
 
     @patch.object(ImageConverter, 'run_in_sandbox')
-    def test_pdf_creation_calls_imagemagick_convert(
+    def test_pdf_creation_calls_magick(
         self, mock_run, work_dir, sample_page_size
     ):
         """PDF creation uses ImageMagick convert with correct parameters."""
@@ -235,7 +235,12 @@ class TestImageConverter:
 
         assert mock_run.called
         call_args = mock_run.call_args[0][0]
-        assert 'convert' in call_args
+
+        # `convert` is deprecated since ImageMagick 7,
+        # `magick` should be used instead
+        assert 'convert' not in call_args
+        assert 'magick' in call_args
+
         assert '-auto-orient' in call_args
         assert '-resize' in call_args
         assert result == os.path.join(work_dir, 'converted.pdf')

@@ -1,6 +1,7 @@
 /backend/gutenberg/settings/docker_settings.py
 /backend/gutenberg/settings/local_settings.py
 /backend/gutenberg/settings/production_settings.py
+/backend/staticroot
 
 /backend/.venv
 /backend/.python-version

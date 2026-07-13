@@ -1,12 +1,11 @@
+import magic
 import os
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List
-
-import magic
 from pypdf import PdfReader
+from typing import List
 
 from printing.processing.pages import PageSize, PageOrientation
 from printing.utils import SANDBOX_PATH, TASK_TIMEOUT_S, logger
@@ -148,7 +147,7 @@ class ImageConverter(SandboxConverter):
         # TODO: Use scaling options (like fit to page)
         self.run_in_sandbox(
             [
-                'convert', preprocess_result.preprocess_result_path,
+                'magick', preprocess_result.preprocess_result_path,
                 # Auto-orient the image based on the EXIF orientation tag
                 '-auto-orient',
                 # Resize the image to fit the "fit area"
@@ -165,7 +164,7 @@ class ImageConverter(SandboxConverter):
 
     @classmethod
     def is_available(cls):
-        return cls.binary_exists('convert')
+        return cls.binary_exists('magick')
 
 
 class DocConverter(EarlyConverter):
