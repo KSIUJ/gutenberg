@@ -1,6 +1,6 @@
 [project]
 name = "gutenberg"
-version = "4.0.0-rc3"
+version = "4.0.0-rc4"
 description = "Office printer gateway: print documents via web GUI or driverless IPP"
 requires-python = "~=3.13.0"
 dependencies = [
