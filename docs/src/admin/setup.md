@@ -9,7 +9,7 @@
 - Linux server: test `lp` command
 - Check if you have the following commands available:
   - `libreoffice` for printing .docx and .odt. A no-GUI version is enough,
-  - `convert` (package `imagemagick`) for printing image files,
+  - `magick` (package `imagemagick`) for printing image files,
   - `gs` (package `ghostscript`),
   - `bbwrap` (package `bubblewrap`).
   

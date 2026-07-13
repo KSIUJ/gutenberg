@@ -23,6 +23,12 @@ jobs:
       with:
         version: "0.8.2"
 
+    - name: Install ImageMagick
+      uses: mfinelli/setup-imagemagick@v8
+      with:
+        cache: true
+        install-libfuse2: true
+
     - name: Configure venv and install dependencies
       working-directory: backend
       run: uv sync
