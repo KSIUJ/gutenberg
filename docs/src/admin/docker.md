@@ -30,13 +30,15 @@ To run Gutenberg in Docker, you need to create your own version of the settings:
   cp backend/gutenberg/settings/docker_settings.py.example backend/gutenberg/settings/docker_settings.py
 ```
 In `docker_settings.py`, fill in the following fields properly:
-* `SECRET_KEY` - unique random string 
 * `ALLOWED_HOSTS` - list of hosts that can connect to the app
 * `CSRF_TRUSTED_ORIGINS` - list of trusted origins for CSRF protection
 
+In addition, the value of `SECRET_KEY` will by default be read from the Docker secret
+`gutenberg_django_secret_key`. It should be set to a unique random string.
+An example of how to generate one can be found below in the [docker-compose.yml](#docker-composeyml) section.
+
 For example:
 ```python
-SECRET_KEY = 'n7+3u12_59wy_kzvecb^w^jrpi(m#(gl8^qe92kvclkd9!=-h)'
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:3000',
