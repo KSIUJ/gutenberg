@@ -4,6 +4,8 @@ The changes below are formatted according to [keep a changelog].
 See also [Creating new releases] for instructions on how to create a new release.
 
 ## [Unreleased]
+- Modified nginx Docker image config to correctly pass the `X-Forwarded-Host` header. 
+- Changed default nginx location filenames
 - ...
 
 ## [4.0.0] - 2026-07-13

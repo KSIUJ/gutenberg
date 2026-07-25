@@ -100,12 +100,13 @@ server {
 The files in the `gutenberg-locations.d` define [`location`](https://nginx.org/en/docs/http/ngx_http_core_module.html#location)
 directives for different endpoints which will be available under the Gutenberg domain.
 
-Gutenberg adds two files to this folder:
-- `gutenberg-app.conf` which defines the handlers for the endpoints
-    `/static/`, `/@webapp-html/` for internal use and a catch-all `location /` directive
-    which proxies all requests to the Django application server.
-- `gutenberg-docs.conf` which defines the handlers for the `/docs/` endpoint
-    which serves the mdbook documentation.
+Gutenberg adds three files to this folder:
+- `10-gutenberg-backend.conf` which defines a catch-all `location /` directive which proxies all requests to the Django backend.
+- `15-gutenberg-static.conf` which defines the handlers for the endpoints:
+  - `/static/` for serving static files.
+  - `/@webapp-html/` for internal use with the `X-Accel-Redirect` header.
+- `20-gutenberg-docs.conf` which defines the handlers for the `/docs/` endpoint
+  which serves the mdbook documentation.
 
 ### Extending the NGINX configuration
 You can make use of the `include` directives described above to extend Gutenberg's default NGINX image with your own
@@ -113,7 +114,7 @@ config.
 
 As an example, this is how you would add a custom `/myapp/` endpoint proxied to https://example.com/myapp/:
 
-Create a new file `myapp.conf` with the contents:
+Create a new file `30-myapp.conf` with the contents:
 ```conf
 location /myapp/ {
     proxy_pass https://example.com/myapp/;
@@ -125,7 +126,7 @@ And your own `Dockerfile` with:
 # Put the name Gutenberg's default NGINX image here:
 FROM run_nginx
 
-COPY path/to/myapp.conf /etc/nginx/gutenberg-locations.d/myapp.conf
+COPY path/to/30-myapp.conf /etc/nginx/gutenberg-locations.d/
 ```
 
 ## Configuring CUPS access
