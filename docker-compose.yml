@@ -100,10 +100,6 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
-    environment:
-      GUTENBERG_TRUST_X_FORWARDED_HOST: 1
-      GUTENBERG_TRUST_X_FORWARDED_PROTO: 1
-      GUTENBERG_TRUST_X_REAL_IP: 1
 
 volumes:
   gutenberg_postgres_data:
