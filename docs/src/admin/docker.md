@@ -108,6 +108,21 @@ Gutenberg adds three files to this folder:
 - `20-gutenberg-docs.conf` which defines the handlers for the `/docs/` endpoint
   which serves the mdbook documentation.
 
+The `10-gutenberg-backend.conf` is generated at runtime based on these environment variables:
+- `GUTENBERG_TRUST_X_FORWARDED_HOST`
+  - Possible values: `0` (default), `1`
+- `GUTENBERG_TRUST_X_FORWARDED_PROTO`
+  - Possible values: `0` (default), `1`
+- `GUTENBERG_TRUST_X_REAL_IP`
+  - Possible values: `0` (default), `1`
+
+These settings determine how the `X-Forwarded-Host`, `X-Forwarded-Proto` and `X-Real-Ip`
+headers are populated in the request to the `gutenberg-backend` container.
+Only set these to `1` if all the following are true:
+1. there is another proxy server before this NGINX container,
+2. untrusted access is only possible via that proxy, and
+3. the proxy securely populates these headers.
+
 ### Extending the NGINX configuration
 You can make use of the `include` directives described above to extend Gutenberg's default NGINX image with your own
 config.
