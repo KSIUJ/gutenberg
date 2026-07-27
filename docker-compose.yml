@@ -100,6 +100,9 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    # Uncomment to trust additional proxy IPs beyond default Docker bridge (172.17.0.0/16)
+    # environment:
+    #   GUTENBERG_TRUSTED_PROXY_IPS: "172.17.0.0/16 10.0.0.0/8"
 
 volumes:
   gutenberg_postgres_data:

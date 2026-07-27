@@ -4,7 +4,16 @@ The changes below are formatted according to [keep a changelog].
 See also [Creating new releases] for instructions on how to create a new release.
 
 ## [Unreleased]
-- ...
+### Added
+- Added `GUTENBERG_TRUSTED_PROXY_IPS` environment variable for configuring trusted reverse proxy IP addresses [#176]
+
+### Changed
+- **BREAKING**: Nginx now validates request source IPs and rejects requests from non-trusted proxies (default: Docker bridge network 172.17.0.0/16). Deployments behind external reverse proxies must configure `GUTENBERG_TRUSTED_PROXY_IPS` [#176]
+
+### Security
+- Nginx now prevents X-Forwarded-* header injection attacks by validating request source IPs [#176]
+
+[#176]: https://github.com/KSIUJ/gutenberg/issues/176
 
 ## [4.0.0] - 2026-07-13
 ### Added

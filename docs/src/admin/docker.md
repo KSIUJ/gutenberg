@@ -107,6 +107,22 @@ Gutenberg adds two files to this folder:
 - `gutenberg-docs.conf` which defines the handlers for the `/docs/` endpoint
     which serves the mdbook documentation.
 
+### Trusted Proxy Configuration
+
+**Default:** Gutenberg trusts requests from Docker bridge network (`172.17.0.0/16`).
+
+If deploying behind an external reverse proxy, configure `GUTENBERG_TRUSTED_PROXY_IPS`:
+
+```yaml
+proxy:
+  environment:
+    GUTENBERG_TRUSTED_PROXY_IPS: "10.0.0.0/8"
+```
+
+**Format:** Space or comma-separated IP/CIDR (e.g., `"10.0.0.1 192.168.1.0/24"`).
+
+**IPv6:** Include IPv6 ranges if needed (e.g., `"172.17.0.0/16 fc00::/7"`).
+
 ### Extending the NGINX configuration
 You can make use of the `include` directives described above to extend Gutenberg's default NGINX image with your own
 config.
