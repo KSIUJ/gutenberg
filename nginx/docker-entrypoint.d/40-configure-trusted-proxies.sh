@@ -23,17 +23,27 @@ else
 fi
 
 # Generate geo block to temp file
-cat > /tmp/gutenberg-geo.conf <<EOF
+# Special case: when TRUSTED_IPS is 0.0.0.0/0, set default to 1 instead of listing it explicitly
+# This avoids nginx warning about duplicate network "0.0.0.0/0"
+if [ "$TRUSTED_IPS" = "0.0.0.0/0" ]; then
+    cat > /tmp/gutenberg-geo.conf <<EOF
+geo \$remote_addr \$is_trusted_proxy {
+    default 1;
+}
+EOF
+else
+    cat > /tmp/gutenberg-geo.conf <<EOF
 geo \$remote_addr \$is_trusted_proxy {
     default 0;
 EOF
 
-# Parse comma or space separated list
-echo "$TRUSTED_IPS" | tr ',' ' ' | xargs -n1 | while read -r ip; do
-    [ -n "$ip" ] && echo "    $ip 1;" >> /tmp/gutenberg-geo.conf
-done
+    # Parse comma or space separated list
+    echo "$TRUSTED_IPS" | tr ',' ' ' | xargs -n1 | while read -r ip; do
+        [ -n "$ip" ] && echo "    $ip 1;" >> /tmp/gutenberg-geo.conf
+    done
 
-echo "}" >> /tmp/gutenberg-geo.conf
+    echo "}" >> /tmp/gutenberg-geo.conf
+fi
 
 # Concatenate geo + static config
 cat /tmp/gutenberg-geo.conf /etc/nginx/gutenberg.conf.static > /etc/nginx/conf.d/gutenberg.conf
