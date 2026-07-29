@@ -20,17 +20,13 @@ from printing.processing.imposition import get_imposition_processor
 from printing.processing.pages import PageSize, PageOrientation
 from printing.utils import JobCanceledException, TASK_TIMEOUT_S, DEFAULT_IPP_FORMAT, \
     AUTODETECT_IPP_FORMAT, SUPPORTED_IPP_FORMATS, DocumentFormatError, handle_cancellation
+from printing.processing.preview import create_preview_for_artefact
 
 logger = logging.getLogger('gutenberg.worker')
 
 
-def create_print_job(user: settings.AUTH_USER_MODEL,
-                     printer: Printer,
-                     job_name: Optional[str] = None,
-                     pages_to_print: Optional[str] = None,
-                     color: bool = False,
-                     copies: int = 1,
-                     two_sided: TwoSidedPrinting = TwoSidedPrinting.ONE_SIDED):
+def create_print_job(user: settings.AUTH_USER_MODEL, printer: Printer, job_name: Optional[str] = None, pages_to_print: Optional[str] = None,
+                     color: bool = False, copies: int = 1, two_sided: TwoSidedPrinting = TwoSidedPrinting.ONE_SIDED):
     job = GutenbergJob.objects.create(name=job_name, status=JobStatus.INCOMING, owner=user, printer=printer)
     PrintingProperties.objects.create(
         color=color,
@@ -175,3 +171,22 @@ def cleanup_print_jobs():
     stale_jobs.update(status=JobStatus.ERROR,
                       status_reason='This task has expired. There is most likely an issue with Gutenberg background '
                                     'workers. Please notify administrators about this.')
+
+
+@shared_task
+def generate_preview(job_id):
+
+    job = GutenbergJob.objects.filter(id=job_id).first()
+
+    if not job:
+        logger.warning("Job id {} missing.".format(job_id))
+        return
+
+
+    # usuwamy stare preview
+    job.artefacts.filter(artefact_type=JobArtefactType.INTERMEDIATE).delete()
+
+
+    for artefact in job.artefacts.filter(artefact_type=JobArtefactType.SOURCE).order_by('document_number'):
+
+        create_preview_for_artefact(job, artefact)
