@@ -100,9 +100,6 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
-    # Trust both Docker (172.17.0.0/16) and Podman (10.89.0.0/16) networks
-    environment:
-      GUTENBERG_TRUSTED_PROXY_IPS: "172.17.0.0/16 10.89.0.0/16"
 
 volumes:
   gutenberg_postgres_data:
