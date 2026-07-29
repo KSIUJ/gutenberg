@@ -1,7 +1,5 @@
 import datetime
 import logging
-import os
-import shutil
 import tempfile
 from typing import Optional
 
@@ -12,12 +10,11 @@ from django.db.models.functions import Greatest, Coalesce
 from django.utils import timezone
 
 from control.models import GutenbergJob, TwoSidedPrinting, JobStatus, PrinterType, Printer, PrintingProperties, \
-    JobArtefact, JobArtefactType, OrientationRequested
+    JobArtefact, JobArtefactType
 from printing.backends import DisabledPrinter, LocalCupsPrinter
-from printing.processing.converter import detect_file_format, get_converter
-from printing.processing.final_pages import FinalPageProcessor, NoPagesToPrintException
-from printing.processing.imposition import get_imposition_processor
-from printing.processing.pages import PageSize, PageOrientation
+from printing.processing.converter import detect_file_format
+from printing.processing.final_pages import NoPagesToPrintException
+from printing.processing.job import create_output_pdfs
 from printing.utils import JobCanceledException, TASK_TIMEOUT_S, DEFAULT_IPP_FORMAT, \
     AUTODETECT_IPP_FORMAT, SUPPORTED_IPP_FORMATS, DocumentFormatError, handle_cancellation
 
@@ -88,84 +85,73 @@ def print_file(job_id):
     if not job:
         logger.warning("Job id {} missing.".format(job_id))
         return
+
     logger.info("Processing job {}".format(job))
     handle_cancellation(job)
+
     job.status = JobStatus.PROCESSING
     job.status_reason = ''
     job.save()
+
     try:
-        with (tempfile.TemporaryDirectory() as job_tmpdir):
-            sum_num_pages = 0
-            for idx, artefact in enumerate(job.artefacts.filter(artefact_type=JobArtefactType.SOURCE).order_by('document_number')):
-                with tempfile.TemporaryDirectory() as artefact_tmpdir:
-                    file_path = artefact.file.path
-                    file_format = artefact.mime_type
-                    ext = os.path.splitext(file_path)[1].lower()
-                    if not ext:
-                        ext = '.bin'
-                    tmp_input = os.path.join(artefact_tmpdir, 'input' + ext)
-                    shutil.copyfile(file_path, tmp_input)
+        with tempfile.TemporaryDirectory() as job_tmpdir:
+            try:
+                processed_documents = create_output_pdfs(
+                    job,
+                    job_tmpdir,
+                )
+            except NoPagesToPrintException:
+                _no_pages_cancel(job)
 
-                    conv = get_converter(file_format, artefact_tmpdir)
-                    preprocess_result = conv.preprocess(tmp_input)
-                    handle_cancellation(job)
+            sum_num_pages = sum(
+                document.media_sheet_page_count
+                for document in processed_documents
+            )
 
-                    # TODO: Use proper source for media size
-                    media_size = PageSize(width_mm=210, height_mm=297)
-                    imposition_processor = get_imposition_processor(job.properties.imposition_template, media_size, artefact_tmpdir)
-                    input_page_orientation = {
-                        OrientationRequested.AUTO: preprocess_result.orientation,
-                        OrientationRequested.LANDSCAPE: PageOrientation.LANDSCAPE,
-                        OrientationRequested.PORTRAIT: PageOrientation.PORTRAIT,
-                    }[job.properties.orientation_requested]
-                    final_page_processor = FinalPageProcessor(
-                        artefact_tmpdir,
-                        job.properties.n_up,
-                        imposition_processor.get_final_page_sizes(),
-                        input_page_orientation,
-                        job.properties.fit_to_page,
-                    )
-
-                    input_pages_file = conv.create_input_pdf(preprocess_result, final_page_processor.input_page_size)
-                    handle_cancellation(job)
-
-                    try:
-                        final_pages_file = final_page_processor.create_final_pages(input_pages_file, job.properties.pages_to_print)
-                    except NoPagesToPrintException:
-                        _no_pages_cancel(job)
-                    handle_cancellation(job)
-
-                    imposition_result = imposition_processor.create_output_pdf(
-                        final_pages_file,
-                        final_page_processor.final_page_orientation,
-                        job.properties.two_sides != TwoSidedPrinting.ONE_SIDED,
-                    )
-
-                    shutil.copyfile(imposition_result.output_file, os.path.join(job_tmpdir, f'{idx:03}_output.pdf'))
-                    sum_num_pages += imposition_result.media_sheet_page_count
-                    handle_cancellation(job)
             job.status = JobStatus.PRINTING
             job.status_reason = ''
             job.date_processed = timezone.now()
-            job.pages = sum_num_pages * job.properties.copies
+            job.pages = (
+                sum_num_pages * job.properties.copies
+            )
             job.save()
+
             backend = {
                 PrinterType.DISABLED: DisabledPrinter,
                 PrinterType.LOCAL_CUPS: LocalCupsPrinter,
-            }.get(job.printer.printer_type, DisabledPrinter)()
-            for out in os.listdir(job_tmpdir):
-                backend.print(job, os.path.join(job_tmpdir, out))
+            }.get(
+                job.printer.printer_type,
+                DisabledPrinter,
+            )()
+
+            for document in processed_documents:
+                backend.print(
+                    job,
+                    document.output_file,
+                )
+
     except JobCanceledException:
         # Canceling job
         pass
+
     except Exception as ex:
         job.status = JobStatus.ERROR
         job.status_reason = repr(ex)
-        if hasattr(ex, 'output') and isinstance(ex.output, bytes):
-            job.status_reason += '\nOutput:\n' + ex.output.decode('utf-8', errors='ignore')
+
+        if (
+            hasattr(ex, 'output')
+            and isinstance(ex.output, bytes)
+        ):
+            job.status_reason += (
+                '\nOutput:\n'
+                + ex.output.decode(
+                'utf-8',
+                errors='ignore',
+            )
+            )
+
         job.save()
         raise ex
-
 
 @shared_task
 def cleanup_print_jobs():
