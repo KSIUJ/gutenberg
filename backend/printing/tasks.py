@@ -7,6 +7,7 @@ from itertools import chain
 from celery.worker.control import control_command
 
 from printing.backends import LocalCupsPrinter
+from printing.preview import generate_preview  # noqa: F401 - register the Celery task
 from printing.processing.converter import CONVERTERS_LOCAL
 
 logger = logging.getLogger('gutenberg.worker')

@@ -3,8 +3,13 @@ The changes below are formatted according to [keep a changelog].
 
 See also [Creating new releases] for instructions on how to create a new release.
 
-## [Unreleased]
-- ...
+## [Unreleased] - 29.07.2026
+### Added
+- Added asynchronous REST API endpoints for generating, retrieving and canceling print previews [#89]
+- Added preview status, page metadata and print-job configuration version tracking [#89]
+
+### Changed
+- Reused the print PDF processing pipeline when generating preview page images [#89]
 
 ## [4.0.0] - 2026-07-13
 ### Added
@@ -37,6 +42,7 @@ The previous significant commit was made on [2022-08-26](https://github.com/KSIU
 
 [#80]: https://github.com/KSIUJ/gutenberg/pull/80
 [#86]: https://github.com/KSIUJ/gutenberg/pull/86
+[#89]: https://github.com/KSIUJ/gutenberg/issues/89
 [#91]: https://github.com/KSIUJ/gutenberg/pull/91
 [#97]: https://github.com/KSIUJ/gutenberg/pull/97
 [#107]: https://github.com/KSIUJ/gutenberg/pull/107

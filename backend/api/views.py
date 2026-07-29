@@ -1,7 +1,10 @@
 import logging
 from secrets import token_urlsafe
 
+from celery import current_app
 from django.contrib.auth import authenticate, login
+from django.db import transaction
+from django.db.models import F
 from django.middleware.csrf import rotate_token
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
@@ -19,12 +22,13 @@ from api.exceptions import UnsupportedDocument, InvalidStatus
 from api.serializers import GutenbergJobSerializer, PrinterSerializer, UserInfoSerializer, \
     CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer, LoginSerializer, \
     DeleteJobArtefactRequestSerializer, ChangeArtefactOrderRequestSerializer, JobArtefactSerializer, \
-    ChangePrintJobPropertiesRequestSerializer
+    ChangePrintJobPropertiesRequestSerializer, PrintPreviewSerializer
 from common.models import User
 from control.models import GutenbergJob, Printer, JobStatus, PrintingProperties, TwoSidedPrinting, JobArtefact, \
-    JobArtefactType, JobType
+    JobArtefactType, JobType, PrintPreview, PreviewStatus
 from gutenberg.worker_capabilities import get_formats_supported_by_workers
 from printing.printing import print_file
+from printing.preview import generate_preview
 from printing.processing.converter import detect_file_format
 
 logger = logging.getLogger('gutenberg.api.printing')
@@ -85,6 +89,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         if not artefact:
             raise exceptions.NotFound("Selected artefact does not exist")
         artefact.delete()
+        self._mark_configuration_changed(job)
         return Response(self.get_serializer(job).data)
 
     @action(detail=True, methods=['post'], name='Change artefact order')
@@ -211,6 +216,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         self._validate_properties(job.printer.id, job.properties, job=job)
         job.properties.save()
         job.save()
+        self._mark_configuration_changed(job)
         return job
 
     def _upload_artefact(self, job, file, **_):
@@ -222,6 +228,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             raise UnsupportedDocumentError("Unsupported file type: {}".format(file_type))
         artefact.mime_type = file_type
         artefact.save()
+        self._mark_configuration_changed(job)
 
     def _change_order(self, new_order):
         job = self.get_object()
@@ -237,9 +244,25 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             artefact.save()
         job.next_document_number = len(new_order) + 1
         job.save()
+        self._mark_configuration_changed(job)
         return job
 
     def _run_job(self, job):
+        try:
+            preview = job.preview
+        except PrintPreview.DoesNotExist:
+            preview = None
+
+        if preview is not None:
+            if preview.celery_task_id:
+                current_app.control.revoke(
+                    preview.celery_task_id,
+                    terminate=False,
+                )
+
+            preview.status = PreviewStatus.CANCELED
+            preview.save(update_fields=['status', 'updated_at'])
+
         job.status = JobStatus.PENDING
         job.save()
         print_file.delay(job.id)
@@ -257,6 +280,94 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             raise exceptions.ValidationError("Color printing is not allowed on the selected printer")
         if properties.two_sides != TwoSidedPrinting.ONE_SIDED and not printer_with_perms.duplex_supported:
             raise exceptions.ValidationError("Two-sided printing is not supported on the selected printer")
+
+    @action(
+        detail=True,
+        methods=['get', 'post', 'delete'],
+        url_path='preview',
+        name='Print preview',
+    )
+    def preview(self, request, pk=None):
+        job = self.get_object()
+
+        if request.method == 'GET':
+            try:
+                preview = job.preview
+            except PrintPreview.DoesNotExist:
+                raise exceptions.NotFound(
+                    'A preview has not been requested for this job'
+                )
+
+            serializer = PrintPreviewSerializer(preview, context={'request': request})
+            return Response(serializer.data)
+
+        if request.method == 'DELETE':
+            try:
+                preview = job.preview
+            except PrintPreview.DoesNotExist:
+                return Response(status=status.HTTP_204_NO_CONTENT)
+
+            if preview.celery_task_id:
+                current_app.control.revoke(preview.celery_task_id, terminate=False)
+
+            preview.status = PreviewStatus.CANCELED
+            preview.save(update_fields=['status', 'updated_at'])
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        if job.status != JobStatus.INCOMING:
+            raise InvalidStatus(
+                'Preview can only be generated for an incoming job',
+                additional_info=f'current status: {job.status}',
+            )
+
+        if not job.artefacts.filter(artefact_type=JobArtefactType.SOURCE).exists():
+            raise exceptions.ValidationError(
+                'The print job does not contain any documents'
+            )
+
+        self._validate_properties(job.printer.id, job.properties, job)
+
+        with transaction.atomic():
+            preview = PrintPreview.objects.select_for_update().filter(job=job).first()
+
+            previous_task_id = ''
+
+            if preview is None:
+                preview = PrintPreview.objects.create(
+                    job=job,
+                    status=PreviewStatus.PENDING,
+                    generation=1,
+                    configuration_version=job.configuration_version,
+                )
+            else:
+                previous_task_id = preview.celery_task_id
+                preview.generation += 1
+                preview.configuration_version = job.configuration_version
+                preview.status = PreviewStatus.PENDING
+                preview.error = ''
+                preview.celery_task_id = ''
+                preview.pages.all().delete()
+                preview.save()
+
+            generation = preview.generation
+
+        if previous_task_id:
+            current_app.control.revoke(previous_task_id, terminate=False)
+
+        task = generate_preview.delay(preview.id, generation)
+
+        preview.celery_task_id = task.id
+        preview.save(update_fields=['celery_task_id', 'updated_at'])
+
+        serializer = PrintPreviewSerializer(preview, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+
+    @staticmethod
+    def _mark_configuration_changed(job):
+        GutenbergJob.objects.filter(id=job.id).update(
+            configuration_version=F('configuration_version') + 1
+        )
+        job.refresh_from_db(fields=['configuration_version'])
 
 
 class PrinterViewSet(viewsets.ReadOnlyModelViewSet):

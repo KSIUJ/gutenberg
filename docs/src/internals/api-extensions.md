@@ -101,24 +101,45 @@ order in the request body, for example:
 The server should verify that all documents are included exactly once.
 
 There does not exist a standard IPP operation for this action.
-
 ## Printing previews in the REST API
-This feature is described in [PR #63](https://github.com/KSIUJ/gutenberg/issues/63).
 
-The preview request generates (low-quality) images for each page in the PDF,
-and any additional metadata needed to display the preview.
-Techniques like [CSS Sprites](https://css-tricks.com/css-sprites/) could be used to load all images in a single request.
+### Generate a preview
 
-As both the print and preview requests create the same PDF file, job-scoped caching could be used
-to avoid generating the same PDF multiple times if the settings and input files have not changed.
+```http
+POST /api/jobs/:id/preview/
+```
 
-Please note that the preprocessing job might take a while to complete, and it is done asynchronously
-in a Celery worker. The API design should account for this:
-- when a new preview is requested, the previous request generation celery task should probably be canceled.
-- the behavior when a print is requested while the preview is being generated should be specified.
-- there needs to be a way for the server to notify the client that the preview is ready.
-  Long-running HTTP requests or [server-side events](https://github.com/KSIUJ/gutenberg/issues/89) could be used.
-  Consider separating the endpoints for a preview request and preview image retrieval.
+Starts asynchronous preview generation and returns `202 Accepted`.
+
+### Get a preview
+
+```http
+GET /api/jobs/:id/preview/
+```
+
+Returns the preview status and, when ready, the ordered page images.
+
+Possible statuses are:
+
+- `pending`;
+- `processing`;
+- `ready`;
+- `failed`;
+- `canceled`.
+
+### Cancel a preview
+
+```http
+DELETE /api/jobs/:id/preview/
+```
+
+Cancels preview generation and returns `204 No Content`.
+
+Each print job has a `configuration_version`. It changes when print settings
+or uploaded documents are modified. A generated preview is saved only when
+its version still matches the current job version.
+
+Starting the print job cancels unfinished preview generation.
 
 ## Printing previews via IPP
 See [PR #69](https://github.com/KSIUJ/gutenberg/issues/69).

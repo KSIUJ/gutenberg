@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from common.models import User
 from control.models import GutenbergJob, Printer, TwoSidedPrinting, validate_pages_to_print, validate_n_up, \
-    ImpositionTemplate, OrientationRequested, JobArtefact
+    ImpositionTemplate, OrientationRequested, JobArtefact, PrintPreview, PrintPreviewPage
 from gutenberg.worker_capabilities import get_formats_supported_by_workers
 
 
@@ -87,3 +87,39 @@ class JobArtefactSerializer(serializers.ModelSerializer):
     class Meta:
         model = JobArtefact
         fields = ['id', 'file', 'artefact_type', 'mime_type', 'document_number']
+
+class PrintPreviewPageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PrintPreviewPage
+        fields = [
+            'number',
+            'image',
+            'width',
+            'height',
+        ]
+
+
+class PrintPreviewSerializer(serializers.ModelSerializer):
+    pages = PrintPreviewPageSerializer(many=True, read_only=True)
+    page_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PrintPreview
+        fields = [
+            'id',
+            'job',
+            'status',
+            'generation',
+            'configuration_version',
+            'page_count',
+            'pages',
+            'error',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = fields
+
+    def get_page_count(self, obj):
+        if obj.status != 'ready':
+            return 0
+        return obj.pages.count()
