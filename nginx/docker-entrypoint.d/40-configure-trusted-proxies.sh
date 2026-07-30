@@ -22,17 +22,36 @@ else
     TRUSTED_IPS="$GUTENBERG_TRUSTED_PROXY_IPS"
 fi
 
-# Generate geo block to temp file
+# Define custom log format for untrusted proxy errors
+# Format inspired by Django's detailed error messages
+cat > /tmp/gutenberg-geo.conf <<EOF
+log_format gutenberg_untrusted_proxy '*** Untrusted Proxy Source *** '
+                                      'Request Method: \$request_method | '
+                                      'Request URL: \$scheme://\$http_host\$request_uri | '
+                                      'Client IP: \$remote_addr | '
+                                      'Error: Invalid request source IP address. '
+                                      'You may need to add this IP to GUTENBERG_TRUSTED_PROXY_IPS. '
+                                      'Currently trusted IPs: $TRUSTED_IPS | '
+                                      'Server time: \$time_local';
+
+# Map for conditional access logging (only log when untrusted)
+map \$is_trusted_proxy \$untrusted_proxy_access {
+    0    1;
+    default 0;
+}
+EOF
+
+# Generate geo block
 # Special case: when TRUSTED_IPS is 0.0.0.0/0, set default to 1 instead of listing it explicitly
 # This avoids nginx warning about duplicate network "0.0.0.0/0"
 if [ "$TRUSTED_IPS" = "0.0.0.0/0" ]; then
-    cat > /tmp/gutenberg-geo.conf <<EOF
+    cat >> /tmp/gutenberg-geo.conf <<EOF
 geo \$remote_addr \$is_trusted_proxy {
     default 1;
 }
 EOF
 else
-    cat > /tmp/gutenberg-geo.conf <<EOF
+    cat >> /tmp/gutenberg-geo.conf <<EOF
 geo \$remote_addr \$is_trusted_proxy {
     default 0;
 EOF
