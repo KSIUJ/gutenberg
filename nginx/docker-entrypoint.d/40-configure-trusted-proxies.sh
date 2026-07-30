@@ -9,8 +9,11 @@ if [ -z "$GUTENBERG_TRUSTED_PROXY_IPS" ]; then
        [ "$GUTENBERG_TRUST_X_FORWARDED_PROTO" = "1" ] || \
        [ "$GUTENBERG_TRUST_X_REAL_IP" = "1" ]; then
         echo "ERROR: GUTENBERG_TRUST_* variables are enabled but GUTENBERG_TRUSTED_PROXY_IPS is not configured." >&2
-        echo "This is a security risk - Nginx would trust headers from any source IP." >&2
-        echo "Please set GUTENBERG_TRUSTED_PROXY_IPS to restrict which proxies can set these headers." >&2
+        echo "Security risk: If nginx is accessible from the internet without IP filtering," >&2
+        echo "malicious clients can send fake X-Real-IP/X-Forwarded-* headers that nginx will blindly trust." >&2
+        echo "This allows IP spoofing and bypassing access controls." >&2
+        echo "Set GUTENBERG_TRUSTED_PROXY_IPS to specify which proxy IPs are allowed to set these headers." >&2
+        echo "See: https://ksiuj.github.io/gutenberg/admin/docker.html#trusted-proxy-configuration" >&2
         exit 1
     fi
 
