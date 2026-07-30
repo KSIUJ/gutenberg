@@ -18,7 +18,6 @@ if [ -z "$GUTENBERG_TRUSTED_PROXY_IPS" ]; then
     fi
 
     # Allow requests from any source IP by default.
-    # This maintains backward compatibility with deployments that don't use a reverse proxy
     TRUSTED_IPS="0.0.0.0/0"
 else
     # GUTENBERG_TRUSTED_PROXY_IPS is set - use it for filtering
