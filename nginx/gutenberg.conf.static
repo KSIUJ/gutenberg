@@ -1,5 +1,11 @@
 server {
     listen 80;
 
+    # Reject ALL requests from non-trusted sources
+    # This applies to the entire application: backend, static files, and docs
+    if ($is_trusted_proxy = 0) {
+        return 403 "Access denied - untrusted proxy source";
+    }
+
     include /etc/nginx/gutenberg-locations.d/*.conf;
 }
