@@ -109,7 +109,11 @@ Gutenberg adds two files to this folder:
 
 ### Trusted Proxy Configuration
 
-**What it does:** When Gutenberg trusts forwarded headers (like `X-Forwarded-For` or `X-Forwarded-Host`), it validates the source IP address of the request. Requests from IP addresses outside the trusted ranges are rejected with HTTP 403. This prevents attackers from spoofing forwarded headers to bypass security controls or impersonate users.
+**What GUTENBERG_TRUSTED_PROXY_IPS does:**
+Filters incoming requests by source IP address. Only requests from IP addresses within the configured ranges are allowed to reach the application; requests from other addresses receive HTTP 400.
+
+**Why configure it:**
+When Gutenberg runs behind a reverse proxy (like nginx), the application needs to trust headers like `X-Forwarded-For`, `X-Forwarded-Host`, and `X-Real-IP` to determine the original client IP and hostname. Without IP filtering, an attacker could send requests directly to the exposed nginx port with spoofed forwarded headers, bypassing any access controls or rate limiting based on client IP. This setting ensures only your known proxy servers can send requests with these trusted headers.
 
 **Default behavior:** By default, Gutenberg accepts all requests without IP filtering (`0.0.0.0/0`). This works for deployments without a reverse proxy or when proxy header trust is not enabled.
 
