@@ -17,7 +17,7 @@ if [ -z "$GUTENBERG_TRUSTED_PROXY_IPS" ]; then
         exit 1
     fi
 
-    # No trust variables enabled - allow all source IPs (no filtering needed)
+    # Allow requests from any source IP by default.
     # This maintains backward compatibility with deployments that don't use a reverse proxy
     TRUSTED_IPS="0.0.0.0/0"
 else
