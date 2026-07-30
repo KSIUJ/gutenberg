@@ -38,14 +38,18 @@ class PrinterBackend(ABC):
         logger.info("Printing job {} via {}".format(job, self.backend_name))
         backend_job_id = self.submit_job(job, file_path)
         cnt = 0
-        while self.check_status(job, backend_job_id):
-            logger.info("Job {} is still printing via {}".format(job, self.backend_name))
-            handle_cancellation(job, lambda: self.cancel_job(job, backend_job_id))
-            time.sleep(1)
-            cnt += 1
-            if cnt > PRINTING_TIMEOUT_S:
-                self.cancel_job(job, backend_job_id)
-                raise TimeoutError("Job {} took too long to complete".format(job))
+        try:
+            while self.check_status(job, backend_job_id):
+                logger.info("Job {} is still printing via {}".format(job, self.backend_name))
+                handle_cancellation(job, lambda: self.cancel_job(job, backend_job_id))
+                time.sleep(1)
+                cnt += 1
+                if cnt > PRINTING_TIMEOUT_S:
+                    self.cancel_job(job, backend_job_id)
+                    raise TimeoutError("Job {} took too long to complete".format(job))
+        except JobCanceledException:
+            logger.warning("Job {} processing stopped because it was canceled".format(job))
+            return
         job.status = JobStatus.COMPLETED
         job.status_reason = ''
         job.date_finished = timezone.now()
@@ -56,12 +60,30 @@ class LocalCupsPrinter(PrinterBackend):
     common_options = ['-h', settings.CUPS_SERVERNAME]
 
     def check_status(self, job: GutenbergJob, backend_job_id: Any) -> bool:
-        output = subprocess.check_output(
+        active_output = subprocess.check_output(
             ['lpstat'] + self.common_options + ['-l'],
             stderr=subprocess.STDOUT,
             timeout=TASK_TIMEOUT_S,
+        ).decode('utf-8', errors='ignore')
+        for idx, val in enumerate(active_output.splitlines()):
+            if re.match('^{}\\s'.format(re.escape(str(backend_job_id))), val):
+                lines = active_output.splitlines()
+                max_idx = idx
+                for i in range(idx + 1, len(lines)):
+                    if re.match(r'^\s+', lines[i]):
+                        max_idx = i
+                    else:
+                        break
+                status = '\n'.join(x.strip() for x in lines[idx + 1: max_idx + 1])
+                GutenbergJob.objects.filter(id=job.id).update(status_reason=status)
+                return True
+
+        all_output = subprocess.check_output(
+            ['lpstat'] + self.common_options + ['-W','all','-l'],
+            stderr=subprocess.STDOUT,
+            timeout=TASK_TIMEOUT_S,
         )
-        output_lines = output.decode('utf-8', errors='ignore').splitlines()
+        output_lines = all_output.decode('utf-8', errors='ignore').splitlines()
         for idx, val in enumerate(output_lines):
             if not re.match('^{}\\s'.format(backend_job_id), val):
                 continue
@@ -73,8 +95,20 @@ class LocalCupsPrinter(PrinterBackend):
                     break
             status = '\n'.join(x.strip() for x in output_lines[idx + 1: max_idx + 1])
             GutenbergJob.objects.filter(id=job.id).update(status_reason=status)
-            return True
-        return False
+            status_lower = status.lower()
+            if 'job-completed-successfully' in status_lower:
+                return False
+            job.status = JobStatus.CANCELED
+            job.status_reason = status
+            job.date_finished = timezone.now()
+            job.save()
+            raise JobCanceledException("Job was canceled in CUPS")
+
+        job.status = JobStatus.CANCELED
+        job.status_reason = 'Job disappeared from CUPS queue'
+        job.date_finished = timezone.now()
+        job.save()
+        raise JobCanceledException("Job was canceled in CUPS")
 
     @staticmethod
     def _cups_params(job: GutenbergJob):
