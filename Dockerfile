@@ -190,6 +190,10 @@ VOLUME ["/var/log/gutenberg"]
 #   As described in https://ksiuj.github.io/gutenberg/admin/docker.html
 FROM nginx:1.29-alpine${ALPINE_VER} AS run_nginx
 
+ENV GUTENBERG_TRUST_X_FORWARDED_HOST=0
+ENV GUTENBERG_TRUST_X_FORWARDED_PROTO=0
+ENV GUTENBERG_TRUST_X_REAL_IP=0
+
 RUN rm /etc/nginx/conf.d/default.conf
 COPY --from=build_webapp /app/webapp/.output/site/html /usr/share/nginx/gutenberg/webapp_html
 # /app/staticroot is the value of STATIC_ROOT in docker_base_settings.py
@@ -197,4 +201,5 @@ COPY --from=collect_static /app/staticroot /usr/share/nginx/gutenberg/static
 COPY --from=build_docs /app/docs/book /usr/share/nginx/gutenberg/docs
 COPY nginx/gutenberg.conf /etc/nginx/conf.d/gutenberg.conf
 COPY nginx/locations /etc/nginx/gutenberg-locations.d
+COPY nginx/entrypoint/50-configure-gutenberg-backend.sh /docker-entrypoint.d/
 EXPOSE 80
