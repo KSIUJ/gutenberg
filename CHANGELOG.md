@@ -8,7 +8,7 @@ See also [Creating new releases] for instructions on how to create a new release
 - Added `GUTENBERG_TRUSTED_PROXY_IPS` environment variable for configuring trusted reverse proxy IP addresses when using `GUTENBERG_TRUST_X_FORWARDED_*` or `GUTENBERG_TRUST_X_REAL_IP` variables [#177]
 
 ### Security
-- Nginx now requires explicit `GUTENBERG_TRUSTED_PROXY_IPS` configuration when `GUTENBERG_TRUST_X_FORWARDED_*` or `GUTENBERG_TRUST_X_REAL_IP` variables are enabled, preventing X-Forwarded-* header injection attacks [#177]
+- Nginx now requires explicit `GUTENBERG_TRUSTED_PROXY_IPS` configuration when `GUTENBERG_TRUST_X_FORWARDED_*` or `GUTENBERG_TRUST_X_REAL_IP` variables are enabled, preventing `X-Forwarded-*` header injection attacks [#177]
 
 ## [4.0.0] - 2026-07-13
 ### Added
