@@ -109,17 +109,22 @@ Gutenberg adds two files to this folder:
 
 ### Trusted Proxy Configuration
 
-**Default:** Gutenberg trusts requests from Docker bridge network (`172.17.0.0/16`).
+**What it does:** When Gutenberg trusts forwarded headers (like `X-Forwarded-For` or `X-Forwarded-Host`), it validates the source IP address of the request. Requests from IP addresses outside the trusted ranges are rejected with HTTP 403. This prevents attackers from spoofing forwarded headers to bypass security controls or impersonate users.
 
-If deploying behind an external reverse proxy, configure `GUTENBERG_TRUSTED_PROXY_IPS`:
+**Default behavior:** By default, Gutenberg accepts all requests without IP filtering (`0.0.0.0/0`). This works for deployments without a reverse proxy or when proxy header trust is not enabled.
+
+**When to configure:** If you enable any of the `GUTENBERG_TRUST_X_FORWARDED_*` options (see table below), you **must** also set `GUTENBERG_TRUSTED_PROXY_IPS` to specify which proxy IP addresses are trusted. Without this configuration, the container will fail to start as a security safeguard.
+
+**How to configure:** Set both the trust flag and the IP ranges for the `proxy` service:
 
 ```yaml
 proxy:
   environment:
-    GUTENBERG_TRUSTED_PROXY_IPS: "10.0.0.0/8"
+    GUTENBERG_TRUST_X_FORWARDED_HOST: "1"
+    GUTENBERG_TRUSTED_PROXY_IPS: "10.0.0.0/8 172.17.0.0/16"
 ```
 
-**Format:** Space or comma-separated IP/CIDR (e.g., `"10.0.0.1 192.168.1.0/24"`).
+**Format:** Space or comma-separated IP addresses and CIDR ranges (e.g., `"10.0.0.1 192.168.1.0/24"`).
 
 **IPv6:** Include IPv6 ranges if needed (e.g., `"172.17.0.0/16 fc00::/7"`).
 
