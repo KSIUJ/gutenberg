@@ -113,7 +113,7 @@ Gutenberg adds two files to this folder:
 Filters incoming requests by source IP address. Only requests from IP addresses within the configured ranges are allowed to reach the application; requests from other addresses receive HTTP 400.
 
 **Why configure it:**
-When Gutenberg runs behind a reverse proxy (like nginx), the application needs to trust headers like `X-Forwarded-For`, `X-Forwarded-Host`, and `X-Real-IP` to determine the original client IP and hostname. Without IP filtering, an attacker could send requests directly to the exposed nginx port with spoofed forwarded headers, bypassing any access controls or rate limiting based on client IP. This setting ensures only your known proxy servers can send requests with these trusted headers.
+When Gutenberg runs behind a reverse proxy, the application needs to trust headers like `X-Forwarded-For`, `X-Forwarded-Host`, and `X-Real-IP` to determine the original client IP and the original value of the `Host` header. Without IP filtering, an attacker could send requests directly to the exposed nginx port with spoofed forwarded headers, bypassing [`ALLOWED_HOSTS`](https://docs.djangoproject.com/en/6.0/ref/settings/#allowed-hosts) or IP address checks. This setting ensures only your known proxy servers can send requests with these trusted headers.
 
 **Default behavior:** By default, Gutenberg accepts all requests without IP filtering (`0.0.0.0/0`). This works for deployments without a reverse proxy or when proxy header trust is not enabled.
 
