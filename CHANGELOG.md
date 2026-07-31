@@ -5,7 +5,7 @@ See also [Creating new releases] for instructions on how to create a new release
 
 ## [Unreleased]
 ### Fixed
-- Fixed external CUPS job cancellation status detection [#119] 
+- Fixed external CUPS job cancellation status detection [#179] 
 ### Changed
 - Modified nginx Docker image config to correctly pass the `X-Forwarded-Host` header [#175]
 - Changed default nginx location filenames [#175]
@@ -55,6 +55,7 @@ The previous significant commit was made on [2022-08-26](https://github.com/KSIU
 [#170]: https://github.com/KSIUJ/gutenberg/pull/170
 [#172]: https://github.com/KSIUJ/gutenberg/pull/172
 [#175]: https://github.com/KSIUJ/gutenberg/pull/175
+[#179]: https://github.com/KSIUJ/gutenberg/pull/179
 
 [keep a changelog]: https://keepachangelog.com/en/1.1.0/
 [OpenID Connect chapter]: https://ksiuj.github.io/gutenberg/admin/openid-connect.html
