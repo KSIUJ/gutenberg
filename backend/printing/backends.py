@@ -98,12 +98,6 @@ class LocalCupsPrinter(PrinterBackend):
             status_lower = status.lower()
             if 'job-completed-successfully' in status_lower:
                 return False
-            job.status = JobStatus.CANCELED
-            job.status_reason = status
-            job.date_finished = timezone.now()
-            job.save()
-            raise JobCanceledException("Job was canceled in CUPS")
-
         job.status = JobStatus.CANCELED
         job.status_reason = 'Job disappeared from CUPS queue'
         job.date_finished = timezone.now()
