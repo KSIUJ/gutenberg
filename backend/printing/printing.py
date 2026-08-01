@@ -170,3 +170,63 @@ def cleanup_print_jobs():
     stale_jobs.update(status=JobStatus.ERROR,
                       status_reason='This task has expired. There is most likely an issue with Gutenberg background '
                                     'workers. Please notify administrators about this.')
+
+
+
+@shared_task(bind=True, max_retries=2)
+def generate_preview_for_job(self, job_id: int, max_pages: int = 5, dpi: int = 150):
+    job = GutenbergJob.objects.filter(id=job_id).first()
+    if not job:
+        return
+
+    job.preview_status = 'PROCESSING'
+    job.save(update_fields=['preview_status'])
+
+    media_root = settings.MEDIA_ROOT
+    tmpdir = os.path.join(media_root, 'previews_tmp', str(job.id))
+    outdir = os.path.join(media_root, job.preview_dir())
+    os.makedirs(tmpdir, exist_ok=True)
+    os.makedirs(outdir, exist_ok=True)
+
+    try:
+        # choose first source artefact
+        artefact = job.artefacts.filter(artefact_type=JobArtefactType.SOURCE).order_by('document_number').first()
+        if not artefact:
+            job.preview_status = 'FAILED'
+            job.save(update_fields=['preview_status'])
+            return
+
+        input_path = artefact.file.path
+
+        # convert to pdf if needed
+        if not input_path.lower().endswith('.pdf'):
+            subprocess.check_call([
+                'soffice', '--headless', '--invisible', '--convert-to', 'pdf', '--outdir', tmpdir, input_path
+            ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            pdfs = [os.path.join(tmpdir, f) for f in os.listdir(tmpdir) if f.lower().endswith('.pdf')]
+            if not pdfs:
+                raise RuntimeError("LibreOffice conversion failed")
+            pdf_path = pdfs[0]
+        else:
+            pdf_path = input_path
+
+        # rasterize
+        prefix = os.path.join(outdir, 'page')
+        subprocess.check_call([
+            'pdftoppm', '-png', '-r', str(dpi), '-f', '1', '-l', str(max_pages), pdf_path, prefix
+        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        pages = sorted([f for f in os.listdir(outdir) if f.startswith('page') and f.endswith('.png')])
+        job.preview_pages = len(pages)
+        job.preview_meta = {'pages': pages}
+        job.preview_status = 'READY'
+        job.save(update_fields=['preview_pages', 'preview_meta', 'preview_status'])
+    except Exception as exc:
+        job.preview_status = 'FAILED'
+        job.save(update_fields=['preview_status'])
+        try:
+            raise self.retry(exc=exc, countdown=5)
+        except Exception:
+            pass
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
