@@ -164,6 +164,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-noto-core fonts-noto-mono \
     fonts-sil-gentium-basic \
     fonts-liberation fonts-liberation-sans-narrow \
+    poppler-utils \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=setup_django /app/backend /app/backend/
