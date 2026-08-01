@@ -107,6 +107,7 @@ export const createApiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => (
     });
   },
 
+  /*
   async uploadArtefact(jobId: number, file: File, last: boolean): Promise<PrintJob> {
     const formData = new FormData();
     formData.append('file', file);
@@ -116,6 +117,35 @@ export const createApiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => (
       body: formData,
     });
   },
+  */
+
+    async uploadArtefact(jobId: number, file: File, last: boolean, preview: boolean = false): Promise<PrintJob> {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('last', last ? '1' : '0');
+      if (preview) formData.append('preview', '1');
+      return await fetch<PrintJob>(`/api/jobs/${jobId}/upload_artefact/`, {
+        method: 'POST',
+        body: formData,
+      });
+    },
+
+    async getPreview(jobId: number): Promise<{status: string, pages: string[], page_count: number}> {
+      return await fetch(`/api/jobs/${jobId}/preview/`, { method: 'GET' });
+    },
+
+    async regeneratePreview(jobId: number, max_pages: number = 5, dpi: number = 150) {
+      return await fetch(`/api/jobs/${jobId}/regenerate_preview/`, {
+        method: 'POST',
+        body: { max_pages, dpi },
+      });
+    },
+
+    async sendFromPreview(jobId: number) {
+      return await fetch(`/api/jobs/${jobId}/send_from_preview/`, {
+        method: 'POST',
+      });
+    },
 
   async runJob(jobId: number): Promise<PrintJob> {
     return await fetch<PrintJob>(`/api/jobs/${jobId}/run_job/`, {
