@@ -146,6 +146,14 @@ class GutenbergJob(models.Model):
     date_finished = models.DateTimeField(null=True, blank=True)
     next_document_number = models.IntegerField(default=1)
 
+        # preview metadata (used by web UI)
+    preview_status = models.CharField(
+        max_length=12,
+        choices=[('PENDING','pending'),('PROCESSING','processing'),('READY','ready'),('FAILED','failed')],
+        default='PENDING')
+    preview_pages = models.IntegerField(default=0)
+    preview_meta = models.JSONField(default=dict, blank=True)
+
     def __str__(self):
         return "{} - {} - {} - {}".format(self.date_created, self.job_type, self.name, self.owner)
 
