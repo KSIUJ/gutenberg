@@ -57,6 +57,7 @@ class Printer(models.Model):
     printer_type = models.CharField(max_length=10, default=PrinterType.DISABLED, choices=PrinterType.choices)
     color_supported = models.BooleanField(default=False)
     duplex_supported = models.BooleanField(default=False)
+    display_order = models.PositiveIntegerField(default=0)
 
     @staticmethod
     def get_queryset_for_user(user):
