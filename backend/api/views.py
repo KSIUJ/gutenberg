@@ -143,6 +143,34 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = JobArtefactSerializer(artefacts, many=True, context={'request': request})
         return Response(serializer.data)
 
+
+    @action(detail=True, methods=['get'], name='Preview')
+    def preview(self, request, pk=None):
+        job = self.get_object()
+        pages = job.preview_meta.get('pages', []) if getattr(job, 'preview_meta', None) else []
+        urls = [request.build_absolute_uri(settings.MEDIA_URL + f"{job.preview_dir()}/{p}") for p in pages]
+        return Response({'status': job.preview_status, 'pages': urls, 'page_count': job.preview_pages})
+
+    @action(detail=True, methods=['post'], name='Regenerate preview')
+    def regenerate_preview(self, request, pk=None):
+        job = self.get_object()
+        max_pages = int(request.data.get('max_pages', 5))
+        dpi = int(request.data.get('dpi', 150))
+        job.preview_status = 'PENDING'
+        job.save(update_fields=['preview_status'])
+        from printing.printing import generate_preview_for_job
+        generate_preview_for_job.delay(job.id, max_pages=max_pages, dpi=dpi)
+        return Response({'status': 'started'})
+
+    @action(detail=True, methods=['post'], name='Send to printer (from preview)')
+    def send_from_preview(self, request, pk=None):
+        job = self.get_object()
+        # Reuse existing run_job/_run_job pipeline:
+        self._validate_properties(job.printer.id, job.properties, job)
+        self._run_job(job)
+        return Response(self.get_serializer(job).data)
+    
+    
     def _create_printing_job(
         self,
         printer_with_perms,
