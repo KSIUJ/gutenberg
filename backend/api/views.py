@@ -69,6 +69,11 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         serializer.is_valid(raise_exception=True)
         try:
             self._upload_artefact(job, **serializer.validated_data)
+            # jeśli klient poprosił o preview, uruchom task asynchronicznie
+            if serializer.validated_data.get('preview'):
+                # lokalny import by uniknąć cykli importów
+                from printing.printing import generate_preview_for_job
+                generate_preview_for_job.delay(job.id)
         except UnsupportedDocumentError as ex:
             raise UnsupportedDocument(str(ex))
         return Response(self.get_serializer(job).data)
