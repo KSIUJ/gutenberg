@@ -1,3 +1,6 @@
+import PrintPreview from '~/components/PrintPreview.vue';
+const showPreview = ref(false);
+
 <template>
   <single-column-layout narrow>
     <app-panel>
@@ -56,12 +59,12 @@
           </p-step-item>
         </p-stepper>
         <p-message
-          v-if="job.data.value.status === 'CANCELED' || job.data.value.status === 'CANCELING'"
-          severity="warn"
-        >
+          v-if="job.data.value.status === 'CANCELED' || job.data.value.status === 'CANCELING'" severity="warn">
           <p>
             This print job has been cancelled.
           </p>
+          <p-button label="Preview" @click="showPreview = true" />
+          <PrintPreview :jobId="jobId" v-model:visible="showPreview" />
           <p
             v-if="job.data.value.status_reason"
             class="mt-3 text-sm"
