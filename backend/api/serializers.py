@@ -12,7 +12,7 @@ class GutenbergJobSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GutenbergJob
-        fields = ['id', 'pages', 'printer', 'status', 'status_reason', 'artefacts']
+        fields = ['id', 'pages', 'printer', 'status', 'status_reason', 'artefacts', 'preview_status', 'preview_pages']
 
     def get_artefacts(self, obj):
         artefacts = obj.artefacts.all().order_by('document_number')
