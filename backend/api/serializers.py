@@ -59,6 +59,7 @@ class ChangePrintJobPropertiesRequestSerializer(serializers.Serializer):
 
 class UploadJobArtefactRequestSerializer(serializers.Serializer):
     file = serializers.FileField(allow_empty_file=False, required=True)
+    preview = serializers.BooleanField(required=False, default=False)
 
 class DeleteJobArtefactRequestSerializer(serializers.Serializer):
     artefact_id = serializers.IntegerField(required=True)
