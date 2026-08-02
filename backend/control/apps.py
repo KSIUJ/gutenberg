@@ -5,4 +5,7 @@ class ControlConfig(AppConfig):
     name = 'control'
 
     def ready(self):
-        import control.signals  # noqa: F401
+        try:
+            import control.signals  # noqa: F401
+        except ModuleNotFoundError:
+            pass
