@@ -15,9 +15,11 @@ from printing.processing.job import create_output_pdfs
 from printing.utils import SANDBOX_PATH, TASK_TIMEOUT_S
 
 
+# Preview image density in dots per inch,
+# see https://imagemagick.org/command-line-options/#density
 # Raster previews are rendered at browser-like screen density.
 PREVIEW_DENSITY = 96
-# JPEG compression trades a small amount of sharpness for smaller stored files.
+# JPEG compression quality of the preview images
 PREVIEW_QUALITY = 75
 
 
