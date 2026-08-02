@@ -5,4 +5,4 @@ class ControlConfig(AppConfig):
     name = 'control'
 
     def ready(self):
-        from control import signals  # noqa: F401
+        import control.signals  # noqa: F401
