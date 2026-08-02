@@ -110,6 +110,8 @@ POST /api/jobs/:id/preview/
 ```
 
 Starts asynchronous preview generation and returns `202 Accepted`.
+The response body is the serialized preview object, including its current
+status, generation number, configuration version, page count and page list.
 
 ### Get a preview
 
@@ -134,6 +136,7 @@ DELETE /api/jobs/:id/preview/
 ```
 
 Cancels preview generation and returns `204 No Content`.
+The response body is empty.
 
 Each print job has a `configuration_version`. It changes when print settings
 or uploaded documents are modified. A generated preview is saved only when

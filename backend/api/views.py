@@ -1,4 +1,6 @@
 import logging
+import os
+import tempfile
 from secrets import token_urlsafe
 
 from celery import current_app
@@ -88,8 +90,9 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         artefact = JobArtefact.objects.filter(id=artefact_id, job=job).first()
         if not artefact:
             raise exceptions.NotFound("Selected artefact does not exist")
-        artefact.delete()
-        self._mark_configuration_changed(job)
+        with transaction.atomic():
+            artefact.delete()
+            self._mark_configuration_changed(job)
         return Response(self.get_serializer(job).data)
 
     @action(detail=True, methods=['post'], name='Change artefact order')
@@ -161,24 +164,25 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         orientation_requested: str,
         **_,
     ):
-        job = GutenbergJob(name='webrequest', job_type=JobType.PRINT, status=JobStatus.INCOMING,
-                                          owner=self.request.user, printer=printer_with_perms)
-        job.properties = PrintingProperties(
-            color=color,
-            copies=copies,
-            two_sides=two_sides,
-            pages_to_print=None if pages_to_print == "" else pages_to_print,
-            job=job,
-            fit_to_page=fit_to_page,
-            n_up=n_up,
-            imposition_template=imposition_template,
-            orientation_requested=orientation_requested,
-        )
+        with transaction.atomic():
+            job = GutenbergJob(name='webrequest', job_type=JobType.PRINT, status=JobStatus.INCOMING,
+                                              owner=self.request.user, printer=printer_with_perms)
+            job.properties = PrintingProperties(
+                color=color,
+                copies=copies,
+                two_sides=two_sides,
+                pages_to_print=None if pages_to_print == "" else pages_to_print,
+                job=job,
+                fit_to_page=fit_to_page,
+                n_up=n_up,
+                imposition_template=imposition_template,
+                orientation_requested=orientation_requested,
+            )
 
-        self._validate_properties(printer_with_perms.id, job.properties, job)
-        job.save()
-        job.properties.save()
-        return job
+            self._validate_properties(printer_with_perms.id, job.properties, job)
+            job.save()
+            job.properties.save()
+            return job
 
     def _change_properties(
         self,
@@ -194,57 +198,82 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         **_,
     ):
         job = self.get_object()
-        if printer_with_perms is not None:
-            job.printer = printer_with_perms
-        if color is not None:
-            job.properties.color = color
-        if copies is not None:
-            job.properties.copies = copies
-        if two_sides is not None:
-            job.properties.two_sides = two_sides
-        if pages_to_print is not None:
-            job.properties.pages_to_print = None if pages_to_print == "" else pages_to_print
-        if fit_to_page is not None:
-            job.properties.fit_to_page = fit_to_page
-        if n_up is not None:
-            job.properties.n_up = n_up
-        if imposition_template is not None:
-            job.properties.imposition_template = imposition_template
-        if orientation_requested is not None:
-            job.properties.orientation_requested = orientation_requested
+        with transaction.atomic():
+            if printer_with_perms is not None:
+                job.printer = printer_with_perms
+            if color is not None:
+                job.properties.color = color
+            if copies is not None:
+                job.properties.copies = copies
+            if two_sides is not None:
+                job.properties.two_sides = two_sides
+            if pages_to_print is not None:
+                job.properties.pages_to_print = None if pages_to_print == "" else pages_to_print
+            if fit_to_page is not None:
+                job.properties.fit_to_page = fit_to_page
+            if n_up is not None:
+                job.properties.n_up = n_up
+            if imposition_template is not None:
+                job.properties.imposition_template = imposition_template
+            if orientation_requested is not None:
+                job.properties.orientation_requested = orientation_requested
 
-        self._validate_properties(job.printer.id, job.properties, job=job)
-        job.properties.save()
-        job.save()
-        self._mark_configuration_changed(job)
+            self._validate_properties(job.printer.id, job.properties, job=job)
+            job.properties.save()
+            job.save()
+            self._mark_configuration_changed(job)
         return job
 
     def _upload_artefact(self, job, file, **_):
-        artefact = JobArtefact.objects.create(job=job, artefact_type=JobArtefactType.SOURCE, file=file, document_number=job.next_document_number)
-        job.next_document_number += 1
-        job.save()
-        file_type = detect_file_format(artefact.file.path)
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            for chunk in file.chunks():
+                temp_file.write(chunk)
+            temp_path = temp_file.name
+
+        artefact = None
+        try:
+            file_type = detect_file_format(temp_path)
+        finally:
+            os.unlink(temp_path)
+
         if file_type not in get_formats_supported_by_workers()["mime_types"]:
             raise UnsupportedDocumentError("Unsupported file type: {}".format(file_type))
-        artefact.mime_type = file_type
-        artefact.save()
-        self._mark_configuration_changed(job)
+
+        try:
+            with transaction.atomic():
+                file.seek(0)
+                artefact = JobArtefact.objects.create(
+                    job=job,
+                    artefact_type=JobArtefactType.SOURCE,
+                    file=file,
+                    document_number=job.next_document_number,
+                )
+                job.next_document_number += 1
+                job.save(update_fields=['next_document_number'])
+                artefact.mime_type = file_type
+                artefact.save(update_fields=['mime_type'])
+                self._mark_configuration_changed(job)
+        except Exception:
+            if artefact is not None and artefact.file.name:
+                artefact.file.delete(save=False)
+            raise
 
     def _change_order(self, new_order):
         job = self.get_object()
-        artefacts = list(job.artefacts.all())
-        artefact_dict = {artefact.id: artefact for artefact in artefacts}
-        if set(new_order) != set(artefact_dict.keys()):
-            raise exceptions.ValidationError("New order does not match existing artefacts")
-        if len(set(new_order)) != len(new_order):
-            raise exceptions.ValidationError("New order contains duplicate artefact IDs")
-        for index, artefact_id in enumerate(new_order):
-            artefact = artefact_dict[artefact_id]
-            artefact.document_number = index + 1
-            artefact.save()
-        job.next_document_number = len(new_order) + 1
-        job.save()
-        self._mark_configuration_changed(job)
+        with transaction.atomic():
+            artefacts = list(job.artefacts.all())
+            artefact_dict = {artefact.id: artefact for artefact in artefacts}
+            if set(new_order) != set(artefact_dict.keys()):
+                raise exceptions.ValidationError("New order does not match existing artefacts")
+            if len(set(new_order)) != len(new_order):
+                raise exceptions.ValidationError("New order contains duplicate artefact IDs")
+            for index, artefact_id in enumerate(new_order):
+                artefact = artefact_dict[artefact_id]
+                artefact.document_number = index + 1
+                artefact.save()
+            job.next_document_number = len(new_order) + 1
+            job.save()
+            self._mark_configuration_changed(job)
         return job
 
     def _run_job(self, job):
@@ -254,14 +283,14 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             preview = None
 
         if preview is not None:
-            if preview.celery_task_id:
-                current_app.control.revoke(
-                    preview.celery_task_id,
-                    terminate=False,
-                )
-
-            preview.status = PreviewStatus.CANCELED
-            preview.save(update_fields=['status', 'updated_at'])
+            if preview.status in (PreviewStatus.PENDING, PreviewStatus.PROCESSING):
+                if preview.celery_task_id:
+                    current_app.control.revoke(
+                        preview.celery_task_id,
+                        terminate=False,
+                    )
+                preview.status = PreviewStatus.CANCELED
+                preview.save(update_fields=['status', 'updated_at'])
 
         job.status = JobStatus.PENDING
         job.save()

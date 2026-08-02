@@ -44,7 +44,7 @@ OVERRIDE_APPS = [
 
 PROJECT_APPS = [
     'printing',
-    'control',
+    'control.apps.ControlConfig',
     'ipp',
 ]
 

@@ -217,8 +217,8 @@ class PrintPreviewPage(models.Model):
     )
     number = models.PositiveIntegerField()
     image = models.FileField(upload_to='previews/%Y/%m/%d/')
-    width = models.PositiveIntegerField()
-    height = models.PositiveIntegerField()
+    width = models.PositiveIntegerField(help_text='Preview image width in pixels')
+    height = models.PositiveIntegerField(help_text='Preview image height in pixels')
 
     class Meta:
         ordering = ['number']

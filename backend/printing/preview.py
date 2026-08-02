@@ -15,7 +15,9 @@ from printing.processing.job import create_output_pdfs
 from printing.utils import SANDBOX_PATH, TASK_TIMEOUT_S
 
 
+# Raster previews are rendered at browser-like screen density.
 PREVIEW_DENSITY = 96
+# JPEG compression trades a small amount of sharpness for smaller stored files.
 PREVIEW_QUALITY = 75
 
 
@@ -56,26 +58,21 @@ def _rasterize_pdf(
         f'{prefix}-%04d.jpg',
     )
 
-    command = [
-        SANDBOX_PATH,
+    _run_in_sandbox(
         output_directory,
-        'magick',
-        '-density',
-        str(PREVIEW_DENSITY),
-        pdf_path,
-        '-background',
-        'white',
-        '-alpha',
-        'remove',
-        '-quality',
-        str(PREVIEW_QUALITY),
-        output_pattern,
-    ]
-
-    subprocess.check_output(
-        command,
-        stderr=subprocess.STDOUT,
-        timeout=TASK_TIMEOUT_S,
+        [
+            'magick',
+            '-density',
+            str(PREVIEW_DENSITY),
+            pdf_path,
+            '-background',
+            'white',
+            '-alpha',
+            'remove',
+            '-quality',
+            str(PREVIEW_QUALITY),
+            output_pattern,
+        ],
     )
 
     filenames = [
@@ -86,17 +83,33 @@ def _rasterize_pdf(
     return sorted(filenames)
 
 
+def _run_in_sandbox(work_dir: str, command: list[str]) -> str:
+    return subprocess.check_output(
+        [SANDBOX_PATH, work_dir, *command],
+        text=True,
+        stderr=subprocess.STDOUT,
+        timeout=TASK_TIMEOUT_S,
+    )
+
+
 def _get_image_dimensions(image_path: str) -> tuple[int, int]:
-    result = subprocess.check_output(
+    """
+    Return the displayed image size in pixels as ``(width, height)``.
+
+    ``magick identify -auto-orient`` applies the EXIF orientation tag before
+    measuring, so portrait images stored sideways are reported in their
+    displayed orientation.
+    """
+    result = _run_in_sandbox(
+        os.path.dirname(image_path),
         [
+            'magick',
             'identify',
+            '-auto-orient',
             '-format',
             '%w %h',
             image_path,
         ],
-        text=True,
-        stderr=subprocess.STDOUT,
-        timeout=TASK_TIMEOUT_S,
     )
 
     width, height = result.strip().split()
@@ -181,6 +194,7 @@ def generate_preview(
                 ):
                     raise ObsoletePreview()
 
+                # File cleanup is handled by the model-level post_delete signal.
                 locked_preview.pages.all().delete()
 
                 for (
