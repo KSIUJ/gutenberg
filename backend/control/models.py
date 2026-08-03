@@ -57,6 +57,10 @@ class Printer(models.Model):
     printer_type = models.CharField(max_length=10, default=PrinterType.DISABLED, choices=PrinterType.choices)
     color_supported = models.BooleanField(default=False)
     duplex_supported = models.BooleanField(default=False)
+    display_order = models.PositiveIntegerField(
+        default=0,
+        help_text="Printers are displayed in ascending order. Lower values appear first. The first printer in the list is used as the default."
+    )
 
     @staticmethod
     def get_queryset_for_user(user):
