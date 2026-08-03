@@ -58,46 +58,66 @@ class PrinterBackend(ABC):
 
 class LocalCupsPrinter(PrinterBackend):
     common_options = ['-h', settings.CUPS_SERVERNAME]
+    @staticmethod
+    def parse_lpstat_job_status(output: str, backend_job_id: Any) -> str | None:
+        """
+        Parses `lpstat` multi-line text output to extract status attributes for a specific job.
+        In `lpstat -l` output, job metadata is indented under the primary job header line
+        for example 'PDF-5 ...'. We collect all indented lines immediately following
+        the matching job ID until an unindented line or EOF is encountered.
+        Returns None if job_id is not found in the output.
+        """
+        lines = output.splitlines()
+        job_pattern = re.compile(f"^{re.escape(str(backend_job_id))}\\s")
+
+        for idx, line in enumerate(lines):
+            if job_pattern.match(line):
+                status_lines = []
+                for i in range(idx + 1, len(lines)):
+                    if re.match(r'^\s+', lines[i]):
+                        status_lines.append(lines[i].strip())
+                    else:
+                        break
+                return '\n'.join(status_lines)
+
+        return None
 
     def check_status(self, job: GutenbergJob, backend_job_id: Any) -> bool:
+        """
+        Checks the status of a print job in CUPS. Returns True if the job is still in progress, False if it has completed or been canceled.
+        Raises `JobCanceledException` if the job was canceled or disappeared from CUPS without completing successfully.
+        """
         active_output = subprocess.check_output(
             ['lpstat'] + self.common_options + ['-l'],
             stderr=subprocess.STDOUT,
             timeout=TASK_TIMEOUT_S,
         ).decode('utf-8', errors='ignore')
-        for idx, val in enumerate(active_output.splitlines()):
-            if re.match('^{}\\s'.format(re.escape(str(backend_job_id))), val):
-                lines = active_output.splitlines()
-                max_idx = idx
-                for i in range(idx + 1, len(lines)):
-                    if re.match(r'^\s+', lines[i]):
-                        max_idx = i
-                    else:
-                        break
-                status = '\n'.join(x.strip() for x in lines[idx + 1: max_idx + 1])
-                GutenbergJob.objects.filter(id=job.id).update(status_reason=status)
-                return True
 
+        status = self.parse_lpstat_job_status(active_output, backend_job_id)
+        if status is not None:
+            GutenbergJob.objects.filter(id=job.id).update(status_reason=status)
+            return True
+
+        # By default, running `lpstat` without `-W` only checks active (not-completed) jobs.
+        # If the job is no longer active, we query all jobs (`-W all`) to check
+        # if it finished or disappeared from the queue.
+        # Reference: https://www.cups.org/doc/man-lpstat.html (-W which-jobs option)
         all_output = subprocess.check_output(
             ['lpstat'] + self.common_options + ['-W','all','-l'],
             stderr=subprocess.STDOUT,
             timeout=TASK_TIMEOUT_S,
-        )
-        output_lines = all_output.decode('utf-8', errors='ignore').splitlines()
-        for idx, val in enumerate(output_lines):
-            if not re.match('^{}\\s'.format(backend_job_id), val):
-                continue
-            max_idx = idx
-            for i in range(idx + 1, len(output_lines)):
-                if re.match(r'^\s+', output_lines[i]):
-                    max_idx = i
-                else:
-                    break
-            status = '\n'.join(x.strip() for x in output_lines[idx + 1: max_idx + 1])
+        ).decode('utf-8', errors='ignore')
+
+        status = self.parse_lpstat_job_status(all_output, backend_job_id)
+        if status is not None:
             GutenbergJob.objects.filter(id=job.id).update(status_reason=status)
-            status_lower = status.lower()
-            if 'job-completed-successfully' in status_lower:
+            # Check for the standard IPP 'job-state-reasons' attribute indicating success.
+            # CUPS sets this when a job finishes without errors.
+            # Reference: https://datatracker.ietf.org/doc/html/rfc8011#section-5.3.8
+            if 'job-completed-successfully' in status.lower():
                 return False
+        # If the job is missing from both active queue and history without completion flags,
+        # CUPS treated it as canceled.
         job.status = JobStatus.CANCELED
         job.status_reason = 'Job disappeared from CUPS queue'
         job.date_finished = timezone.now()
