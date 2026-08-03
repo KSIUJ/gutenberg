@@ -1,4 +1,15 @@
 #!/bin/sh
+
+# This script generates the /etc/nginx/conf.d/10-gutenberg-trusted-proxies.conf
+# configuration file, which sets up the `$is_trusted_proxy` and `$is_not_trusted_proxy`
+# variables using the `geo` directive from `ngx_http_geo_module`,
+# based on the `GUTENBERG_TRUSTED_PROXY_IPS` environment variable specified at runtime.
+#
+# The variable `$is_trusted_proxy` will be `1` when the request comes from an IP address
+# range specified in `GUTENBERG_TRUSTED_PROXY_IPS` and `0` otherwise.
+# `$is_not_trusted_proxy` will be `1` if and only if `$is_trusted_proxy` is `0`,
+# and `0` otherwise.
+
 set -e
 
 if [ -z "$GUTENBERG_TRUSTED_PROXY_IPS" ]; then
@@ -20,13 +31,13 @@ if [ -z "$GUTENBERG_TRUSTED_PROXY_IPS" ]; then
     # Allow requests from any source IP by default.
     TRUSTED_IPS="0.0.0.0/0"
 else
-    # GUTENBERG_TRUSTED_PROXY_IPS is set - use it for filtering
     TRUSTED_IPS="$GUTENBERG_TRUSTED_PROXY_IPS"
 fi
 
-# Define custom log format for untrusted proxy errors
-# Format inspired by Django's detailed error messages
-cat > /tmp/gutenberg-geo.conf <<EOF
+generate_config() {
+  # Define custom log format for untrusted proxy errors
+  # Format inspired by Django's detailed error messages
+  cat <<EOF
 log_format gutenberg_untrusted_proxy '*** Untrusted Proxy Source *** '
                                       'Request Method: \$request_method | '
                                       'Request URL: \$scheme://\$http_host\$request_uri | '
@@ -37,37 +48,36 @@ log_format gutenberg_untrusted_proxy '*** Untrusted Proxy Source *** '
                                       'Server time: \$time_local';
 
 # Map for conditional access logging (only log when untrusted)
-map \$is_trusted_proxy \$untrusted_proxy_access {
+map \$is_trusted_proxy \$is_not_trusted_proxy {
     0    1;
     default 0;
 }
 EOF
 
-# Generate geo block
-# Special case: when TRUSTED_IPS is 0.0.0.0/0, set default to 1 instead of listing it explicitly
-# This avoids nginx warning about duplicate network "0.0.0.0/0"
-if [ "$TRUSTED_IPS" = "0.0.0.0/0" ]; then
-    cat >> /tmp/gutenberg-geo.conf <<EOF
+  # Generate geo block
+  # Special case: when TRUSTED_IPS is 0.0.0.0/0, set default to 1 instead of listing it explicitly
+  # This avoids nginx warning about duplicate network "0.0.0.0/0"
+  if [ "$TRUSTED_IPS" = "0.0.0.0/0" ]; then
+      cat <<EOF
 geo \$remote_addr \$is_trusted_proxy {
     default 1;
 }
 EOF
-else
-    cat >> /tmp/gutenberg-geo.conf <<EOF
+  else
+      cat <<EOF
 geo \$remote_addr \$is_trusted_proxy {
     default 0;
 EOF
 
-    # Parse comma or space separated list
-    echo "$TRUSTED_IPS" | tr ',' ' ' | xargs -n1 | while read -r ip; do
-        [ -n "$ip" ] && echo "    $ip 1;" >> /tmp/gutenberg-geo.conf
-    done
+      # Parse comma or space separated list
+      echo "$TRUSTED_IPS" | tr ',' ' ' | xargs -n1 | while read -r ip; do
+          [ -n "$ip" ] && echo "    $ip 1;"
+      done
 
-    echo "}" >> /tmp/gutenberg-geo.conf
-fi
+      echo "}"
+  fi
+}
 
-# Concatenate geo + static config
-cat /tmp/gutenberg-geo.conf /etc/nginx/gutenberg.conf.static > /etc/nginx/conf.d/gutenberg.conf
-rm /tmp/gutenberg-geo.conf
-
+echo "Generating /etc/nginx/conf.d/10-gutenberg-trusted-proxies.conf:"
+generate_config | tee /etc/nginx/conf.d/10-gutenberg-trusted-proxies.conf
 echo "INFO: Configured trusted proxy IPs: $TRUSTED_IPS" >&2

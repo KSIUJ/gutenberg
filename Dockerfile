@@ -201,7 +201,7 @@ COPY --from=collect_static /app/staticroot /usr/share/nginx/gutenberg/static
 COPY --from=build_docs /app/docs/book /usr/share/nginx/gutenberg/docs
 
 # Copy static server config (will be concatenated with geo block at runtime)
-COPY nginx/gutenberg.conf.static /etc/nginx/gutenberg.conf.static
+COPY nginx/20-gutenberg.conf /etc/nginx/conf.d/20-gutenberg.conf
 COPY nginx/locations /etc/nginx/gutenberg-locations.d
 
 # Copy entrypoint scripts for trusted proxy and backend configuration

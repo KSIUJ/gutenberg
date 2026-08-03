@@ -108,7 +108,7 @@ Gutenberg adds three files to this folder:
 - `20-gutenberg-docs.conf` which defines the handlers for the `/docs/` endpoint
   which serves the mdbook documentation.
 
-The `10-gutenberg-backend.conf` is generated at runtime based on these environment variables:
+`10-gutenberg-backend.conf` is generated at runtime based on these environment variables:
 - `GUTENBERG_TRUST_X_FORWARDED_HOST`
   - Possible values: `0` (default), `1`
 - `GUTENBERG_TRUST_X_FORWARDED_PROTO`
@@ -133,7 +133,7 @@ When Gutenberg runs behind a reverse proxy, the application needs to trust heade
 
 **Default behavior:** By default, Gutenberg accepts all requests without IP filtering (`0.0.0.0/0`). This works for deployments without a reverse proxy or when proxy header trust is not enabled.
 
-**When to configure:** If you enable any of the `GUTENBERG_TRUST_X_FORWARDED_*` options (see table below), you **must** also set `GUTENBERG_TRUSTED_PROXY_IPS` to specify which proxy IP addresses are trusted. Without this configuration, the container will fail to start as a security safeguard.
+**When to configure:** If you enable any of the `GUTENBERG_TRUST_X_FORWARDED_*` options, you **must** also set `GUTENBERG_TRUSTED_PROXY_IPS` to specify which proxy IP addresses are trusted. Without this configuration, the container will fail to start as a security safeguard.
 
 **How to configure:** Set both the trust flag and the IP ranges for the `proxy` service:
 
