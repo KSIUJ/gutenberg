@@ -204,8 +204,8 @@ COPY --from=build_docs /app/docs/book /usr/share/nginx/gutenberg/docs
 COPY nginx/gutenberg.conf.static /etc/nginx/gutenberg.conf.static
 COPY nginx/locations /etc/nginx/gutenberg-locations.d
 
-# Copy entrypoint script for trusted proxy configuration
-COPY nginx/entrypoint/40-configure-trusted-proxies.sh /docker-entrypoint.d/
-RUN chmod +x /docker-entrypoint.d/40-configure-trusted-proxies.sh
+# Copy entrypoint scripts for trusted proxy and backend configuration
+COPY nginx/entrypoint/*.sh /docker-entrypoint.d/
+RUN chmod +x /docker-entrypoint.d/*.sh
 
 EXPOSE 80
