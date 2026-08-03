@@ -312,36 +312,27 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(
         detail=True,
-        methods=['get', 'post', 'delete'],
+        methods=['get'],
         url_path='preview',
         name='Print preview',
     )
     def preview(self, request, pk=None):
         job = self.get_object()
 
-        if request.method == 'GET':
-            try:
-                preview = job.preview
-            except PrintPreview.DoesNotExist:
-                raise exceptions.NotFound(
-                    'A preview has not been requested for this job'
-                )
+        try:
+            preview = job.preview
+        except PrintPreview.DoesNotExist:
+            raise exceptions.NotFound(
+                'A preview has not been requested for this job'
+            )
 
-            serializer = PrintPreviewSerializer(preview, context={'request': request})
-            return Response(serializer.data)
+        serializer = PrintPreviewSerializer(preview, context={'request': request})
+        return Response(serializer.data)
 
-        if request.method == 'DELETE':
-            try:
-                preview = job.preview
-            except PrintPreview.DoesNotExist:
-                return Response(status=status.HTTP_204_NO_CONTENT)
-
-            if preview.celery_task_id:
-                current_app.control.revoke(preview.celery_task_id, terminate=False)
-
-            preview.status = PreviewStatus.CANCELED
-            preview.save(update_fields=['status', 'updated_at'])
-            return Response(status=status.HTTP_204_NO_CONTENT)
+    # Split the mutating methods so DRF shows separate browsable API forms.
+    @preview.mapping.post
+    def preview_post(self, request, pk=None):
+        job = self.get_object()
 
         if job.status != JobStatus.INCOMING:
             raise InvalidStatus(
@@ -390,6 +381,22 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
 
         serializer = PrintPreviewSerializer(preview, context={'request': request})
         return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+
+    @preview.mapping.delete
+    def preview_delete(self, request, pk=None):
+        job = self.get_object()
+
+        try:
+            preview = job.preview
+        except PrintPreview.DoesNotExist:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        if preview.celery_task_id:
+            current_app.control.revoke(preview.celery_task_id, terminate=False)
+
+        preview.status = PreviewStatus.CANCELED
+        preview.save(update_fields=['status', 'updated_at'])
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @staticmethod
     def _mark_configuration_changed(job):

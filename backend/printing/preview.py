@@ -5,6 +5,7 @@ import tempfile
 from celery import shared_task
 from django.core.files import File
 from django.db import transaction
+from django.utils import timezone
 
 from control.models import (
     PreviewStatus,
@@ -245,6 +246,7 @@ def generate_preview(
         ).update(
             status=PreviewStatus.FAILED,
             error=str(exception),
+            updated_at=timezone.now(),
         )
 
         if updated:

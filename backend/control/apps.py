@@ -5,7 +5,5 @@ class ControlConfig(AppConfig):
     name = 'control'
 
     def ready(self):
-        try:
-            import control.signals  # noqa: F401
-        except ModuleNotFoundError:
-            pass
+        # Import signal handlers at startup so preview/artefact cleanup is registered.
+        import control.signals  # noqa: F401
