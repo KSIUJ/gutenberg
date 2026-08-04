@@ -44,8 +44,7 @@ OVERRIDE_APPS = [
 
 PROJECT_APPS = [
     'printing',
-    # Load ControlConfig so ready() registers signal handlers on startup.
-    'control.apps.ControlConfig',
+    'control',
     'ipp',
 ]
 
