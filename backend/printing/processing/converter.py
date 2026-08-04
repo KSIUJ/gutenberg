@@ -283,6 +283,12 @@ class NoConverterAvailableError(ValueError):
 
 
 def detect_file_format(input_file: str):
+    """
+    Detect the MIME type of a file stored on disk.
+
+    The detector works on a filesystem path because the underlying `magic`
+    API reads file metadata and content from the path directly.
+    """
     mime_detector = magic.Magic(mime=True)
     input_type = mime_detector.from_file(input_file)
     if input_type == 'text/plain' or input_type == 'application/octet-stream':

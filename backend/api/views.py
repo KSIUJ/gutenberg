@@ -225,6 +225,8 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         return job
 
     def _upload_artefact(self, job, file, **_):
+        # `detect_file_format()` needs a real file path, while uploaded files may
+        # be in-memory streams, so copy the upload to a temp file just for sniffing.
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             for chunk in file.chunks():
                 temp_file.write(chunk)
