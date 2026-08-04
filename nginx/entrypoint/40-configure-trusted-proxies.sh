@@ -1,15 +1,4 @@
 #!/bin/sh
-
-# This script generates the /etc/nginx/conf.d/10-gutenberg-trusted-proxies.conf
-# configuration file, which sets up the `$is_trusted_proxy` and `$is_not_trusted_proxy`
-# variables using the `geo` directive from `ngx_http_geo_module`,
-# based on the `GUTENBERG_TRUSTED_PROXY_IPS` environment variable specified at runtime.
-#
-# The variable `$is_trusted_proxy` will be `1` when the request comes from an IP address
-# range specified in `GUTENBERG_TRUSTED_PROXY_IPS` and `0` otherwise.
-# `$is_not_trusted_proxy` will be `1` if and only if `$is_trusted_proxy` is `0`,
-# and `0` otherwise.
-
 set -e
 
 if [ -z "$GUTENBERG_TRUSTED_PROXY_IPS" ]; then
@@ -31,6 +20,7 @@ if [ -z "$GUTENBERG_TRUSTED_PROXY_IPS" ]; then
     # Allow requests from any source IP by default.
     TRUSTED_IPS="0.0.0.0/0"
 else
+    # GUTENBERG_TRUSTED_PROXY_IPS is set - use it for filtering
     TRUSTED_IPS="$GUTENBERG_TRUSTED_PROXY_IPS"
 fi
 

@@ -1,0 +1,31 @@
+# Test Scenario 4: SSL with HSTS Enabled
+# Expected: HTTPS responses include Strict-Transport-Security header
+
+services:
+  proxy:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: run_nginx
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - type: bind
+        source: /home/dawidbukowski/IdeaProjects/gutenberg/test-ssl/fullchain.pem
+        target: /etc/ssl/certs/gutenberg.crt
+        read_only: true
+      - type: bind
+        source: /home/dawidbukowski/IdeaProjects/gutenberg/test-ssl/privkey.pem
+        target: /etc/ssl/certs/gutenberg.key
+        read_only: true
+    environment:
+      GUTENBERG_SSL_ENABLE: "1"
+      GUTENBERG_SSL_CERT_PATH: "/etc/ssl/certs/gutenberg.crt"
+      GUTENBERG_SSL_KEY_PATH: "/etc/ssl/certs/gutenberg.key"
+      GUTENBERG_SSL_REDIRECT_HTTP: "1"
+      GUTENBERG_SSL_HSTS_ENABLE: "1"
+      GUTENBERG_SSL_HSTS_MAX_AGE: "31536000"
+      GUTENBERG_SSL_HSTS_INCLUDE_SUBDOMAINS: "1"
+      GUTENBERG_TRUSTED_PROXY_IPS: "172.17.0.0/16"
+    command: nginx -g 'daemon off;'

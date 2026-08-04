@@ -208,4 +208,4 @@ COPY nginx/locations /etc/nginx/gutenberg-locations.d
 COPY nginx/entrypoint/*.sh /docker-entrypoint.d/
 RUN chmod +x /docker-entrypoint.d/*.sh
 
-EXPOSE 80
+EXPOSE 80 443
