@@ -8,7 +8,6 @@ See also [Creating new releases] for instructions on how to create a new release
 - Fixed external CUPS job cancellation status detection [#179] 
 ### Changed
 - Added configurable printer display order in the Django admin panel. [#181]
->>>>>>> origin/develop
 - Modified nginx Docker image config to correctly pass the `X-Forwarded-Host` header [#175]
 - Changed default nginx location filenames [#175]
 - Added `GUTENBERG_TRUST_X_FORWARDED_HOST`, `GUTENBERG_TRUST_X_FORWARDED_PROTO` and `GUTENBERG_TRUST_X_REAL_IP` environment variables used to configure the nginx container [#175] 
@@ -17,7 +16,6 @@ See also [Creating new releases] for instructions on how to create a new release
 
 ### Security
 - Nginx now requires explicit `GUTENBERG_TRUSTED_PROXY_IPS` configuration when `GUTENBERG_TRUST_X_FORWARDED_*` or `GUTENBERG_TRUST_X_REAL_IP` variables are enabled, preventing `X-Forwarded-*` header injection attacks [#190]
->>>>>>> origin/develop
 
 ## [4.0.0] - 2026-07-13
 ### Added
