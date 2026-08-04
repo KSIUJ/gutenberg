@@ -4,10 +4,11 @@ The changes below are formatted according to [keep a changelog].
 See also [Creating new releases] for instructions on how to create a new release.
 
 ## [Unreleased]
-- Added configurable printer display order in the Django admin panel. [#181]
-- Modified nginx Docker image config to correctly pass the `X-Forwarded-Host` header [#175]
-- Changed default nginx location filenames [#175]
-- Added `GUTENBERG_TRUST_X_FORWARDED_HOST`, `GUTENBERG_TRUST_X_FORWARDED_PROTO` and `GUTENBERG_TRUST_X_REAL_IP` environment variables used to configure the nginx container [#175] 
+### Added
+- Added `GUTENBERG_TRUSTED_PROXY_IPS` environment variable for configuring trusted reverse proxy IP addresses when using `GUTENBERG_TRUST_X_FORWARDED_*` or `GUTENBERG_TRUST_X_REAL_IP` variables [#190]
+
+### Security
+- Nginx now requires explicit `GUTENBERG_TRUSTED_PROXY_IPS` configuration when `GUTENBERG_TRUST_X_FORWARDED_*` or `GUTENBERG_TRUST_X_REAL_IP` variables are enabled, preventing `X-Forwarded-*` header injection attacks [#190]
 
 ## [4.0.0] - 2026-07-13
 ### Added
@@ -52,8 +53,7 @@ The previous significant commit was made on [2022-08-26](https://github.com/KSIU
 [#130]: https://github.com/KSIUJ/gutenberg/pull/130
 [#170]: https://github.com/KSIUJ/gutenberg/pull/170
 [#172]: https://github.com/KSIUJ/gutenberg/pull/172
-[#175]: https://github.com/KSIUJ/gutenberg/pull/175
-[#181]: https://github.com/KSIUJ/gutenberg/pull/181
+[#190]: https://github.com/KSIUJ/gutenberg/pull/190
 
 [keep a changelog]: https://keepachangelog.com/en/1.1.0/
 [OpenID Connect chapter]: https://ksiuj.github.io/gutenberg/admin/openid-connect.html

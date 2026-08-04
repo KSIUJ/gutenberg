@@ -199,7 +199,13 @@ COPY --from=build_webapp /app/webapp/.output/site/html /usr/share/nginx/gutenber
 # /app/staticroot is the value of STATIC_ROOT in docker_base_settings.py
 COPY --from=collect_static /app/staticroot /usr/share/nginx/gutenberg/static
 COPY --from=build_docs /app/docs/book /usr/share/nginx/gutenberg/docs
-COPY nginx/gutenberg.conf /etc/nginx/conf.d/gutenberg.conf
+
+# Copy static server config (will be concatenated with geo block at runtime)
+COPY nginx/20-gutenberg.conf /etc/nginx/conf.d/20-gutenberg.conf
 COPY nginx/locations /etc/nginx/gutenberg-locations.d
-COPY nginx/entrypoint/50-configure-gutenberg-backend.sh /docker-entrypoint.d/
+
+# Copy entrypoint scripts for trusted proxy and backend configuration
+COPY nginx/entrypoint/*.sh /docker-entrypoint.d/
+RUN chmod +x /docker-entrypoint.d/*.sh
+
 EXPOSE 80

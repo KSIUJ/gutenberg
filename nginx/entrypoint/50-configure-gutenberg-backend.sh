@@ -1,5 +1,12 @@
 #!/bin/sh
 
+# This script generates the /etc/nginx/gutenberg-locations.d/10-gutenberg-backend.conf
+# configuration file, which proxies requests to the Django backend server,
+# based on these environment variables specified at runtime:
+# - `GUTENBERG_TRUST_X_FORWARDED_HOST`
+# - `GUTENBERG_TRUST_X_FORWARDED_PROTO`
+# - `GUTENBERG_TRUST_X_REAL_IP`
+
 set -eu
 
 if [ "${GUTENBERG_TRUST_X_FORWARDED_HOST:-}" != "0" ] && [ "${GUTENBERG_TRUST_X_FORWARDED_HOST:-}" != "1" ]; then

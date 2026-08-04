@@ -108,7 +108,7 @@ Gutenberg adds three files to this folder:
 - `20-gutenberg-docs.conf` which defines the handlers for the `/docs/` endpoint
   which serves the mdbook documentation.
 
-The `10-gutenberg-backend.conf` is generated at runtime based on these environment variables:
+`10-gutenberg-backend.conf` is generated at runtime based on these environment variables:
 - `GUTENBERG_TRUST_X_FORWARDED_HOST`
   - Possible values: `0` (default), `1`
 - `GUTENBERG_TRUST_X_FORWARDED_PROTO`
@@ -122,6 +122,31 @@ Only set these to `1` if all the following are true:
 1. there is another proxy server before this NGINX container,
 2. untrusted access is only possible via that proxy, and
 3. the proxy securely populates these headers.
+
+### Trusted Proxy Configuration
+
+**What GUTENBERG_TRUSTED_PROXY_IPS does:**
+Filters incoming requests by source IP address. Only requests from IP addresses within the configured ranges are allowed to reach the application; requests from other addresses receive HTTP 400.
+
+**Why configure it:**
+When Gutenberg runs behind a reverse proxy, the application needs to trust headers like `X-Forwarded-For`, `X-Forwarded-Host`, and `X-Real-IP` to determine the original client IP and the original value of the `Host` header. Without IP filtering, an attacker could send requests directly to the exposed nginx port with spoofed forwarded headers, bypassing [`ALLOWED_HOSTS`](https://docs.djangoproject.com/en/6.0/ref/settings/#allowed-hosts) or IP address checks. This setting ensures only your known proxy servers can send requests with these trusted headers.
+
+**Default behavior:** By default, Gutenberg accepts all requests without IP filtering (`0.0.0.0/0`). This works for deployments without a reverse proxy or when proxy header trust is not enabled.
+
+**When to configure:** If you enable any of the `GUTENBERG_TRUST_X_FORWARDED_*` options, you **must** also set `GUTENBERG_TRUSTED_PROXY_IPS` to specify which proxy IP addresses are trusted. Without this configuration, the container will fail to start as a security safeguard.
+
+**How to configure:** Set both the trust flag and the IP ranges for the `proxy` service:
+
+```yaml
+proxy:
+  environment:
+    GUTENBERG_TRUST_X_FORWARDED_HOST: "1"
+    GUTENBERG_TRUSTED_PROXY_IPS: "10.0.0.0/8 172.17.0.0/16"
+```
+
+**Format:** Space or comma-separated IP addresses and CIDR ranges (e.g., `"10.0.0.1 192.168.1.0/24"`).
+
+**IPv6:** Include IPv6 ranges if needed (e.g., `"172.17.0.0/16 fc00::/7"`).
 
 ### Extending the NGINX configuration
 You can make use of the `include` directives described above to extend Gutenberg's default NGINX image with your own
