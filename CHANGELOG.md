@@ -9,6 +9,15 @@ See also [Creating new releases] for instructions on how to create a new release
 
 ### Security
 - Nginx now requires explicit `GUTENBERG_TRUSTED_PROXY_IPS` configuration when `GUTENBERG_TRUST_X_FORWARDED_*` or `GUTENBERG_TRUST_X_REAL_IP` variables are enabled, preventing `X-Forwarded-*` header injection attacks [#190]
+### Added
+- Added `GUTENBERG_TRUST_X_FORWARDED_HOST`, `GUTENBERG_TRUST_X_FORWARDED_PROTO` and `GUTENBERG_TRUST_X_REAL_IP` environment variables used to configure the nginx container [#175] 
+- Added asynchronous REST API endpoints for generating, retrieving and canceling print previews [#178]
+- Added preview status, page metadata and print-job configuration version tracking [#178]
+
+### Changed
+- Modified nginx Docker image config to correctly pass the `X-Forwarded-Host` header [#175]
+- Changed default nginx location filenames [#175]
+- Reused the print PDF processing pipeline when generating preview page images [#178]
 
 ## [4.0.0] - 2026-07-13
 ### Added
@@ -53,6 +62,8 @@ The previous significant commit was made on [2022-08-26](https://github.com/KSIU
 [#130]: https://github.com/KSIUJ/gutenberg/pull/130
 [#170]: https://github.com/KSIUJ/gutenberg/pull/170
 [#172]: https://github.com/KSIUJ/gutenberg/pull/172
+[#175]: https://github.com/KSIUJ/gutenberg/pull/175
+[#178]: https://github.com/KSIUJ/gutenberg/pull/178
 [#190]: https://github.com/KSIUJ/gutenberg/pull/190
 
 [keep a changelog]: https://keepachangelog.com/en/1.1.0/
