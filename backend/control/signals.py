@@ -6,14 +6,6 @@ from django.dispatch import receiver
 
 from control.models import JobArtefact, PrintPreviewPage
 
-
-@receiver(post_delete, sender=JobArtefact)
-def delete_job_artefact_file(sender, instance, **kwargs):
-    # FileField storage is outside the DB transaction, so delete the blob only
-# Deleting a model instance does not automatically delete files referenced by `FileField`s in the model.
-# These handlers automatically delete files after the model instance is deleted.
-# TODO: Are the signals sent after a database commit or just after calling `delete`? If it's the latter, a rollbacked transaction will lead to missing files.
-
 @receiver(post_delete, sender=JobArtefact)
 def delete_job_artefact_file(sender, instance, **kwargs):
     if instance.file and instance.file.name:
