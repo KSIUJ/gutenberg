@@ -6,6 +6,12 @@ See also [Creating new releases] for instructions on how to create a new release
 ## [Unreleased]
 ### Added
 - Added `GUTENBERG_TRUSTED_PROXY_IPS` environment variable for configuring trusted reverse proxy IP addresses when using `GUTENBERG_TRUST_X_FORWARDED_*` or `GUTENBERG_TRUST_X_REAL_IP` variables [#190]
+- Added configurable SSL/TLS termination support in nginx Docker image [#189]
+  - New environment variables: `GUTENBERG_SSL_ENABLE`, `GUTENBERG_SSL_CERT_PATH`, `GUTENBERG_SSL_KEY_PATH`
+  - Optional HTTP to HTTPS redirect (`GUTENBERG_SSL_REDIRECT_HTTP`)
+  - Optional HSTS configuration (`GUTENBERG_SSL_HSTS_ENABLE`)
+  - Configurable SSL protocols and ciphers
+  - See SSL/TLS Configuration section in documentation for setup guide
 
 ### Security
 - Nginx now requires explicit `GUTENBERG_TRUSTED_PROXY_IPS` configuration when `GUTENBERG_TRUST_X_FORWARDED_*` or `GUTENBERG_TRUST_X_REAL_IP` variables are enabled, preventing `X-Forwarded-*` header injection attacks [#190]
@@ -53,6 +59,7 @@ The previous significant commit was made on [2022-08-26](https://github.com/KSIU
 [#130]: https://github.com/KSIUJ/gutenberg/pull/130
 [#170]: https://github.com/KSIUJ/gutenberg/pull/170
 [#172]: https://github.com/KSIUJ/gutenberg/pull/172
+[#189]: https://github.com/KSIUJ/gutenberg/pull/189
 [#190]: https://github.com/KSIUJ/gutenberg/pull/190
 
 [keep a changelog]: https://keepachangelog.com/en/1.1.0/
