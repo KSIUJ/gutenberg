@@ -32,6 +32,8 @@ class PrinterPermissionsAdmin(admin.TabularInline):
 
 class PrinterAdmin(admin.ModelAdmin):
     inlines = [LocalPrinterParamsInline, PrinterPermissionsAdmin]
+    list_display = ('name', 'display_order')
+    ordering = ('display_order', 'name')
 
 
 admin.site.register(Printer, PrinterAdmin)

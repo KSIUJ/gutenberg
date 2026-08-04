@@ -415,7 +415,7 @@ class PrinterViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return Printer.get_queryset_for_user(user).all().order_by('name')
+        return Printer.get_queryset_for_user(user).all().order_by('display_order', 'name')
 
 
 def _generate_token():
