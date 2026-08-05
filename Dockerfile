@@ -36,7 +36,7 @@ WORKDIR /app/docs
 RUN apk add curl
 RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | sh
 
-RUN cargo binstall mdbook mdbook-mermaid mdbook-alerts
+RUN cargo binstall mdbook@0.5.2 mdbook-mermaid@0.17.0
 
 COPY ./docs /app/docs/
 RUN mdbook build
@@ -70,7 +70,14 @@ ENV GUTENBERG_GID="659"
 FROM setup_base AS setup_django
 
 COPY ./backend/pyproject.toml ./backend/uv.lock /app/backend/
-RUN uv sync --no-managed-python
+# If a build system is specified in pyproject.toml then by
+# default `uv sync` would invoke the build system, which fails
+# if the package source is not available.
+# The `--no-install-project` flag prevents the build command from
+# running.
+# Running `uv sync` before copying the backend source is preferable,
+# because it allows caching when the `pyproject.toml` file has not changed.
+RUN uv sync --no-managed-python --frozen --no-install-project
 COPY ./backend /app/backend/
 
 
@@ -79,14 +86,14 @@ COPY ./backend /app/backend/
 #
 #   extends: setup_django
 #   build inputs:
-#   - /app/webapp/.output/public from build_webapp
+#   - /app/webapp/.output/site/static from build_webapp
 #   build outputs:
 #   - /app/staticroot - collected static files
 FROM setup_django AS collect_static
 
 ENV DJANGO_SETTINGS_MODULE=gutenberg.settings.docker_base
 RUN mkdir /var/log/gutenberg
-COPY --from=build_webapp /app/webapp/.output/public /app/webapp_public/
+COPY --from=build_webapp /app/webapp/.output/site/static /app/webapp_public/
 # collectstatic puts the collected static files into STATIC_ROOT,
 # configured in docker_base_settings.py as /app/staticroot
 RUN uv run --frozen python manage.py collectstatic --noinput
@@ -171,7 +178,7 @@ VOLUME ["/var/log/gutenberg"]
 #   Runs the NGINX proxy.
 #
 #   build inputs:
-#   - /app/webapp/.output/html from build_webapp
+#   - /app/webapp/.output/site/html from build_webapp
 #   - /app/staticroot from collect_static
 #   - /app/docs/book from build_docs
 #   depends on run_backend for server on port 8000
@@ -183,11 +190,22 @@ VOLUME ["/var/log/gutenberg"]
 #   As described in https://ksiuj.github.io/gutenberg/admin/docker.html
 FROM nginx:1.29-alpine${ALPINE_VER} AS run_nginx
 
+ENV GUTENBERG_TRUST_X_FORWARDED_HOST=0
+ENV GUTENBERG_TRUST_X_FORWARDED_PROTO=0
+ENV GUTENBERG_TRUST_X_REAL_IP=0
+
 RUN rm /etc/nginx/conf.d/default.conf
-COPY --from=build_webapp /app/webapp/.output/html /usr/share/nginx/gutenberg/webapp_html
+COPY --from=build_webapp /app/webapp/.output/site/html /usr/share/nginx/gutenberg/webapp_html
 # /app/staticroot is the value of STATIC_ROOT in docker_base_settings.py
 COPY --from=collect_static /app/staticroot /usr/share/nginx/gutenberg/static
 COPY --from=build_docs /app/docs/book /usr/share/nginx/gutenberg/docs
-COPY nginx/gutenberg.conf /etc/nginx/conf.d/gutenberg.conf
+
+# Copy static server config (will be concatenated with geo block at runtime)
+COPY nginx/20-gutenberg.conf /etc/nginx/conf.d/20-gutenberg.conf
 COPY nginx/locations /etc/nginx/gutenberg-locations.d
+
+# Copy entrypoint scripts for trusted proxy and backend configuration
+COPY nginx/entrypoint/*.sh /docker-entrypoint.d/
+RUN chmod +x /docker-entrypoint.d/*.sh
+
 EXPOSE 80

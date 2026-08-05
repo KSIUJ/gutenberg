@@ -57,6 +57,10 @@ class Printer(models.Model):
     printer_type = models.CharField(max_length=10, default=PrinterType.DISABLED, choices=PrinterType.choices)
     color_supported = models.BooleanField(default=False)
     duplex_supported = models.BooleanField(default=False)
+    display_order = models.PositiveIntegerField(
+        default=0,
+        help_text="Printers are displayed in ascending order. Lower values appear first. The first printer in the list is used as the default."
+    )
 
     @staticmethod
     def get_queryset_for_user(user):
@@ -145,6 +149,7 @@ class GutenbergJob(models.Model):
     date_processed = models.DateTimeField(null=True, blank=True)
     date_finished = models.DateTimeField(null=True, blank=True)
     next_document_number = models.IntegerField(default=1)
+    configuration_version = models.PositiveIntegerField(default=1)
 
     def __str__(self):
         return "{} - {} - {} - {}".format(self.date_created, self.job_type, self.name, self.owner)
@@ -176,6 +181,60 @@ class JobArtefact(models.Model):
 
     def __str__(self):
         return self.file.name
+
+
+class PreviewStatus(models.TextChoices):
+    PENDING = 'pending', _('pending')
+    PROCESSING = 'processing', _('processing')
+    READY = 'ready', _('ready')
+    FAILED = 'failed', _('failed')
+    CANCELED = 'canceled', _('canceled')
+
+
+class PrintPreview(models.Model):
+    job = models.OneToOneField(
+        GutenbergJob,
+        related_name='preview',
+        on_delete=models.CASCADE,
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=PreviewStatus.choices,
+        default=PreviewStatus.PENDING,
+    )
+    generation = models.PositiveIntegerField(default=1)
+    configuration_version = models.PositiveIntegerField()
+    celery_task_id = models.CharField(max_length=255, blank=True)
+    error = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'Preview for job {self.job_id}, generation {self.generation}'
+
+
+class PrintPreviewPage(models.Model):
+    preview = models.ForeignKey(
+        PrintPreview,
+        related_name='pages',
+        on_delete=models.CASCADE,
+    )
+    number = models.PositiveIntegerField()
+    image = models.FileField(upload_to='previews/%Y/%m/%d/')
+    width = models.PositiveIntegerField(help_text='Preview image width in pixels')
+    height = models.PositiveIntegerField(help_text='Preview image height in pixels')
+
+    class Meta:
+        ordering = ['number']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['preview', 'number'],
+                name='unique_preview_page_number',
+            ),
+        ]
+
+    def __str__(self):
+        return f'Preview {self.preview_id}, page {self.number}'
 
 
 def validate_pages_to_print(value):

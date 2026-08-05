@@ -19,7 +19,8 @@ export default defineNuxtConfig({
   ],
   devtools: { enabled: true },
   app: {
-    cdnURL: '/static/',
+    cdnURL: '/',
+    buildAssetsDir: '/static/_nuxt/',
   },
   css: ['~/assets/css/main.css'],
   router: {
@@ -69,15 +70,20 @@ export default defineNuxtConfig({
           },
         }
       : {},
+    output: {
+      publicDir: path.join(process.cwd(), '.output/site'),
+    },
     hooks: {
       'prerender:generate'(route) {
         const routesToSkip = ['/index.html'];
         if (routesToSkip.includes(route.route)) {
           route.skip = true;
         }
-        // Output the HTML files served by Django separately from static files,
-        // to prevent accessing them directly by visiting https://example.com/static/200.html
-        if (route.fileName) route.fileName = path.join('../html/', route.fileName);
+        // Output the HTML files intended to be served by Django separately from static files.
+        // This `html` folder should not be excluded from being served directly,
+        // to prevent accessing them directly by visiting https://example.com/static/html/200.html
+        // (or https://example.com/static/200.html without the change below).
+        if (route.fileName) route.fileName = path.join('html/', route.fileName);
       },
     },
   },
@@ -85,6 +91,12 @@ export default defineNuxtConfig({
     plugins: [
       tailwindcss(),
     ],
+    optimizeDeps: {
+      include: [
+        '@vueuse/core',
+        'js-cookie',
+      ],
+    },
   },
   hooks: {
     // This hook, together with `router.options.strict` set to `true`,

@@ -1,6 +1,11 @@
 name: Gutenberg
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
 
 jobs:
   test_django:
@@ -23,6 +28,12 @@ jobs:
       with:
         version: "0.8.2"
 
+    - name: Install ImageMagick
+      uses: mfinelli/setup-imagemagick@v8
+      with:
+        cache: true
+        install-libfuse2: true
+
     - name: Configure venv and install dependencies
       working-directory: backend
       run: uv sync
@@ -33,7 +44,7 @@ jobs:
 
     - name: Run tests
       working-directory: backend
-      run: uv run manage.py test
+      run: uv run pytest
 
   test_webapp:
     runs-on: ubuntu-latest
