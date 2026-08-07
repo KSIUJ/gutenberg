@@ -1,6 +1,7 @@
 import os
 import tempfile
 import pytest
+import subprocess
 from unittest.mock import Mock, patch, MagicMock, call
 
 from pypdf import PdfReader, PdfWriter, PageObject
@@ -14,6 +15,7 @@ from printing.processing.imposition import (
     get_imposition_processor,
 )
 from printing.processing.pages import PageSize, PageSizes, PageOrientation
+
 
 class TestImpositionResult:
     def test_imposition_result_creation(self):
@@ -124,8 +126,7 @@ class TestStandardImpositionProcessor:
 
     @patch('printing.processing.imposition.PdfReader')
     @patch('printing.processing.imposition.PdfWriter')
-    @patch('builtins.open', new_callable=Mock)
-    def test_create_output_pdf_portrait_no_duplex(self, mock_open, mock_writer_class, mock_reader_class):
+    def test_create_output_pdf_portrait_no_duplex(self, mock_writer_class, mock_reader_class):
         media_size = Mock(spec=PageSize)
         media_size.is_horizontal.return_value = False
         media_size.width_pt.return_value = 612
@@ -162,8 +163,7 @@ class TestStandardImpositionProcessor:
 
     @patch('printing.processing.imposition.PdfReader')
     @patch('printing.processing.imposition.PdfWriter')
-    @patch('builtins.open', new_callable=Mock)
-    def test_create_output_pdf_landscape(self, mock_open, mock_writer_class, mock_reader_class):
+    def test_create_output_pdf_landscape(self, mock_writer_class, mock_reader_class):
         media_size = Mock(spec=PageSize)
         media_size.is_horizontal.return_value = False
         media_size.width_pt.return_value = 612
@@ -193,8 +193,7 @@ class TestStandardImpositionProcessor:
 
     @patch('printing.processing.imposition.PdfReader')
     @patch('printing.processing.imposition.PdfWriter')
-    @patch('builtins.open', new_callable=Mock)
-    def test_create_output_pdf_duplex_odd_pages(self, mock_open, mock_writer_class, mock_reader_class):
+    def test_create_output_pdf_duplex_odd_pages(self, mock_writer_class, mock_reader_class):
         media_size = Mock(spec=PageSize)
         media_size.is_horizontal.return_value = False
         media_size.width_pt.return_value = 612
@@ -220,14 +219,12 @@ class TestStandardImpositionProcessor:
                 True
             )
 
-            # Should append a blank page to make the count even
             assert mock_writer.add_blank_page.call_count == 2
             assert result.media_sheet_count == 1
 
     @patch('printing.processing.imposition.PdfReader')
     @patch('printing.processing.imposition.PdfWriter')
-    @patch('builtins.open', new_callable=Mock)
-    def test_create_output_pdf_duplex_even_pages(self, mock_open, mock_writer_class, mock_reader_class):
+    def test_create_output_pdf_duplex_even_pages(self, mock_writer_class, mock_reader_class):
         media_size = Mock(spec=PageSize)
         media_size.is_horizontal.return_value = False
         media_size.width_pt.return_value = 612
@@ -283,8 +280,7 @@ class TestBookletImpositionProcessor:
     @patch('printing.processing.imposition.PdfReader')
     @patch('printing.processing.imposition.PdfWriter')
     @patch('printing.processing.imposition.Transformation')
-    @patch('builtins.open', new_callable=Mock)
-    def test_create_output_pdf_portrait_4_pages(self, mock_open, mock_transformation_class, mock_writer_class, mock_reader_class):
+    def test_create_output_pdf_portrait_4_pages(self, mock_transformation_class, mock_writer_class, mock_reader_class):
         media_size = Mock(spec=PageSize)
         media_size.is_horizontal.return_value = False
         media_size.width_pt.return_value = 612
@@ -327,8 +323,7 @@ class TestBookletImpositionProcessor:
     @patch('printing.processing.imposition.PdfReader')
     @patch('printing.processing.imposition.PdfWriter')
     @patch('printing.processing.imposition.Transformation')
-    @patch('builtins.open', new_callable=Mock)
-    def test_create_output_pdf_landscape(self, mock_open, mock_transformation_class, mock_writer_class, mock_reader_class):
+    def test_create_output_pdf_landscape(self, mock_transformation_class, mock_writer_class, mock_reader_class):
         media_size = Mock(spec=PageSize)
         media_size.is_horizontal.return_value = False
         media_size.width_pt.return_value = 612
@@ -363,8 +358,7 @@ class TestBookletImpositionProcessor:
     @patch('printing.processing.imposition.PdfReader')
     @patch('printing.processing.imposition.PdfWriter')
     @patch('printing.processing.imposition.Transformation')
-    @patch('builtins.open', new_callable=Mock)
-    def test_create_output_pdf_8_pages(self, mock_open, mock_transformation_class, mock_writer_class, mock_reader_class):
+    def test_create_output_pdf_8_pages(self, mock_transformation_class, mock_writer_class, mock_reader_class):
         media_size = Mock(spec=PageSize)
         media_size.is_horizontal.return_value = False
         media_size.width_pt.return_value = 612
@@ -401,13 +395,10 @@ class TestBookletImpositionProcessor:
             assert result.media_sheet_page_count == 4
             assert mock_writer.add_blank_page.call_count == 4
 
-    # NEW TEST 3: Edge case for booklet missing pages to fill the sheets completely
     @patch('printing.processing.imposition.PdfReader')
     @patch('printing.processing.imposition.PdfWriter')
     @patch('printing.processing.imposition.Transformation')
-    @patch('builtins.open', new_callable=Mock)
-    def test_create_output_pdf_booklet_odd_pages(self, mock_open, mock_transformation_class, mock_writer_class, mock_reader_class):
-        """Test how booklets handle odd page counts (e.g. 5 pages). Should create 2 sheets (8 pages)."""
+    def test_create_output_pdf_booklet_odd_pages(self, mock_transformation_class, mock_writer_class, mock_reader_class):
         media_size = Mock(spec=PageSize)
         media_size.is_horizontal.return_value = False
         media_size.width_pt.return_value = 612
@@ -440,7 +431,6 @@ class TestBookletImpositionProcessor:
                 False
             )
 
-            # 5 pages requires ceil(5/4) = 2 media sheets = 4 physical sides printed
             assert result.media_sheet_count == 2
             assert result.media_sheet_page_count == 4
             assert mock_writer.add_blank_page.call_count == 4
@@ -448,8 +438,7 @@ class TestBookletImpositionProcessor:
     @patch('printing.processing.imposition.PdfReader')
     @patch('printing.processing.imposition.PdfWriter')
     @patch('printing.processing.imposition.Transformation')
-    @patch('builtins.open', new_callable=Mock)
-    def test_create_output_pdf_transformation_calls(self, mock_open, mock_transformation_class, mock_writer_class, mock_reader_class):
+    def test_create_output_pdf_transformation_calls(self, mock_transformation_class, mock_writer_class, mock_reader_class):
         media_size = Mock(spec=PageSize)
         media_size.is_horizontal.return_value = False
         media_size.width_pt.return_value = 612
@@ -518,4 +507,3 @@ class TestGetImpositionProcessor:
             get_imposition_processor("unknown_template", media_size, work_dir)
 
         assert "Unknown imposition template" in str(context.value)
-
