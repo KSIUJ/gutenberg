@@ -1,0 +1,17 @@
+# Test Scenario 5: SSL enabled but certificate file missing
+# Expected: Container should fail to start with clear error message
+
+services:
+  proxy:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: run_nginx
+    ports:
+      - "8443:443"
+    environment:
+      GUTENBERG_SSL_ENABLE: "1"
+      GUTENBERG_SSL_CERT_PATH: "/etc/ssl/certs/missing.crt"
+      GUTENBERG_SSL_KEY_PATH: "/etc/ssl/certs/missing.key"
+      GUTENBERG_TRUSTED_PROXY_IPS: "172.17.0.0/16"
+    command: nginx -g 'daemon off;'

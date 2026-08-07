@@ -10,6 +10,8 @@ if [ -z "$TEST_NUM" ]; then
     echo "  2 - SSL Dual-Mode (HTTP + HTTPS)"
     echo "  3 - SSL with HTTP→HTTPS Redirect"
     echo "  4 - SSL with HSTS"
+    echo "  5 - SSL with missing certificate (error test)"
+    echo "  6 - SSL with invalid protocol (error test)"
     exit 1
 fi
 
@@ -38,25 +40,71 @@ echo ""
 case $TEST_NUM in
     1)
         echo "Test 1: HTTP on port 8080 (SSL disabled)"
-        curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" http://localhost:8080/ || echo "Failed to connect"
+        STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ 2>/dev/null || echo "000")
+        echo "HTTP Status: $STATUS"
+        [ "$STATUS" = "502" ] && echo "✓ Expected (no backend)" || echo "✗ Unexpected status"
         ;;
     2)
         echo "Test 2a: HTTP on port 8080"
-        curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" http://localhost:8080/ || echo "Failed to connect"
+        STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ 2>/dev/null || echo "000")
+        echo "HTTP Status: $STATUS"
+        [ "$STATUS" = "502" ] && echo "✓ Expected (no backend)" || echo "✗ Unexpected status"
         echo ""
         echo "Test 2b: HTTPS on port 8443"
-        curl -k -s -o /dev/null -w "HTTP Status: %{http_code}\n" https://localhost:8443/ || echo "Failed to connect"
+        STATUS=$(curl -k -s -o /dev/null -w "%{http_code}" https://localhost:8443/ 2>/dev/null || echo "000")
+        echo "HTTPS Status: $STATUS"
+        [ "$STATUS" = "502" ] && echo "✓ Expected (no backend)" || echo "✗ Unexpected status"
         ;;
     3)
         echo "Test 3a: HTTP should redirect (301)"
-        curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" http://localhost:8080/ || echo "Failed to connect"
+        STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ 2>/dev/null || echo "000")
+        echo "HTTP Status: $STATUS"
+        [ "$STATUS" = "301" ] && echo "✓ Redirect OK" || echo "✗ Expected 301"
         echo ""
         echo "Test 3b: HTTPS serves content"
-        curl -k -s -o /dev/null -w "HTTP Status: %{http_code}\n" https://localhost:8443/ || echo "Failed to connect"
+        STATUS=$(curl -k -s -o /dev/null -w "%{http_code}" https://localhost:8443/ 2>/dev/null || echo "000")
+        echo "HTTPS Status: $STATUS"
+        [ "$STATUS" = "502" ] && echo "✓ Expected (no backend)" || echo "✗ Unexpected status"
         ;;
     4)
-        echo "Test 4: HSTS header check"
-        curl -k -s -I https://localhost:8443/ | grep -i "strict-transport-security" || echo "HSTS header not found"
+        echo "Test 4a: HSTS header presence"
+        HSTS=$(curl -k -s -I https://localhost:8443/ 2>/dev/null | grep -i "strict-transport-security" | cut -d: -f2- | xargs)
+        if [ -n "$HSTS" ]; then
+            echo "✓ HSTS header found: $HSTS"
+        else
+            echo "✗ HSTS header not found"
+        fi
+        echo ""
+        echo "Test 4b: HTTPS content"
+        STATUS=$(curl -k -s -o /dev/null -w "%{http_code}" https://localhost:8443/ 2>/dev/null || echo "000")
+        echo "HTTPS Status: $STATUS"
+        [ "$STATUS" = "502" ] && echo "✓ Expected (no backend)" || echo "✗ Unexpected status"
+        ;;
+    5)
+        echo "Test 5: SSL with missing certificate"
+        echo "Expected: Container should fail with clear error"
+        sleep 2
+        if docker compose -f "$COMPOSE_FILE" ps | grep -q "Up"; then
+            echo "✗ Container is running (should have failed)"
+        else
+            echo "✓ Container failed as expected"
+            echo ""
+            echo "Error message:"
+            docker compose -f "$COMPOSE_FILE" logs 2>&1 | grep -i "ERROR" | head -3
+        fi
+        ;;
+    6)
+        echo "Test 6: SSL with invalid protocol"
+        echo "Expected: Container should fail with validation error"
+        sleep 2
+        if docker compose -f "$COMPOSE_FILE" ps | grep -q "Up"; then
+            echo "✗ Container is running (should have failed)"
+        else
+            echo "✓ Container failed as expected"
+            echo ""
+            echo "Error message:"
+            docker compose -f "$COMPOSE_FILE" logs 2>&1 | grep -i "ERROR" | head -3
+        fi
         ;;
 esac
 

@@ -90,6 +90,9 @@ server {
     ssl_certificate ${GUTENBERG_SSL_CERT_PATH};
     ssl_certificate_key ${GUTENBERG_SSL_KEY_PATH};
     ssl_protocols ${GUTENBERG_SSL_PROTOCOLS};
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
 EOF
 
 if [ -n "$GUTENBERG_SSL_CIPHERS" ]; then
