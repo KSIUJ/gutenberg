@@ -200,11 +200,10 @@ COPY --from=build_webapp /app/webapp/.output/site/html /usr/share/nginx/gutenber
 COPY --from=collect_static /app/staticroot /usr/share/nginx/gutenberg/static
 COPY --from=build_docs /app/docs/book /usr/share/nginx/gutenberg/docs
 
-# Copy static server config (will be concatenated with geo block at runtime)
-COPY nginx/20-gutenberg.conf /etc/nginx/conf.d/20-gutenberg.conf
+# Copy nginx locations (server blocks are generated dynamically by entrypoint scripts)
 COPY nginx/locations /etc/nginx/gutenberg-locations.d
 
-# Copy entrypoint scripts for trusted proxy and backend configuration
+# Copy entrypoint scripts for trusted proxy and SSL configuration
 COPY nginx/entrypoint/*.sh /docker-entrypoint.d/
 RUN chmod +x /docker-entrypoint.d/*.sh
 

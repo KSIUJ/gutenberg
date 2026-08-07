@@ -2,9 +2,6 @@
 set -e
 
 if [ -z "$GUTENBERG_TRUSTED_PROXY_IPS" ]; then
-    # GUTENBERG_TRUSTED_PROXY_IPS is not set
-
-    # Check if any GUTENBERG_TRUST_* variable is enabled
     if [ "$GUTENBERG_TRUST_X_FORWARDED_HOST" = "1" ] || \
        [ "$GUTENBERG_TRUST_X_FORWARDED_PROTO" = "1" ] || \
        [ "$GUTENBERG_TRUST_X_REAL_IP" = "1" ]; then
@@ -17,15 +14,12 @@ if [ -z "$GUTENBERG_TRUSTED_PROXY_IPS" ]; then
         exit 1
     fi
 
-    # Allow requests from any source IP by default.
     TRUSTED_IPS="0.0.0.0/0"
 else
-    # GUTENBERG_TRUSTED_PROXY_IPS is set - use it for filtering
     TRUSTED_IPS="$GUTENBERG_TRUSTED_PROXY_IPS"
 fi
 
 generate_config() {
-  # Define custom log format for untrusted proxy errors
   # Format inspired by Django's detailed error messages
   cat <<EOF
 log_format gutenberg_untrusted_proxy '*** Untrusted Proxy Source *** '
@@ -37,14 +31,12 @@ log_format gutenberg_untrusted_proxy '*** Untrusted Proxy Source *** '
                                       'Currently trusted IPs: $TRUSTED_IPS | '
                                       'Server time: \$time_local';
 
-# Map for conditional access logging (only log when untrusted)
 map \$is_trusted_proxy \$is_not_trusted_proxy {
     0    1;
     default 0;
 }
 EOF
 
-  # Generate geo block
   # Special case: when TRUSTED_IPS is 0.0.0.0/0, set default to 1 instead of listing it explicitly
   # This avoids nginx warning about duplicate network "0.0.0.0/0"
   if [ "$TRUSTED_IPS" = "0.0.0.0/0" ]; then
@@ -59,7 +51,7 @@ geo \$remote_addr \$is_trusted_proxy {
     default 0;
 EOF
 
-      # Parse comma or space separated list
+      # Support both comma and space separators
       echo "$TRUSTED_IPS" | tr ',' ' ' | xargs -n1 | while read -r ip; do
           [ -n "$ip" ] && echo "    $ip 1;"
       done
@@ -68,6 +60,7 @@ EOF
   fi
 }
 
-echo "Generating /etc/nginx/conf.d/10-gutenberg-trusted-proxies.conf:"
-generate_config | tee /etc/nginx/conf.d/10-gutenberg-trusted-proxies.conf
+echo "Generating /tmp/gutenberg-geo.conf for use by SSL configuration script:"
+generate_config > /tmp/gutenberg-geo.conf
+cat /tmp/gutenberg-geo.conf
 echo "INFO: Configured trusted proxy IPs: $TRUSTED_IPS" >&2

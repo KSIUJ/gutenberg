@@ -1,21 +1,13 @@
 #!/bin/sh
 set -e
 
-# ========================================
-# Environment Variable Defaults
-# ========================================
-
-# Check if SSL is enabled
 if [ "$GUTENBERG_SSL_ENABLE" != "1" ]; then
-    # SSL disabled - generate HTTP-only server block (backward compatible)
     cat > /tmp/gutenberg-servers.conf <<'EOF'
 server {
     listen 80;
 
-    # Log format and map defined at http level (from geo block)
-    access_log /dev/stderr gutenberg_untrusted_proxy if=$untrusted_proxy_access;
+    access_log /dev/stderr gutenberg_untrusted_proxy if=$is_not_trusted_proxy;
 
-    # Reject ALL requests from non-trusted sources
     if ($is_trusted_proxy = 0) {
         return 400;
     }
@@ -24,17 +16,12 @@ server {
 }
 EOF
 
-    # Concatenate geo + HTTP server → final config
     cat /tmp/gutenberg-geo.conf /tmp/gutenberg-servers.conf > /etc/nginx/conf.d/gutenberg.conf
     rm /tmp/gutenberg-geo.conf /tmp/gutenberg-servers.conf
 
     echo "INFO: SSL disabled. Nginx listening on HTTP port 80 only." >&2
     exit 0
 fi
-
-# ========================================
-# SSL Enabled - Validation
-# ========================================
 
 if [ -z "$GUTENBERG_SSL_CERT_PATH" ]; then
     echo "ERROR: GUTENBERG_SSL_ENABLE is set but GUTENBERG_SSL_CERT_PATH is not configured." >&2
@@ -52,7 +39,6 @@ if [ -z "$GUTENBERG_SSL_KEY_PATH" ]; then
     exit 1
 fi
 
-# Validate certificate files exist and are readable
 if [ ! -f "$GUTENBERG_SSL_CERT_PATH" ]; then
     echo "ERROR: SSL certificate file not found: $GUTENBERG_SSL_CERT_PATH" >&2
     echo "Ensure the certificate file is mounted via Docker volumes." >&2
@@ -77,17 +63,25 @@ if [ ! -r "$GUTENBERG_SSL_KEY_PATH" ]; then
     exit 1
 fi
 
-# ========================================
-# Set Optional Defaults
-# ========================================
-
 : "${GUTENBERG_SSL_PORT:=443}"
 : "${GUTENBERG_SSL_PROTOCOLS:=TLSv1.2 TLSv1.3}"
 : "${GUTENBERG_SSL_HSTS_MAX_AGE:=31536000}"
 
-# ========================================
-# Generate HTTPS Server Block
-# ========================================
+if ! echo "$GUTENBERG_SSL_PORT" | grep -Eq '^[0-9]+$' || [ "$GUTENBERG_SSL_PORT" -lt 1 ] || [ "$GUTENBERG_SSL_PORT" -gt 65535 ]; then
+    echo "ERROR: GUTENBERG_SSL_PORT must be a number between 1 and 65535, got: $GUTENBERG_SSL_PORT" >&2
+    exit 1
+fi
+
+for proto in $GUTENBERG_SSL_PROTOCOLS; do
+    case "$proto" in
+        TLSv1.2|TLSv1.3) ;;
+        *)
+            echo "ERROR: Unsupported SSL protocol: $proto. Only TLSv1.2 and TLSv1.3 are supported." >&2
+            echo "Current value: GUTENBERG_SSL_PROTOCOLS='$GUTENBERG_SSL_PROTOCOLS'" >&2
+            exit 1
+            ;;
+    esac
+done
 
 cat > /tmp/gutenberg-servers.conf <<EOF
 server {
@@ -98,16 +92,14 @@ server {
     ssl_protocols ${GUTENBERG_SSL_PROTOCOLS};
 EOF
 
-# Add ssl_ciphers only if specified (otherwise use nginx defaults)
 if [ -n "$GUTENBERG_SSL_CIPHERS" ]; then
     cat >> /tmp/gutenberg-servers.conf <<EOF
     ssl_ciphers ${GUTENBERG_SSL_CIPHERS};
 EOF
 fi
 
-# Add HSTS header if enabled
 if [ "$GUTENBERG_SSL_HSTS_ENABLE" = "1" ]; then
-    HSTS_HEADER="Strict-Transport-Security \"max-age=${GUTENBERG_SSL_HSTS_MAX_AGE}"
+    HSTS_HEADER="max-age=${GUTENBERG_SSL_HSTS_MAX_AGE}"
 
     if [ "$GUTENBERG_SSL_HSTS_INCLUDE_SUBDOMAINS" = "1" ]; then
         HSTS_HEADER="${HSTS_HEADER}; includeSubDomains"
@@ -117,20 +109,15 @@ if [ "$GUTENBERG_SSL_HSTS_ENABLE" = "1" ]; then
         HSTS_HEADER="${HSTS_HEADER}; preload"
     fi
 
-    HSTS_HEADER="${HSTS_HEADER}\""
-
     cat >> /tmp/gutenberg-servers.conf <<EOF
-    add_header ${HSTS_HEADER} always;
+    add_header Strict-Transport-Security "${HSTS_HEADER}" always;
 EOF
 fi
 
-# Complete HTTPS server block
 cat >> /tmp/gutenberg-servers.conf <<'EOF'
 
-    # Log format and map defined at http level (from geo block)
-    access_log /dev/stderr gutenberg_untrusted_proxy if=$untrusted_proxy_access;
+    access_log /dev/stderr gutenberg_untrusted_proxy if=$is_not_trusted_proxy;
 
-    # Reject ALL requests from non-trusted sources
     if ($is_trusted_proxy = 0) {
         return 400;
     }
@@ -139,31 +126,30 @@ cat >> /tmp/gutenberg-servers.conf <<'EOF'
 }
 EOF
 
-# ========================================
-# Generate HTTP Server Block
-# ========================================
-
 if [ "$GUTENBERG_SSL_REDIRECT_HTTP" = "1" ]; then
-    # HTTP → HTTPS redirect mode
-    cat >> /tmp/gutenberg-servers.conf <<EOF
-
-server {
-    listen 80;
-    return 301 https://\$host\$request_uri;
-}
-EOF
-    echo "INFO: SSL enabled on port ${GUTENBERG_SSL_PORT}. HTTP requests on port 80 will redirect to HTTPS." >&2
-else
-    # Dual mode: serve content on both HTTP and HTTPS
     cat >> /tmp/gutenberg-servers.conf <<'EOF'
 
 server {
     listen 80;
 
-    # Log format and map defined at http level (from geo block)
-    access_log /dev/stderr gutenberg_untrusted_proxy if=$untrusted_proxy_access;
+    access_log /dev/stderr gutenberg_untrusted_proxy if=$is_not_trusted_proxy;
 
-    # Reject ALL requests from non-trusted sources
+    if ($is_trusted_proxy = 0) {
+        return 400;
+    }
+
+    return 301 https://$host$request_uri;
+}
+EOF
+    echo "INFO: SSL enabled on port ${GUTENBERG_SSL_PORT}. HTTP requests on port 80 will redirect to HTTPS." >&2
+else
+    cat >> /tmp/gutenberg-servers.conf <<'EOF'
+
+server {
+    listen 80;
+
+    access_log /dev/stderr gutenberg_untrusted_proxy if=$is_not_trusted_proxy;
+
     if ($is_trusted_proxy = 0) {
         return 400;
     }
@@ -173,10 +159,6 @@ server {
 EOF
     echo "INFO: SSL enabled on port ${GUTENBERG_SSL_PORT}. HTTP port 80 also serves content (no redirect)." >&2
 fi
-
-# ========================================
-# Final Concatenation
-# ========================================
 
 cat /tmp/gutenberg-geo.conf /tmp/gutenberg-servers.conf > /etc/nginx/conf.d/gutenberg.conf
 rm /tmp/gutenberg-geo.conf /tmp/gutenberg-servers.conf
