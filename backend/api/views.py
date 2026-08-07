@@ -2,7 +2,12 @@ import logging
 import os
 import tempfile
 from secrets import token_urlsafe
-
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from printing.services import (
+    create_printing_job as create_printing_job_helper,
+    validate_properties as validate_properties_helper,
+    run_job as run_job_helper,
+)
 from celery import current_app
 from django.contrib.auth import authenticate, login
 from django.db import transaction
@@ -164,25 +169,26 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         orientation_requested: str,
         **_,
     ):
-        with transaction.atomic():
-            job = GutenbergJob(name='webrequest', job_type=JobType.PRINT, status=JobStatus.INCOMING,
-                                              owner=self.request.user, printer=printer_with_perms)
-            job.properties = PrintingProperties(
-                color=color,
+        # Delegation to services.py
+        try:
+            job = create_printing_job_helper(
+                user=self.request.user,
+                printer_with_perms=printer_with_perms,
+                name='webrequest',
                 copies=copies,
+                pages_to_print=pages_to_print,
+                color=color,
                 two_sides=two_sides,
-                pages_to_print=None if pages_to_print == "" else pages_to_print,
-                job=job,
                 fit_to_page=fit_to_page,
                 n_up=n_up,
                 imposition_template=imposition_template,
                 orientation_requested=orientation_requested,
             )
-
-            self._validate_properties(printer_with_perms.id, job.properties, job)
-            job.save()
-            job.properties.save()
             return job
+        except ObjectDoesNotExist:
+            raise exceptions.NotFound("Selected printer does not exist")
+        except ValidationError as ex:
+            raise exceptions.ValidationError(detail=getattr(ex, 'messages', [str(ex)]))
 
     def _change_properties(
         self,
@@ -280,39 +286,28 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
 
     def _run_job(self, job):
         try:
-            preview = job.preview
-        except PrintPreview.DoesNotExist:
-            preview = None
-
-        if preview is not None:
-            if preview.status in (PreviewStatus.PENDING, PreviewStatus.PROCESSING):
-                if preview.celery_task_id:
-                    current_app.control.revoke(
-                        preview.celery_task_id,
-                        terminate=False,
-                    )
-                preview.status = PreviewStatus.CANCELED
-                preview.save(update_fields=['status', 'updated_at'])
-
-        job.status = JobStatus.PENDING
-        job.save()
-        print_file.delay(job.id)
-        logger.info('User %s submitted job: %s', self.request.user.username, job.id)
-        return job
+            return run_job_helper(job, request_user=self.request.user)
+        except Exception:
+            # re-raise so higher-level handlers can manage it
+            raise
 
     def _validate_properties(self, printer_id: int, properties, job):
-        if job.status != JobStatus.INCOMING:
-            raise InvalidStatus("Invalid job status for this request", additional_info="current status: {}".format(job.status))
-        printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
-                                                          printer_id=printer_id)
-        if not printer_with_perms:
+        try:
+            validate_properties_helper(user=self.request.user, printer_id=printer_id, properties=properties, job=job)
+        except ObjectDoesNotExist:
             raise exceptions.NotFound("Selected printer does not exist")
-        if not printer_with_perms.is_available:
-            raise PrinterUnavailable(printer_with_perms.unavailable_message)
-        if properties.color and not printer_with_perms.color_allowed:
-            raise exceptions.ValidationError("Color printing is not allowed on the selected printer")
-        if properties.two_sides != TwoSidedPrinting.ONE_SIDED and not printer_with_perms.duplex_supported:
-            raise exceptions.ValidationError("Two-sided printing is not supported on the selected printer")
+        except ValidationError as ex:
+            raise exceptions.ValidationError(detail=getattr(ex, 'messages', [str(ex)]))
+
+        printer_with_perms = Printer.get_printer_for_user(user=self.request.user, printer_id=printer_id)
+        if printer_with_perms:
+            if not getattr(printer_with_perms, 'is_available', True):
+                raise PrinterUnavailable(getattr(printer_with_perms, 'unavailable_message', 'Printer unavailable'))
+            if properties.color and not getattr(printer_with_perms, 'color_allowed', True):
+                raise exceptions.ValidationError("Color printing is not allowed on the selected printer")
+            if properties.two_sides != TwoSidedPrinting.ONE_SIDED and not getattr(printer_with_perms, 'duplex_supported', True):
+                raise exceptions.ValidationError("Two-sided printing is not supported on the selected printer")
+
 
     @action(
         detail=True,
