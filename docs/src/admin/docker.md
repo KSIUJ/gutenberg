@@ -286,6 +286,15 @@ Then use `source: ./ssl/fullchain.pem` and `source: ./ssl/privkey.pem` in the do
 > [!WARNING]
 > Self-signed certificates are **not suitable for production**. Browsers will show security warnings, and clients must explicitly trust the certificate.
 
+**Migration Notes:**
+
+If you previously customized the nginx configuration by modifying the `nginx/20-gutenberg.conf` file, note that this file has been removed. Server blocks are now generated dynamically by entrypoint scripts based on environment variables.
+
+To customize nginx configuration:
+- Place custom location blocks in `nginx/locations/` (see "Extending the NGINX configuration" below)
+- Use environment variables for SSL, trusted proxies, and backend settings
+- For advanced customization, create custom entrypoint scripts in `nginx/entrypoint/`
+
 ### Extending the NGINX configuration
 You can make use of the `include` directives described above to extend Gutenberg's default NGINX image with your own
 config.

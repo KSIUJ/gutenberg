@@ -1,10 +1,6 @@
 #!/bin/bash
 set -e
 
-# Helper script to run SSL tests
-# Usage: ./run-test.sh <test-number>
-# Example: ./run-test.sh 1
-
 TEST_NUM=$1
 
 if [ -z "$TEST_NUM" ]; then
@@ -24,11 +20,9 @@ echo "Running Test Scenario $TEST_NUM"
 echo "========================================="
 echo ""
 
-# Stop any running containers
 docker compose -f docker-compose.test*.yml down 2>/dev/null || true
 
-# Start the test
-docker compose -f $COMPOSE_FILE up -d
+docker compose -f "$COMPOSE_FILE" up -d
 
 echo ""
 echo "Waiting for nginx to start..."
@@ -37,7 +31,7 @@ sleep 3
 echo ""
 echo "Container logs:"
 echo "========================================="
-docker compose -f $COMPOSE_FILE logs
+docker compose -f "$COMPOSE_FILE" logs
 echo "========================================="
 echo ""
 
@@ -68,4 +62,4 @@ esac
 
 echo ""
 echo "Test completed. Container is still running."
-echo "To stop: docker compose -f $COMPOSE_FILE down"
+echo "To stop: docker compose -f \"$COMPOSE_FILE\" down"
