@@ -20,7 +20,7 @@
     "@vueuse/core": "^13.9.0",
     "eslint": "^9.39.1",
     "js-cookie": "^3.0.8",
-    "nuxt": "4.4.8",
+    "nuxt": "4.5.1",
     "primevue": "^4.4.1",
     "tailwindcss": "^4.3.2",
     "tailwindcss-primeui": "^0.6.1",
