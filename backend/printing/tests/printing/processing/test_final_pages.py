@@ -57,9 +57,10 @@ class TestFinalPageProcessor:
         ("1-2,3", 10, [0, 1, 2]),
         ("1,10", 10, [0, 9]),
         ("1-10", 10, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
-        ("1-5,3-7", 10, [0, 1, 2, 3, 4, 5, 6]),
+        ("1-5,3-7", 10, [0, 1, 2, 3, 4, 2, 3, 4, 5, 6]),
         ("3,2,1", 5, [2, 1, 0]),
         ("5-7,1-3", 10, [4, 5, 6, 0, 1, 2]),
+        ("5-7,1-3,1-3", 10, [4, 5, 6, 0, 1, 2, 0, 1, 2]),
     ])
     def test_pages_to_print_iter_range(self, page_range, input_pages, expected):
         it = FinalPageProcessor._create_pages_to_print_iter(page_range, input_pages)
