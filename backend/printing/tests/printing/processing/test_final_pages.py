@@ -24,20 +24,20 @@ def mock_page_sizes():
 
 class TestFinalPageProcessor:
 
-    def test_init_perfect_square(self, mock_page_sizes):
-        fp = FinalPageProcessor(str(tmp_path), 4, mock_page_sizes, PageOrientation.PORTRAIT, True)
-        assert fp.columns == 2
-        assert fp.rows == 2
+  def test_init_perfect_square(self, mock_page_sizes, tmp_path):
+    fp = FinalPageProcessor(str(tmp_path), 4, mock_page_sizes, PageOrientation.PORTRAIT, True)
+    assert fp.columns == 2
+    assert fp.rows == 2
 
-    def test_init_perfect_square_times_two(self, mock_page_sizes):
-        fp = FinalPageProcessor(str(tmp_path), 2, mock_page_sizes, PageOrientation.PORTRAIT, True)
-        assert fp.final_page_orientation == PageOrientation.LANDSCAPE
+  def test_init_perfect_square_times_two(self, mock_page_sizes, tmp_path):
+    fp = FinalPageProcessor(str(tmp_path), 2, mock_page_sizes, PageOrientation.PORTRAIT, True)
+    assert fp.final_page_orientation == PageOrientation.LANDSCAPE
 
-        def test_init_eight_pages_up(self, mock_page_sizes, tmp_path):
-            fp = FinalPageProcessor(str(tmp_path), 8, mock_page_sizes, PageOrientation.PORTRAIT, True)
-        assert fp.final_page_orientation == PageOrientation.LANDSCAPE
-        assert fp.columns == 4
-        assert fp.rows == 2
+  def test_init_eight_pages_up(self, mock_page_sizes, tmp_path):
+    fp = FinalPageProcessor(str(tmp_path), 8, mock_page_sizes, PageOrientation.PORTRAIT, True)
+    assert fp.final_page_orientation == PageOrientation.LANDSCAPE
+    assert fp.columns == 4
+    assert fp.rows == 2
 
     def test_init_invalid_n(self, mock_page_sizes):
         with pytest.raises(ValueError):
