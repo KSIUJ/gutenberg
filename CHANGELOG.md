@@ -5,9 +5,9 @@ See also [Creating new releases] for instructions on how to create a new release
 
 ## [Unreleased]
 ### Changed
-- Migrated printing processing tests from `unittest` to `pytest`, parameterized test cases, and removed redundant `sys.modules` Django mocking [#153]
+- Migrated printing processing tests from `unittest` to `pytest`, parameterized test cases, and removed redundant `sys.modules` Django mocking [#194]
 ### Added
-- Added new edge-case tests for page size ratio orientations, booklet odd-page imposition, and disabled fit-to-page scaling [#153]
+- Added new edge-case tests for page size ratio orientations, booklet odd-page imposition, disabled fit-to-page scaling, isolated temporary directories via `pytest` fixtures, and overlapping/unusual order input validators [#194]
 ### Fixed
 - Fixed external CUPS job cancellation status detection [#179] 
 ### Changed
@@ -78,7 +78,7 @@ The previous significant commit was made on [2022-08-26](https://github.com/KSIU
 [#181]: https://github.com/KSIUJ/gutenberg/pull/181
 [#178]: https://github.com/KSIUJ/gutenberg/pull/178
 [#190]: https://github.com/KSIUJ/gutenberg/pull/190
-[#153]: https://github.com/KSIUJ/gutenberg/pull/153
+[#194]: https://github.com/KSIUJ/gutenberg/pull/194
 
 [keep a changelog]: https://keepachangelog.com/en/1.1.0/
 [OpenID Connect chapter]: https://ksiuj.github.io/gutenberg/admin/openid-connect.html

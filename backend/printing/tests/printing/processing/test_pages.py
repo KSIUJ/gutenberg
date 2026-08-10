@@ -1,7 +1,7 @@
 import pytest
 from printing.processing.pages import PageSize, PageSizes, PageOrientation
 
-# NEW TEST 1: Parametrized test covering all width/height ratios from the PR review
+# Parametrized test covering all width/height ratios from the PR review
 @pytest.mark.parametrize("width, height, is_vert, is_horiz", [
     (100, 300, True, False),   # width/height < 1/2
     (100, 200, True, False),   # width/height = 1/2

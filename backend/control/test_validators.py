@@ -11,6 +11,10 @@ from control.models import validate_n_up, validate_pages_to_print
         "1",
         "1-3",
         "1,3-4,10",
+        "1-5,3-7",
+        "5-7,1-3",
+        "3,2,1",
+
     ],
 )
 def test_validate_pages_to_print_accepts_expected_formats(value):
