@@ -790,3 +790,4 @@ class TestPerformanceConstraints:
 
         # With mocked subprocess, should be nearly instant
         assert elapsed < 1.0
+
