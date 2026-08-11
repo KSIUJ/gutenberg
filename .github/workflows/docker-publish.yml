@@ -1,0 +1,64 @@
+name: Publish Docker Images
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  release:
+    types: [published]
+
+# Use GitHub Container Registry
+env:
+  REGISTRY: ghcr.io
+  # github.repository is usually owner/repo (e.g., ksiuj/gutenberg)
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Required to push images to GHCR
+      packages: write
+
+    strategy:
+      # Map Dockerfile targets to final image name suffixes
+      matrix:
+        include:
+          - target: run_backend
+            suffix: -backend
+          - target: run_celery
+            suffix: -celery
+          - target: run_nginx
+            suffix: -proxy
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # For example, ghcr.io/ksiuj/gutenberg-backend
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}${{ matrix.suffix }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: ${{ matrix.target }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

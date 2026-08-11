@@ -10,7 +10,6 @@ services:
       - gutenberg_postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      # Replace the values of -U and -d with the name of the user and database if changed.
       test: [ "CMD-SHELL", "pg_isready -U gutenberg -d gutenberg" ]
       interval: 1s
       retries: 10
@@ -18,25 +17,21 @@ services:
     secrets:
       - gutenberg_postgres_password
 
-  # SECURITY: The Redis image does not enable authentication by default.
-  # This container should not be exposed to the internet, it should only be accessible
-  # in the internal Docker-managed network.
   redis:
     image: redis:8.2-alpine3.22
     container_name: gutenberg-redis
     restart: unless-stopped
 
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: run_backend
+    # Use published image instead of building from source
+    image: ghcr.io/ksiuj/gutenberg-backend:main
     container_name: gutenberg-backend
     volumes:
       - gutenberg_backend_logs:/var/log/gutenberg
       - gutenberg_backend_data:/var/lib/gutenberg
+      # Expect docker_settings.py to be in the same directory as compose.yml
       - type: bind
-        source: ./backend/gutenberg/settings/docker_settings.py
+        source: ./docker_settings.py
         target: /etc/gutenberg/docker_settings.py
         read_only: true
       - type: bind
@@ -53,10 +48,8 @@ services:
       - gutenberg_django_secret_key
 
   celery:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: run_celery
+    # Use published image instead of building from source
+    image: ghcr.io/ksiuj/gutenberg-celery:main
     container_name: gutenberg-celery
     depends_on:
       db:
@@ -66,8 +59,9 @@ services:
     volumes:
       - gutenberg_backend_logs:/var/log/gutenberg
       - gutenberg_backend_data:/var/lib/gutenberg
+      # Expect docker_settings.py to be in the same directory as compose.yml
       - type: bind
-        source: ./backend/gutenberg/settings/docker_settings.py
+        source: ./docker_settings.py
         target: /etc/gutenberg/docker_settings.py
         read_only: true
       - type: bind
@@ -77,23 +71,13 @@ services:
     secrets:
       - gutenberg_postgres_password
       - gutenberg_django_secret_key
-
-    # The cap_add SYS_ADMIN and privileged settings allow bubblewrap to run inside the container.
-    # The security implications of these changes have not been properly reviewed.
-    # FIXME: These settings should probably me more restrictive.
-    #
-    # Some relevant links:
-    # - https://docs.docker.com/engine/security/apparmor/
-    # - https://docs.docker.com/engine/security/seccomp/
     cap_add:
       - SYS_ADMIN
     privileged: true
 
   proxy:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: run_nginx
+    # Use published image instead of building from source
+    image: ghcr.io/ksiuj/gutenberg-proxy:main
     container_name: gutenberg-proxy
     ports:
       - "3000:80"
@@ -106,10 +90,6 @@ volumes:
   gutenberg_backend_logs:
   gutenberg_backend_data:
 
-# Docker Compose only supports loading secrets from files or environment variables
-# https://docs.docker.com/reference/compose-file/secrets/
-# These secrets should be randomly generated, for example, using commands like:
-#   openssl rand -base64 32 > ./secrets/postgres_password.txt
 secrets:
   gutenberg_postgres_password:
     file: ./secrets/postgres_password.txt
