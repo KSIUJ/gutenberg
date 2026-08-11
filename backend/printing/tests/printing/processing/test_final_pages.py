@@ -117,18 +117,21 @@ class TestFinalPageProcessor:
                 fp.create_final_pages("in.pdf", "")
 
     @patch("printing.processing.final_pages.subprocess.check_output")
-    @patch("printing.processing.final_pages.SANDBOX_PATH", "/tmp/sandbox")
     @patch("printing.processing.final_pages.TASK_TIMEOUT_S", 30)
     def test_run_in_sandbox(self, mock_sub, mock_page_sizes, tmp_path):
         mock_sub.return_value = "ok"
-        fp = FinalPageProcessor(str(tmp_path), 1, mock_page_sizes, PageOrientation.PORTRAIT, False)
 
-        result = fp.run_in_sandbox(["ls"])
+        sandbox_bin = str(tmp_path / "mock_sandbox")
 
-        assert result == "ok"
-        mock_sub.assert_called_once_with(
-            ["/tmp/sandbox", str(tmp_path), "ls"],
-            text=True,
-            stderr=subprocess.STDOUT,
-            timeout=30
-        )
+        with patch("printing.processing.final_pages.SANDBOX_PATH", sandbox_bin):
+            fp = FinalPageProcessor(str(tmp_path), 1, mock_page_sizes, PageOrientation.PORTRAIT, False)
+
+            result = fp.run_in_sandbox(["ls"])
+
+            assert result == "ok"
+            mock_sub.assert_called_once_with(
+                [sandbox_bin, str(tmp_path), "ls"],
+                text=True,
+                stderr=subprocess.STDOUT,
+                timeout=30
+            )
