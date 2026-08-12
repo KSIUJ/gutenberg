@@ -150,25 +150,9 @@ proxy:
 
 ### SSL/TLS Configuration
 
-**What SSL configuration does:**
-Enables HTTPS support in the nginx proxy, allowing encrypted connections to Gutenberg. The nginx container can terminate SSL/TLS connections using certificates you provide via Docker volumes.
+The nginx proxy can terminate SSL/TLS connections. SSL is disabled by default.
 
-**Default behavior:** 
-SSL is disabled by default. Gutenberg serves HTTP only on port 80, exactly as before this feature was added. Enabling SSL requires explicit configuration and providing SSL certificates.
-
-**When to configure:** 
-Configure SSL/TLS when you have obtained SSL certificates for your domain (e.g., from Let's Encrypt, your organization's certificate authority, or a commercial CA) and want the nginx container to handle SSL termination directly.
-
-**How to configure:**
-
-1. Obtain SSL certificates and place them in a directory accessible to Docker (e.g., `./ssl/`):
-   ```bash
-   # Example: Using Let's Encrypt with certbot
-   sudo certbot certonly --standalone -d gutenberg.example.com
-   # Certificates will be in /etc/letsencrypt/live/gutenberg.example.com/
-   ```
-
-2. Configure the proxy service with SSL settings in `docker-compose.yml`:
+Mount your SSL certificates and configure environment variables in `docker-compose.yml`:
 
    ```yaml
    proxy:
