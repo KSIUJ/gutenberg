@@ -15,6 +15,11 @@ logger = logging.getLogger('gutenberg.admin.test_print')
 @staff_member_required
 @require_POST
 def trigger_test_print_view(request, printer_id):
+    """
+    Triggers a test print for the selected printer.
+    Returns a JSON response with status 'ok' and ID of the job if it succeeds
+    or status 'error' if it fails .
+    """
     logger.info(
         "trigger_test_print_view called: method=%s referer=%s remote_addr=%s user=%s",
         request.method,

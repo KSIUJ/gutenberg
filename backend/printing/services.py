@@ -127,9 +127,8 @@ def run_job(job, request_user=None):
 
 def trigger_test_print_from_file(printer: Printer, user, file_path: str, *, color: bool = False, duplex: bool = False):
     """
-    Convenience helper: creates INCOMING job + properties + attaches file at file_path
-    then calls run_job(job).
-    Raises ValidationError / ObjectDoesNotExist if validation fails.
+    Creates and enqueues a test print job for the given printer using a PDF file.
+    Returns the created job.
     """
     # Validate printer type (accept model enum or string)
     if getattr(printer, 'printer_type', None) not in (PrinterType.LOCAL_CUPS, 'LP',):
@@ -175,7 +174,7 @@ def trigger_test_print_from_file(printer: Printer, user, file_path: str, *, colo
 
 def find_test_pdf_from_static(relative_static_path='documents/test_page.pdf'):
     """
-    Helper: use staticfiles finder to locate the PDF. Returns absolute path or None.
+    Uses staticfiles finder to locate the PDF. Returns absolute path or None.
     """
     path = find(relative_static_path)
     return path
