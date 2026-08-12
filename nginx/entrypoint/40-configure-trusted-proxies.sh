@@ -1,4 +1,15 @@
 #!/bin/sh
+
+# This script generates /tmp/gutenberg-geo.conf, which defines the `$is_trusted_proxy`
+# and `$is_not_trusted_proxy` variables using the `geo` directive from `ngx_http_geo_module`,
+# based on the GUTENBERG_TRUSTED_PROXY_IPS environment variable specified at runtime.
+# This configuration is later merged with server blocks by 50-configure-ssl.sh.
+#
+# The variable `$is_trusted_proxy` will be `1` when the request comes from an IP address
+# range specified in GUTENBERG_TRUSTED_PROXY_IPS and `0` otherwise.
+# `$is_not_trusted_proxy` will be `1` if and only if `$is_trusted_proxy` is `0`,
+# and `0` otherwise.
+
 set -e
 
 if [ -z "$GUTENBERG_TRUSTED_PROXY_IPS" ]; then
