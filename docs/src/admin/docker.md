@@ -153,12 +153,6 @@ proxy:
 **What SSL configuration does:**
 Enables HTTPS support in the nginx proxy, allowing encrypted connections to Gutenberg. The nginx container can terminate SSL/TLS connections using certificates you provide via Docker volumes.
 
-**Why configure it:**
-SSL/TLS encryption protects data in transit between clients and the server. Enable SSL when:
-- Exposing Gutenberg to the internet or untrusted networks
-- Organizational security policies require encrypted connections
-- Handling sensitive print jobs or user data
-
 **Default behavior:** 
 SSL is disabled by default. Gutenberg serves HTTP only on port 80, exactly as before this feature was added. Enabling SSL requires explicit configuration and providing SSL certificates.
 
