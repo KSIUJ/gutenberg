@@ -173,7 +173,6 @@ Mount your SSL certificates and configure environment variables in `docker-compo
        GUTENBERG_SSL_CERT_PATH: "/etc/ssl/certs/gutenberg.crt"
        GUTENBERG_SSL_KEY_PATH: "/etc/ssl/certs/gutenberg.key"
        GUTENBERG_SSL_REDIRECT_HTTP: "1"
-       GUTENBERG_SSL_HSTS_ENABLE: "1"
    ```
 
 **Environment Variables:**
