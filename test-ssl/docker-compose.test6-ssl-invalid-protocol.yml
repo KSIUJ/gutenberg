@@ -11,11 +11,11 @@ services:
       - "8443:443"
     volumes:
       - type: bind
-        source: /home/dawidbukowski/IdeaProjects/gutenberg/test-ssl/fullchain.pem
+        source: ./fullchain.pem
         target: /etc/ssl/certs/gutenberg.crt
         read_only: true
       - type: bind
-        source: /home/dawidbukowski/IdeaProjects/gutenberg/test-ssl/privkey.pem
+        source: ./privkey.pem
         target: /etc/ssl/certs/gutenberg.key
         read_only: true
     environment:
