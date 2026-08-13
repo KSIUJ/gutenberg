@@ -70,7 +70,6 @@ def create_printing_job(user,
             owner=user,
             printer=printer_with_perms,
         )
-        # create printing properties instance but do not save until job is saved
         job.properties = PrintingProperties(
             color=color,
             copies=copies,
@@ -83,7 +82,6 @@ def create_printing_job(user,
             orientation_requested=orientation_requested or PrintingProperties._meta.get_field('orientation_requested').get_default(),
         )
 
-        # run shared validation
         validate_properties(user=user, printer_id=printer_with_perms.id, properties=job.properties, job=job)
 
         job.save()
@@ -130,7 +128,6 @@ def trigger_test_print_from_file(printer: Printer, user, file_path: str, *, colo
     Creates and enqueues a test print job for the given printer using a PDF file.
     Returns the created job.
     """
-    # Validate printer type (accept model enum or string)
     if getattr(printer, 'printer_type', None) not in (PrinterType.LOCAL_CUPS, 'LP',):
         raise ValidationError("Test print is only supported for local CUPS printers (type LP).")
 
@@ -144,7 +141,6 @@ def trigger_test_print_from_file(printer: Printer, user, file_path: str, *, colo
 
     two_sided_option = TwoSidedPrinting.TWO_SIDED_LONG_EDGE if duplex else TwoSidedPrinting.ONE_SIDED
 
-    # create job (uses shared validation)
     job = create_printing_job(
         user=user,
         printer_with_perms=printer,
@@ -157,7 +153,6 @@ def trigger_test_print_from_file(printer: Printer, user, file_path: str, *, colo
         n_up=1,
     )
 
-    # attach artefact
     with open(file_path, 'rb') as f:
         JobArtefact.objects.create(
             job=job,
@@ -167,7 +162,6 @@ def trigger_test_print_from_file(printer: Printer, user, file_path: str, *, colo
             document_number=1,
         )
 
-    # run via shared runner (sets PENDING + enqueue)
     run_job(job, request_user=user)
     return job
 

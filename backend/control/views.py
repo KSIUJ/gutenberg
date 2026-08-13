@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 import logging
+import json
 
 from control.models import Printer
 from printing.services import trigger_test_print_from_file, find_test_pdf_from_static
@@ -17,6 +18,7 @@ logger = logging.getLogger('gutenberg.admin.test_print')
 def trigger_test_print_view(request, printer_id):
     """
     Triggers a test print for the selected printer.
+    Accepts JSON body with 'color' (bool) and 'duplex' (bool) parameters.
     Returns a JSON response with status 'ok' and ID of the job if it succeeds
     or status 'error' if it fails .
     """
@@ -26,21 +28,52 @@ def trigger_test_print_view(request, printer_id):
         request.META.get('HTTP_REFERER'),
         request.META.get('REMOTE_ADDR'),
         getattr(request.user, 'username', '<anon>'))
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        logger.warning("Invalid JSON in request body from user %s",
+                       getattr(request.user, 'username', '<anon>'))
+        return JsonResponse(
+            {"status": "error", "message": "Invalid JSON payload"},
+            status=400
+        )
+
+    color = data.get('color', False)
+    duplex = data.get('duplex', False)
+
+    if not isinstance(color, bool) or not isinstance(duplex, bool):
+        logger.warning(
+            "Invalid parameter types: color=%s (type %s), duplex=%s (type %s)",
+            color, type(color).__name__, duplex, type(duplex).__name__)
+        return JsonResponse(
+            {"status": "error",
+             "message": "Parameters 'color' and 'duplex' must be boolean"},
+            status=400
+        )
+
+    logger.info("Test print requested: color=%s, duplex=%s, printer_id=%s",
+                color, duplex, printer_id)
 
     printer = get_object_or_404(Printer, pk=printer_id)
-    pdf_path = find_test_pdf_from_static('documents/test_page.pdf')
+    pdf_filename = 'documents/test_page_color.pdf' if color else 'documents/test_page_bw.pdf'
+    pdf_path = find_test_pdf_from_static(pdf_filename)
 
     if not pdf_path:
         messages.error(request,
-                       "Test PDF file 'documents/test_page.pdf' was not found in static assets.")
+                       f"Test PDF file '{pdf_filename}' was not found in static assets.")
         return JsonResponse({"status": "error", "message": "PDF not found"}, status=404)
 
     try:
-        job = trigger_test_print_from_file(printer=printer, user=request.user,
-                                           file_path=pdf_path, color=False,
-                                           duplex=False)
-        messages.success(request,
-                         f"Test print job #{job.id} dispatched to '{printer.name}'.")
+        job = trigger_test_print_from_file(
+            printer=printer,
+            user=request.user,
+            file_path=pdf_path,
+            color=color,
+            duplex=duplex
+        )
+        msg = f"Test print job #{job.id} (color={color}, duplex={duplex}) dispatched to '{printer.name}'."
+        messages.success(request, msg)
+        logger.info(msg)
     except ValidationError as e:
         msgs = getattr(e, 'messages', [str(e)])
         messages.error(request, "; ".join(msgs))
