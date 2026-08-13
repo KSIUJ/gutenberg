@@ -91,10 +91,8 @@ def create_printing_job(user,
 
 def run_job(job, request_user=None):
     """
-    Start job using the same logic as API._run_job:
-     - cancel pending preview task if needed,
-     - set job.status = PENDING
-     - enqueue print_file.delay(job.id)
+    Cancels any pending preview task, sets job status to PENDING,
+    and enqueues print_file task via Celery.
     """
     try:
         preview = job.preview
