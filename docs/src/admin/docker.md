@@ -31,10 +31,30 @@ To run Gutenberg using the prebuilt Docker images, you need to download the `com
 mkdir gutenberg && cd gutenberg
 
 # Download compose.yml
-curl -O [https://raw.githubusercontent.com/KSIUJ/gutenberg/main/compose.yml](https://raw.githubusercontent.com/KSIUJ/gutenberg/main/compose.yml)
+curl -O https://raw.githubusercontent.com/KSIUJ/gutenberg/main/compose.yml
 
 # Download and rename the settings template
-curl -o docker_settings.py [https://raw.githubusercontent.com/KSIUJ/gutenberg/main/backend/gutenberg/settings/docker_settings.py.example](https://raw.githubusercontent.com/KSIUJ/gutenberg/main/backend/gutenberg/settings/docker_settings.py.example)
+curl -o docker_settings.py https://raw.githubusercontent.com/KSIUJ/gutenberg/main/backend/gutenberg/settings/docker_settings.py.example
+```
+In `docker_settings.py`, fill in the following fields properly:
+* `ALLOWED_HOSTS` - list of hosts that can connect to the app
+* `CSRF_TRUSTED_ORIGINS` - list of trusted origins for CSRF protection
+
+In addition, the value of `SECRET_KEY` will by default be read from the Docker secret
+`gutenberg_django_secret_key`. It should be set to a unique random string.
+An example of how to generate one can be found below in the [compose.yml](#composeyml) section.
+
+For example:
+```python
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+CSRF_TRUSTED_ORIGINS = [
+    'http://127.0.0.1:3000',
+    'http://localhost:3000',
+]
+```
+After saving the file, you can run all the containers with:
+```bash
+docker compose up -d
 ```
 
 ## compose.yml

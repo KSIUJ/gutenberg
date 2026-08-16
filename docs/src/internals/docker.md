@@ -78,3 +78,10 @@ from `/app/backend/gutenberg/settings/docker_settings.py`.
 Build-time steps (like running the `collectstatic` command) use `docker_base.py` as the settings module.
 Run-time commands (starting the Django server and Celery worker) use `docker_server_overrides.py`.
 See the `ENV DJANGO_SETTINGS_MODULE=` commands in the `Dockerfile`.
+
+
+## Automatic Image Publishing
+Gutenberg uses GitHub Actions (`docker-publish.yml`) to automatically build and publish Docker images to the GitHub Container Registry (GHCR).
+The images are built automatically on every push to the `main` and `develop` branches, as well as whenever a new GitHub Release is published.
+The workflow uses the `docker/metadata-action` to dynamically generate tags. Images are tagged with the branch name (for example, `main`, `develop`) for branch pushes. For releases, they are tagged using Semantic Versioning (SemVer) based on the release tag.
+By default, we avoid using a generic `latest` tag to prevent unpredictable updates. Production deployments should rely on explicit release tags (like `v1.2.3`), while `main` and `develop` tags reflect the latest state of those respective branches.

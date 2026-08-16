@@ -11,7 +11,7 @@ on:
 # Use GitHub Container Registry
 env:
   REGISTRY: ghcr.io
-  # github.repository is usually owner/repo (e.g., ksiuj/gutenberg)
+  # github.repository is usually owner/repo (e.g., KSIUJ/gutenberg)
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
@@ -48,7 +48,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          # For example, ghcr.io/ksiuj/gutenberg-backend
+          # For example, ghcr.io/KSIUJ/gutenberg-backend
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}${{ matrix.suffix }}
           tags: |
             type=ref,event=branch
