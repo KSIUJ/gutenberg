@@ -11,6 +11,39 @@ from django.utils.translation import gettext_lazy as _
 from common.models import User
 
 
+class GroupQuota(models.Model):
+    """Quota limits made available to members of a Django group.
+
+    A blank period does not contribute a limit.  Zero explicitly means that
+    the period is unlimited, while a positive value is a limit in printed
+    impressions.
+    """
+
+    group = models.OneToOneField(Group, on_delete=models.CASCADE)
+    daily_limit = models.PositiveIntegerField(null=True, blank=True)
+    weekly_limit = models.PositiveIntegerField(null=True, blank=True)
+    monthly_limit = models.PositiveIntegerField(null=True, blank=True)
+
+    def __str__(self):
+        return 'Quota for group {}'.format(self.group)
+
+
+class UserQuotaOverride(models.Model):
+    """Per-user replacements for limits inherited from quota groups.
+
+    The meaning of each field matches :class:`GroupQuota`: ``None`` inherits,
+    zero is unlimited, and a positive number is an explicit limit.
+    """
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    daily_limit = models.PositiveIntegerField(null=True, blank=True)
+    weekly_limit = models.PositiveIntegerField(null=True, blank=True)
+    monthly_limit = models.PositiveIntegerField(null=True, blank=True)
+
+    def __str__(self):
+        return 'Quota override for {}'.format(self.user)
+
+
 class JobStatus(models.TextChoices):
     UNKNOWN = 'UNKNOWN', _('unknown')
     INCOMING = 'INCOMING', _('incoming')
