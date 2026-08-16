@@ -74,7 +74,7 @@ class LocalCupsPrinter(PrinterBackend):
 
     @staticmethod
     def _parse_ipptool_attributes(output: str) -> dict[str, list[str]]:
-        """Extract the requested simple IPP attributes from ``ipptool -t`` output."""
+        """Extract the requested simple IPP attributes from ``ipptool -tv`` output."""
         attributes = {}
         for line in output.splitlines():
             match = re.match(r'^\s*(?P<name>[\w-]+) \([^)]*\) = (?P<values>.*)$', line)
