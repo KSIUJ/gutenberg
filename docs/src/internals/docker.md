@@ -7,7 +7,7 @@ The graph below visualizes the build-time layer dependencies.
 
 The images are based on Alpine Linux or on Debian. The variables `DEBIAN_VER` and `ALPINE_VER`
 are used to select versions of the base images. The same versions should albo be used 
-when specifying image versions in `compose.yml`. Using common versions let's Docker reduce the disk space used by the images.
+when specifying image versions in `compose.yml`. Using common versions lets Docker reduce the disk space used by the images.
 ## Targets in Dockerfile
 - A solid line from `a` to `b` represents the `FROM a AS b` instruction.
 - A dashed line from `a` to `b` represents `COPY --from a` as a layer of target `b`. 
