@@ -55,7 +55,7 @@ def trigger_test_print_view(request, printer_id):
                 color, duplex, printer_id)
 
     printer = get_object_or_404(Printer, pk=printer_id)
-    pdf_filename = 'documents/test_page_color.pdf' if color else 'documents/test_page_bw.pdf'
+    pdf_filename = 'documents/test_page_colored.pdf' if color else 'documents/test_page_grayscale.pdf'
     pdf_path = find_test_pdf_from_static(pdf_filename)
 
     if not pdf_path:

@@ -285,11 +285,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         return job
 
     def _run_job(self, job):
-        try:
-            return run_job_helper(job, request_user=self.request.user)
-        except Exception:
-            # re-raise so higher-level handlers can manage it
-            raise
+        return run_job_helper(job, request_user=self.request.user)
 
     def _validate_properties(self, printer_id: int, properties, job):
         try:
