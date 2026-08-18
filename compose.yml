@@ -50,7 +50,7 @@ services:
       - gutenberg_django_secret_key
 
   celery:
-    image: ghcr.io/ksiuj/gutenberg-celery:${GUTENBERG_VERSION:-main}
+    image: ghcr.io/ksiuj/gutenberg-celery:${GUTENBERG_VERSION}
     container_name: gutenberg-celery
     depends_on:
       db:
