@@ -84,7 +84,7 @@ services:
     privileged: true
 
   proxy:
-    image: ghcr.io/ksiuj/gutenberg-proxy:${GUTENBERG_VERSION:-main}
+    image: ghcr.io/ksiuj/gutenberg-proxy:${GUTENBERG_VERSION}
     container_name: gutenberg-proxy
     ports:
       - "3000:80"
