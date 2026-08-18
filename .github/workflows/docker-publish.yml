@@ -11,8 +11,8 @@ on:
 # Use GitHub Container Registry
 env:
   REGISTRY: ghcr.io
-  # github.repository is usually owner/repo (e.g., KSIUJ/gutenberg), converted to lowercase for GHCR compatibility
-  IMAGE_NAME: ${{ toLowerCase(github.repository) }}
+  # The prefix of all image names. Converted to lowercase for GHCR compatibility.
+  IMAGE_NAME: "ksiuj/gutenberg"
 
 jobs:
   build-and-push:
@@ -48,7 +48,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          # For example, ghcr.io/KSIUJ/gutenberg-backend
+          # For example, ghcr.io/ksiuj/gutenberg-backend
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}${{ matrix.suffix }}
           tags: |
             type=ref,event=branch
