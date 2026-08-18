@@ -11,8 +11,8 @@ on:
 # Use GitHub Container Registry
 env:
   REGISTRY: ghcr.io
-  # github.repository is usually owner/repo (e.g., KSIUJ/gutenberg)
-  IMAGE_NAME: ${{ github.repository }}
+  # github.repository is usually owner/repo (e.g., KSIUJ/gutenberg), converted to lowercase for GHCR compatibility
+  IMAGE_NAME: ${{ toLowerCase(github.repository) }}
 
 jobs:
   build-and-push:
