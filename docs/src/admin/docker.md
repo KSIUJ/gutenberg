@@ -54,7 +54,7 @@ CSRF_TRUSTED_ORIGINS = [
 ```
 After saving the file, you can run all the containers with:
 ```bash
-docker compose up -d
+docker compose up
 ```
 
 ## compose.yml
