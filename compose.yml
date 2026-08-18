@@ -27,7 +27,7 @@ services:
     restart: unless-stopped
 
   backend:
-    image: ghcr.io/ksiuj/gutenberg-backend:${GUTENBERG_VERSION:-main}
+    image: ghcr.io/ksiuj/gutenberg-backend:${GUTENBERG_VERSION}
     container_name: gutenberg-backend
     volumes:
       - gutenberg_backend_logs:/var/log/gutenberg
