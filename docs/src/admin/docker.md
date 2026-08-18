@@ -148,6 +148,130 @@ proxy:
 
 **IPv6:** Include IPv6 ranges if needed (e.g., `"172.17.0.0/16 fc00::/7"`).
 
+### SSL/TLS Configuration
+
+The nginx proxy can terminate SSL/TLS connections. SSL is disabled by default.
+
+Mount your SSL certificates and configure environment variables in `docker-compose.yml`:
+
+   ```yaml
+   proxy:
+     ports:
+       - "80:80"    # HTTP (optional - for redirect or dual-mode)
+       - "443:443"  # HTTPS
+     volumes:
+       - type: bind
+         source: /etc/letsencrypt/live/gutenberg.example.com/fullchain.pem
+         target: /etc/ssl/certs/gutenberg.crt
+         read_only: true
+       - type: bind
+         source: /etc/letsencrypt/live/gutenberg.example.com/privkey.pem
+         target: /etc/ssl/certs/gutenberg.key
+         read_only: true
+     environment:
+       GUTENBERG_SSL_ENABLE: "1"
+       GUTENBERG_SSL_CERT_PATH: "/etc/ssl/certs/gutenberg.crt"
+       GUTENBERG_SSL_KEY_PATH: "/etc/ssl/certs/gutenberg.key"
+       GUTENBERG_SSL_REDIRECT_HTTP: "1"
+   ```
+
+**Environment Variables:**
+
+| Variable | Description | Default | Required when SSL enabled |
+|----------|-------------|---------|---------------------------|
+| `GUTENBERG_SSL_ENABLE` | Enable SSL support (set to `1`) | `0` (disabled) | Yes |
+| `GUTENBERG_SSL_CERT_PATH` | Path to SSL certificate file inside container | None | Yes |
+| `GUTENBERG_SSL_KEY_PATH` | Path to SSL private key file inside container | None | Yes |
+| `GUTENBERG_SSL_PORT` | HTTPS port | `443` | No |
+| `GUTENBERG_SSL_PROTOCOLS` | Space-separated SSL/TLS protocols | `TLSv1.2 TLSv1.3` | No |
+| `GUTENBERG_SSL_CIPHERS` | SSL cipher suite (empty = nginx defaults) | Empty | No |
+| `GUTENBERG_SSL_REDIRECT_HTTP` | Redirect HTTP to HTTPS (set to `1`) | `0` (dual-mode) | No |
+| `GUTENBERG_SSL_HSTS_ENABLE` | Enable HSTS header (set to `1`) | `0` (disabled) | No |
+| `GUTENBERG_SSL_HSTS_MAX_AGE` | HSTS max-age in seconds | `31536000` (1 year) | No |
+| `GUTENBERG_SSL_HSTS_INCLUDE_SUBDOMAINS` | Include subdomains in HSTS (set to `1`) | `0` | No |
+| `GUTENBERG_SSL_HSTS_PRELOAD` | Enable HSTS preload (set to `1`) | `0` | No |
+
+**Certificate Formats:**
+
+- `GUTENBERG_SSL_CERT_PATH` should point to the **full certificate chain** (often named `fullchain.pem` in Let's Encrypt)
+- `GUTENBERG_SSL_KEY_PATH` should point to the **private key** (often named `privkey.pem`)
+- Both files must be readable by the nginx process (certificate: 644 permissions, key: 600 permissions)
+
+**HTTP Behavior with SSL:**
+
+By default, when SSL is enabled (`GUTENBERG_SSL_ENABLE=1`), both HTTP (port 80) and HTTPS (port 443) serve the full application content (dual-mode). This allows gradual migration or mixed access scenarios.
+
+To redirect all HTTP traffic to HTTPS, set `GUTENBERG_SSL_REDIRECT_HTTP=1`. In this mode:
+- Requests to `http://gutenberg.example.com/` redirect to `https://gutenberg.example.com/`
+- HTTP port 80 only serves the redirect (no content)
+
+**HSTS Configuration:**
+
+HTTP Strict Transport Security (HSTS) tells browsers to **only** access the site via HTTPS in the future. Enable it with `GUTENBERG_SSL_HSTS_ENABLE=1` only if:
+- You're committed to serving the site over HTTPS permanently
+- All subdomains (if `INCLUDE_SUBDOMAINS=1`) support HTTPS
+- You understand that HSTS is cached by browsers (for `max-age` seconds)
+
+> [!WARNING]
+> **HSTS Preload** (`GUTENBERG_SSL_HSTS_PRELOAD=1`) submits your domain to browser vendors' HSTS preload lists. This is **permanent** and very difficult to undo. Only enable preload if you are certain you will never serve the domain over HTTP again.
+
+**SSL Protocols and Ciphers:**
+
+The default settings (`TLSv1.2 TLSv1.3` with nginx default ciphers) provide a secure, modern configuration suitable for most deployments. Only customize these if you have specific compliance requirements or need to support legacy clients.
+
+**Certificate Renewal:**
+
+SSL certificates expire and must be renewed periodically (Let's Encrypt certificates expire every 90 days).
+
+To reload nginx after renewing certificates without restarting the container:
+```bash
+docker exec gutenberg-proxy nginx -s reload
+```
+
+For automated renewal with Let's Encrypt certbot, add a renewal hook:
+```bash
+# /etc/letsencrypt/renewal-hooks/deploy/reload-gutenberg.sh
+#!/bin/bash
+docker exec gutenberg-proxy nginx -s reload
+```
+
+**Troubleshooting:**
+
+| Problem | Solution |
+|---------|----------|
+| Container fails to start with "certificate file not found" | Verify volume mount paths in `docker-compose.yml` match actual certificate locations on host |
+| Container fails to start with "not readable" error | Check file permissions: `chmod 644` for certificate, `chmod 600` for key |
+| Browser shows "certificate not trusted" error | Ensure you're using the **full chain** certificate (`fullchain.pem`), not just the certificate (`cert.pem`) |
+| Browser shows "certificate name mismatch" | Certificate must be issued for the exact domain name you're accessing |
+| HTTPS works but HTTP doesn't | Port 80 must be mapped in `docker-compose.yml`: `"80:80"` |
+| HTTP doesn't redirect to HTTPS | Set `GUTENBERG_SSL_REDIRECT_HTTP=1` |
+
+**Example: Self-Signed Certificate for Testing:**
+
+For development/testing only, you can generate a self-signed certificate:
+
+```bash
+mkdir -p ./ssl
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout ./ssl/privkey.pem \
+  -out ./ssl/fullchain.pem \
+  -subj "/CN=localhost"
+```
+
+Then use `source: ./ssl/fullchain.pem` and `source: ./ssl/privkey.pem` in the docker-compose volumes.
+
+> [!WARNING]
+> Self-signed certificates are **not suitable for production**. Browsers will show security warnings, and clients must explicitly trust the certificate.
+
+**Migration Notes:**
+
+If you previously customized the nginx configuration by modifying the `nginx/20-gutenberg.conf` file, note that this file has been removed. Server blocks are now generated dynamically by entrypoint scripts based on environment variables.
+
+To customize nginx configuration:
+- Place custom location blocks in `nginx/locations/` (see "Extending the NGINX configuration" below)
+- Use environment variables for SSL, trusted proxies, and backend settings
+- For advanced customization, create custom entrypoint scripts in `nginx/entrypoint/`
+
 ### Extending the NGINX configuration
 You can make use of the `include` directives described above to extend Gutenberg's default NGINX image with your own
 config.
