@@ -4,7 +4,7 @@ import tailwind from 'eslint-plugin-tailwindcss';
 import { fileURLToPath } from 'url';
 
 export default withNuxt([
-  ...tailwind.configs['flat/recommended'],
+  tailwind.configs['flat/recommended'],
   {
     settings: {
       tailwindcss: {
