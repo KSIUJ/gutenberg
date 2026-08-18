@@ -84,4 +84,7 @@ See the `ENV DJANGO_SETTINGS_MODULE=` commands in the `Dockerfile`.
 Gutenberg uses GitHub Actions (`docker-publish.yml`) to automatically build and publish Docker images to the GitHub Container Registry (GHCR).
 The images are built automatically on every push to the `main` and `develop` branches, as well as whenever a new GitHub Release is published.
 The workflow uses the `docker/metadata-action` to dynamically generate tags. Images are tagged with the branch name (for example, `main`, `develop`) for branch pushes. For releases, they are tagged using Semantic Versioning (SemVer) based on the release tag.
-By default, we avoid using a generic `latest` tag to prevent unpredictable updates. Production deployments should rely on explicit release tags (like `v1.2.3`), while `main` and `develop` tags reflect the latest state of those respective branches.
+We do not publish images with a `latest` tag.
+Pproduction deployments should
+rely on explicit release tags (like `v1.2.3`), a `latest` tag could break deployments when a new  major version of Gutenberg is released.   
+The `main` and `develop` tags reflect the latest state of those respective branches.
