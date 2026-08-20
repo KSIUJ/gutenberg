@@ -4,6 +4,19 @@ The changes below are formatted according to [keep a changelog].
 See also [Creating new releases] for instructions on how to create a new release.
 
 ## [Unreleased]
+### Added
+- Added a new workflow (`docker-publish.yml`) to automatically build and publish `backend`, `celery`, and `proxy` images to the GitHub Container Registry [#184].
+- Added instructions in `docs/docker.md` and internal docs for users to fetch the required setup files (`compose.yml` and `docker_settings.py.example`) directly from the repository using `curl` [#184].
+- Introduced `compose.dev.yml` to support local development environments by allowing developers to build Docker images directly from source [#184].
+
+### Changed
+- Updated the `setup-ipp.vue` file to enhance the IPP configuration page [#201].
+- Replaced the legacy `docker-compose.yml` with a production-ready `compose.yml` that pulls prebuilt images from GHCR for end-users [#184].
+- Updated the `ImportError` message in `docker_server_overrides.py` to reflect that users will place `docker_settings.py` next to the `compose.yml` file [#184].
+
+### Fixed
+- Fixed a critical permission issue (`Permission denied: '/home/gutenberg-docker'`) in the `Dockerfile` to ensure the backend container correctly creates and assigns permissions to the user's home directory, preventing silent startup crashes [#201].
+
 ### Changed
 - Migrated printing processing tests from `unittest` to `pytest`, parameterized test cases, and removed redundant `sys.modules` Django mocking [#194]
 ### Added
