@@ -3,6 +3,7 @@ import re
 import subprocess
 import time
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Any
 
 from django.conf import settings
@@ -58,6 +59,142 @@ class PrinterBackend(ABC):
 
 class LocalCupsPrinter(PrinterBackend):
     common_options = ['-h', settings.CUPS_SERVERNAME]
+    ipp_capabilities_test = Path(__file__).with_name('ipptool') / 'get-printer-capabilities.test'
+
+    @staticmethod
+    def _parse_lpoptions(output: str) -> dict[str, list[str]]:
+        """Return the available values for each option from ``lpoptions -l`` output."""
+        options = {}
+        for line in output.splitlines():
+            match = re.match(r'^(?P<name>[^/\s:]+)(?:/[^:]+)?:\s*(?P<values>.*)$', line)
+            if not match:
+                continue
+            options[match.group('name')] = [value.lstrip('*') for value in match.group('values').split()]
+        return options
+
+    @staticmethod
+    def _parse_ipptool_attributes(output: str) -> dict[str, list[str]]:
+        """Extract the requested simple IPP attributes from ``ipptool -tv`` output."""
+        attributes = {}
+        for line in output.splitlines():
+            match = re.match(r'^\s*(?P<name>[\w-]+) \([^)]*\) = (?P<values>.*)$', line)
+            if not match:
+                continue
+            attributes[match.group('name')] = [value.strip() for value in match.group('values').split(',')]
+        return attributes
+
+    @staticmethod
+    def _get_cups_printer_uri(cups_printer_name: str) -> str | None:
+        output = subprocess.check_output(
+            ['lpstat'] + LocalCupsPrinter.common_options + ['-v', cups_printer_name],
+            stderr=subprocess.STDOUT,
+            text=True,
+            timeout=TASK_TIMEOUT_S,
+        )
+        match = re.search(r'^device for [^:]+:\s*(?P<uri>\S+)$', output, re.MULTILINE)
+        return match.group('uri') if match else None
+
+    @staticmethod
+    def _option_value(options: dict[str, list[str]], option_names: tuple[str, ...],
+                      values: tuple[str, ...]) -> str | None:
+        """Find a CUPS option and value without changing CUPS' original spelling."""
+        for option_name in option_names:
+            available_values = options.get(option_name, [])
+            value_by_normalized_name = {value.casefold(): value for value in available_values}
+            for value in values:
+                if selected := value_by_normalized_name.get(value.casefold()):
+                    # IPP capability attributes end in ``-supported`` while
+                    # CUPS expects the corresponding job-template attribute.
+                    return f'{option_name.removesuffix("-supported")}={selected}'
+        return None
+
+    @staticmethod
+    def _configuration_from_options(cups_printer_name: str,
+                                    options: dict[str, list[str]]) -> dict[str, str | bool | None]:
+        """Map CUPS or IPP capabilities to the fields Gutenberg currently supports."""
+        color_option_names = ('print-color-mode-supported', 'print-color-mode', 'ColorModel', 'ColorMode',
+                              'OutputMode')
+        grayscale_param = LocalCupsPrinter._option_value(
+            options, color_option_names, ('monochrome', 'mono', 'gray', 'grey', 'black'))
+        color_param = LocalCupsPrinter._option_value(
+            options, color_option_names, ('color', 'rgb', 'cmyk'))
+        one_sided_param = LocalCupsPrinter._option_value(
+            options, ('sides-supported', 'sides'), ('one-sided',))
+        two_sided_long_edge_param = LocalCupsPrinter._option_value(
+            options, ('sides-supported', 'sides'), ('two-sided-long-edge',))
+        two_sided_short_edge_param = LocalCupsPrinter._option_value(
+            options, ('sides-supported', 'sides'), ('two-sided-short-edge',))
+        # Older PPD-based CUPS queues commonly use these names instead of
+        # the IPP-standard ``sides`` option.
+        if one_sided_param is None:
+            one_sided_param = LocalCupsPrinter._option_value(options, ('Duplex',), ('None',))
+        if two_sided_long_edge_param is None:
+            two_sided_long_edge_param = LocalCupsPrinter._option_value(
+                options, ('Duplex',), ('DuplexNoTumble',))
+        if two_sided_short_edge_param is None:
+            two_sided_short_edge_param = LocalCupsPrinter._option_value(
+                options, ('Duplex',), ('DuplexTumble',))
+
+        return {
+            'cups_printer_name': cups_printer_name,
+            'color_supported': 'true' in {value.casefold() for value in options.get('color-supported', [])} or
+                               color_param is not None,
+            # Gutenberg's current boolean model advertises both duplex modes.
+            'duplex_supported': two_sided_long_edge_param is not None and two_sided_short_edge_param is not None,
+            'print_grayscale_param': grayscale_param,
+            'print_color_param': color_param,
+            'print_one_sided_param': one_sided_param,
+            'print_two_sided_long_edge_param': two_sided_long_edge_param,
+            'print_two_sided_short_edge_param': two_sided_short_edge_param,
+        }
+
+    @staticmethod
+    def get_cups_printer_options(cups_printer_name: str) -> dict[str, str | bool | None]:
+        """Discover the subset of CUPS options Gutenberg can configure for a queue.
+
+        The result deliberately mirrors ``LocalPrinterParams`` rather than exposing
+        every driver-specific CUPS option. Driverless queues are queried through
+        IPP; PPD-based queues fall back to ``lpoptions -l``.
+        """
+        try:
+            printer_uri = LocalCupsPrinter._get_cups_printer_uri(cups_printer_name)
+            if printer_uri and printer_uri.startswith(('ipp://', 'ipps://')):
+                output = subprocess.check_output(
+                    # ``-t`` reports the test result and ``-v`` includes the
+                    # response attributes which we parse below.
+                    ['ipptool', '-tv', printer_uri, str(LocalCupsPrinter.ipp_capabilities_test)],
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    timeout=TASK_TIMEOUT_S,
+                )
+                options = LocalCupsPrinter._parse_ipptool_attributes(output)
+                if any(name in options for name in ('color-supported', 'print-color-mode-supported',
+                                                    'sides-supported')):
+                    return LocalCupsPrinter._configuration_from_options(cups_printer_name, options)
+                logger.warning("IPP capability query for CUPS printer %s returned no supported options",
+                               cups_printer_name)
+        except Exception as error:
+            logger.warning("Failed to query IPP capabilities for CUPS printer %s: %s", cups_printer_name, error,
+                           exc_info=True)
+
+        try:
+            output = subprocess.check_output(
+                ['lpoptions'] + LocalCupsPrinter.common_options + ['-p', cups_printer_name, '-l'],
+                stderr=subprocess.STDOUT,
+                text=True,
+                timeout=TASK_TIMEOUT_S,
+            )
+        except Exception as error:
+            logger.error("Failed to get options for CUPS printer %s: %s", cups_printer_name, error,
+                         exc_info=True)
+            return {}
+
+        options = LocalCupsPrinter._parse_lpoptions(output)
+        if not options:
+            logger.error("CUPS returned no options for printer %s", cups_printer_name)
+            return {}
+        return LocalCupsPrinter._configuration_from_options(cups_printer_name, options)
+
     @staticmethod
     def parse_lpstat_job_status(output: str, backend_job_id: Any) -> str | None:
         """

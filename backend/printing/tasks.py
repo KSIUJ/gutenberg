@@ -29,3 +29,9 @@ def get_own_supported_formats(state) -> dict:
 @control_command(name="gutenberg_list_cups_printer_names")
 def list_cups_printer_names(state) -> list[str]:
     return LocalCupsPrinter.list_cups_printer_names()
+
+
+@control_command(name="gutenberg_get_cups_printer_options")
+def get_cups_printer_options(state, cups_printer_name: str) -> dict[str, str | bool | None]:
+    """Return the configurable Gutenberg options for one CUPS printer queue."""
+    return LocalCupsPrinter.get_cups_printer_options(cups_printer_name)

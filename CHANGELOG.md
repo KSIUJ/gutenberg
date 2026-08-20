@@ -11,6 +11,7 @@ See also [Creating new releases] for instructions on how to create a new release
   - `GUTENBERG_TRUST_X_FORWARDED_HOST`, `GUTENBERG_TRUST_X_FORWARDED_PROTO` and `GUTENBERG_TRUST_X_REAL_IP` [#175]
   - `GUTENBERG_TRUSTED_PROXY_IPS` [#190]
 - Docker Images are now published in the GitHub Container Registry [#199]
+- Added automatic CUPS printer capability configuration when selecting a printer in the Django admin panel [#200]
 
 ### Changed
 - Modified nginx Docker image config to correctly pass the `X-Forwarded-Host` header [#175]
@@ -75,7 +76,8 @@ The previous significant commit was made on [2022-08-26](https://github.com/KSIU
 [#178]: https://github.com/KSIUJ/gutenberg/pull/178
 [#190]: https://github.com/KSIUJ/gutenberg/pull/190
 [#194]: https://github.com/KSIUJ/gutenberg/pull/194
-- [#199]: https://github.com/KSIUJ/gutenberg/pull/199
+[#199]: https://github.com/KSIUJ/gutenberg/pull/199
+[#200]: https://github.com/KSIUJ/gutenberg/pull/200
 
 [keep a changelog]: https://keepachangelog.com/en/1.1.0/
 [OpenID Connect chapter]: https://ksiuj.github.io/gutenberg/admin/openid-connect.html
