@@ -32,6 +32,8 @@ services:
       dockerfile: Dockerfile
       target: run_backend
     container_name: gutenberg-backend
+    environment:
+      - HOME=/var/lib/gutenberg
     volumes:
       - gutenberg_backend_logs:/var/log/gutenberg
       - gutenberg_backend_data:/var/lib/gutenberg
@@ -52,12 +54,15 @@ services:
       - gutenberg_postgres_password
       - gutenberg_django_secret_key
 
+
   celery:
     build:
       context: .
       dockerfile: Dockerfile
       target: run_celery
     container_name: gutenberg-celery
+    environment:
+      - HOME=/var/lib/gutenberg
     depends_on:
       db:
         condition: service_healthy

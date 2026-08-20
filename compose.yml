@@ -33,7 +33,7 @@ services:
       - gutenberg_backend_logs:/var/log/gutenberg
       - gutenberg_backend_data:/var/lib/gutenberg
       - type: bind
-        source: ./docker_settings.py
+        source: ./backend/gutenberg/settings/docker_settings.py
         target: /etc/gutenberg/docker_settings.py
         read_only: true
       - type: bind
@@ -61,7 +61,7 @@ services:
       - gutenberg_backend_logs:/var/log/gutenberg
       - gutenberg_backend_data:/var/lib/gutenberg
       - type: bind
-        source: ./docker_settings.py
+        source: ./backend/gutenberg/settings/docker_settings.py
         target: /etc/gutenberg/docker_settings.py
         read_only: true
       - type: bind
