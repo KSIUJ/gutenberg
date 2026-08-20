@@ -1,4 +1,5 @@
 from django import forms
+from django.urls import reverse
 
 
 class CupsPrinterNameAutocomplete(forms.TextInput):
@@ -12,6 +13,7 @@ class CupsPrinterNameAutocomplete(forms.TextInput):
         context = super().get_context(name, value, attrs)
         printer_names = self.get_printer_names()
         context["printer_names"] = printer_names
+        context["cups_printer_options_url"] = reverse('admin:control_printer_cups_printer_options')
         return context
 
     class Media:

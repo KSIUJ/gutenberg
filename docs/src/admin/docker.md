@@ -25,9 +25,16 @@ In summary:
 | `gutenberg-proxy`    | Nginx for routing requests                       |
 
 ## Configuration
-To run Gutenberg in Docker, you need to create your own version of the settings:
+To run Gutenberg using the prebuilt Docker images, you need to download the `compose.yml` file and the example settings file. Place them in a new directory on your server:
+
 ```bash
-  cp backend/gutenberg/settings/docker_settings.py.example backend/gutenberg/settings/docker_settings.py
+mkdir gutenberg && cd gutenberg
+
+# Download compose.yml
+curl -o compose.yml -O https://raw.githubusercontent.com/KSIUJ/gutenberg/main/compose.prod.yml
+
+# Download and rename the settings template
+curl -o docker_settings.py https://raw.githubusercontent.com/KSIUJ/gutenberg/main/backend/gutenberg/settings/docker_settings.py.example
 ```
 In `docker_settings.py`, fill in the following fields properly:
 * `ALLOWED_HOSTS` - list of hosts that can connect to the app
@@ -35,7 +42,7 @@ In `docker_settings.py`, fill in the following fields properly:
 
 In addition, the value of `SECRET_KEY` will by default be read from the Docker secret
 `gutenberg_django_secret_key`. It should be set to a unique random string.
-An example of how to generate one can be found below in the [docker-compose.yml](#docker-composeyml) section.
+An example of how to generate one can be found below in the [compose.yml](#composeyml) section.
 
 For example:
 ```python
@@ -47,12 +54,12 @@ CSRF_TRUSTED_ORIGINS = [
 ```
 After saving the file, you can run all the containers with:
 ```bash
-docker compose up --build	
+docker compose up
 ```
 
-## docker-compose.yml
-The `docker-compose.yml` file provides an example Docker Compose configuration, which references the local `Dockerfile`
-to build the required Docker images. You might need to modify it to fit your deployment.
+## compose.yml
+
+The `compose.yml` file provides an example Docker Compose configuration, which uses the published Docker images. You might need to modify it to fit your deployment.
 
 Two secrets need to be provided for Docker Compose: `gutenberg_postgres_password` and
 `gutenberg_django_secret_key`. They should be randomly generated strings and should be kept secret.
@@ -177,7 +184,7 @@ It will be used as the `-f` argument to commands provided by `cups-client`
 
 To use the CUPS server running on the host machine, you can mount the
 `/run/cups` directory from the host machine to the Docker containers for
-the backend and the Celery worker. The example `docker-compose.yml` file
+the backend and the Celery worker. The example `compose.yml` file
 does this. The `CUPS_SERVERNAME` can then be set to `/run/cups/cups.sock`.
 
 > [!WARNING]
