@@ -54,7 +54,6 @@ services:
       - gutenberg_postgres_password
       - gutenberg_django_secret_key
 
-
   celery:
     build:
       context: .
