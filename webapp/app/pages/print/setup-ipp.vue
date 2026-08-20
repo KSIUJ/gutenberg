@@ -32,9 +32,7 @@
           />
           <label for="printer-select">Printer</label>
         </p-float-label>
-
         <template v-if="details !== null">
-
           <!-- NEW UI SECTION: OS selection using PrimeVue buttons -->
           <div class="mb-6">
             <h3 class="text-sm font-semibold text-surface-500 mb-3 uppercase tracking-wider">
@@ -52,14 +50,20 @@
               />
             </div>
           </div>
-
           <!-- DYNAMIC INSTRUCTIONS: Change depending on the selected operating system -->
-          <p-fieldset :legend="`${activeOSLabel} Setup Guide`" class="mb-6">
-
+          <p-fieldset
+            :legend="`${activeOSLabel} Setup Guide`"
+            class="mb-6"
+          >
             <!-- INSTRUCTIONS FOR WINDOWS AND IOS (Require Basic Auth) -->
             <div v-if="selectedOS === 'windows' || selectedOS === 'ios'" class="flex flex-col gap-4">
               <div class="mb-2 text-surface-700">
-                <p v-if="selectedOS === 'windows'" class="mb-2">Follow these steps to add the printer on <strong>Windows 11</strong>:</p>
+                <p
+                  v-if="selectedOS === 'windows'"
+                  class="mb-2"
+                >
+                  Follow these steps to add the printer on <strong>Windows 11</strong>:
+                </p>
                 <ol v-if="selectedOS === 'windows'" class="list-decimal list-inside space-y-1 mb-4 ml-1">
                   <li>Open <strong>Settings</strong> > <strong>Bluetooth & devices</strong> > <strong>Printers & scanners</strong>.</li>
                   <li>Click <strong>Add device</strong> and then <strong>Add manually</strong>.</li>
@@ -169,7 +173,6 @@
               />
             </div>
           </p-fieldset>
-
         </template>
       </template>
     </app-panel>
@@ -195,7 +198,7 @@ const osOptions = [
   { id: 'macos', label: 'macOS' },
   { id: 'linux', label: 'Linux' },
   { id: 'ios', label: 'iOS' },
-  { id: 'android', label: 'Android' }
+  { id: 'android', label: 'Android' },
 ];
 
 // Default selection before detecting the user's OS
