@@ -4,22 +4,22 @@ version = "4.0.0"
 description = "Office printer gateway: print documents via web GUI or driverless IPP"
 requires-python = "~=3.13.0"
 dependencies = [
-    "celery>=5.6.3",
-    "django>=5.2.8",
-    "djangorestframework>=3.17.1",
-    "pypdf>=6.14.2",
-    "python-magic>=0.4.27",
-    "redis>=8.0.1",
-    "ksi-oidc-django>=1.0.0",
-    "gunicorn>=26.0.0",
-    "psycopg[binary]>=3.3.4",
+    "celery~=5.6.3",
+    "django~=6.1",
+    "djangorestframework~=3.18.0",
+    "pypdf~=6.16.1",
+    "python-magic~=0.4.27",
+    "redis~=8.1.0",
+    "ksi-oidc-django~=1.0.0",
+    "gunicorn~=26.0.0",
+    "psycopg[binary]~=3.3.4",
 ]
 
 [dependency-groups]
 dev = [
-    "pytest>=9.0.2",
-    "pytest-cov>=7.0.0",
-    "pytest-django>=4.11.1",
+    "pytest~=9.0.2",
+    "pytest-cov~=7.0.0",
+    "pytest-django~=4.11.1",
 ]
 
 [tool.uv.sources]

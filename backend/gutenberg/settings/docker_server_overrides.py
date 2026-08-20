@@ -6,7 +6,7 @@ try:
 except ImportError:
     raise ImportError(
         'The "docker_settings.py" file was not found. '
-        'Please create it based on "backend/gutenberg/settings/docker_settings.py.example" '
+        'Please download the initial configuration (e.g. from the Gutenberg repository) '
         'and mount it at "/etc/gutenberg/docker_settings.py". '
         'Check Gutenberg\'s documentation for more details.'
     )
