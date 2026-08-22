@@ -175,6 +175,21 @@ class PrintJobViewSet(viewsets.ModelViewSet):
         self._run_job(job)
         return Response(self.get_serializer(job).data)
 
+    @action(detail=True, methods=['post'], name='Resume manual duplex')
+    def resume_manual_duplex(self, request, pk=None):
+        job = self.get_object()
+        if job.status != JobStatus.WAITING_FOR_USER:
+            raise InvalidStatus("Job is not waiting for user interaction")
+
+        # Zmienia status zadania, aby Celery kontynuował wydruk drugiej strony
+        job.status = JobStatus.PENDING
+        job.status_reason = "Manual duplex resumed by user"
+        job.save()
+
+        # Wywołaj zadanie druku drugiej partii
+        print_file.delay(job.id, resume_manual_duplex=True)
+        return Response(self.get_serializer(job).data)
+
     def _create_printing_job(
         self,
         printer_with_perms,
@@ -299,14 +314,11 @@ class PrintJobViewSet(viewsets.ModelViewSet):
     def _validate_properties(self, printer_id: int, properties, job):
         if job.status != JobStatus.INCOMING:
             raise InvalidStatus("Invalid job status for this request", additional_info="current status: {}".format(job.status))
-        printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
-                                                          printer_id=printer_id)
+        printer_with_perms = Printer.get_printer_for_user(user=self.request.user, printer_id=printer_id)
         if not printer_with_perms:
             raise exceptions.NotFound("Selected printer does not exist")
         if properties.color and not printer_with_perms.color_allowed:
             raise exceptions.ValidationError("Color printing is not allowed on the selected printer")
-        if properties.two_sides != TwoSidedPrinting.ONE_SIDED and not printer_with_perms.duplex_supported:
-            raise exceptions.ValidationError("Two-sided printing is not supported on the selected printer")
 
 
 class PrinterViewSet(viewsets.ReadOnlyModelViewSet):

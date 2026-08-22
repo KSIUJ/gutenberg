@@ -92,17 +92,6 @@
           Processing options
         </h2>
 
-        <!--      <label id="page-filter-select" class="text-label px-form">Filter printed pages</label> -->
-        <!--      <SelectButton -->
-        <!--        :options="pageFilterOptions" -->
-        <!--        option-value="value" -->
-        <!--        data-key="value" -->
-        <!--        option-label="label" -->
-        <!--        :allow-empty="false" -->
-        <!--        fluid -->
-        <!--        aria-labelledby="page-filter-select" -->
-        <!--      /> -->
-
         <div>
           <p-float-label variant="in">
             <p-input-text
@@ -185,17 +174,24 @@
           <label for="copy-number-input">Number of copies</label>
         </p-float-label>
 
-        <template v-if="jobCreator.selectedPrinter?.duplex_supported">
+        <div>
           <labeled-toggle
             v-model="duplexEnabled"
             label="Enable two&dash;sided printing"
             input-id="duplex-enabled"
           />
 
+          <input-hint
+            v-if="duplexEnabled && !jobCreator.selectedPrinter?.duplex_supported"
+            class="mt-1 text-amber-600 dark:text-amber-400"
+          >
+            This printer does not support automatic duplex. You will be asked to flip the pages manually during printing.
+          </input-hint>
+
           <template v-if="jobCreator.duplexMode !== 'disabled'">
             <label
               id="duplex-mode-select"
-              class="text-label px-form"
+              class="mt-3 block text-label px-form"
             >Flip backside around</label>
             <p-select-button
               v-model="jobCreator.duplexMode"
@@ -214,8 +210,30 @@
                 </div>
               </template>
             </p-select-button>
+
+            <!-- INSTRUKCJA RĘCZNEGO DRUKU DWUSTRONNEGO -->
+            <p-message
+              v-if="!jobCreator.selectedPrinter?.duplex_supported"
+              severity="warn"
+              class="mt-3"
+            >
+              <div class="text-sm space-y-1">
+                <div class="font-semibold flex items-center gap-1">
+                  <i class="pi pi-exclamation-triangle" />
+                  Manual duplex instruction:
+                </div>
+                <div v-if="jobCreator.duplexMode === 'duplex-long-edge'">
+                  • Odd pages will print first.<br>
+                  • Place printed pages back in the tray <b>face DOWN</b>, rotated <b>180° horizontally</b> (flip along long edge).
+                </div>
+                <div v-else>
+                  • Odd pages will print first.<br>
+                  • Place printed pages back in the tray <b>face DOWN</b>, flipped <b>vertically</b> (flip along short edge).
+                </div>
+              </div>
+            </p-message>
           </template>
-        </template>
+        </div>
 
         <div>
           <label
@@ -298,18 +316,17 @@ const duplexOptions = [
   { value: 'duplex-long-edge' as DuplexMode, label: 'Long edge', description: 'for vertical documents' },
   { value: 'duplex-short-edge' as DuplexMode, label: 'Short edge', description: 'for horizontal documents' },
 ];
+
 const duplexEnabled = computed({
   get: () => jobCreator.duplexMode !== 'disabled',
   set: (value) => {
     if (value && jobCreator.duplexMode === 'disabled') {
-      jobCreator.duplexMode = 'duplex-unspecified';
+      jobCreator.duplexMode = 'duplex-long-edge';
     }
     if (!value) jobCreator.duplexMode = 'disabled';
   },
 });
 
-// Uses Tailwind color classes, see
-// https://tailwindcss.com/docs/detecting-classes-in-source-files#how-classes-are-detected
 const colorOptions = computed(() => [
   {
     value: 'monochrome' as ColorMode,
@@ -324,13 +341,6 @@ const colorOptions = computed(() => [
     disabled: jobCreator.selectedPrinter?.color_allowed === false,
   },
 ]);
-
-// const pageFilterOptions = [
-//   { value: 'all', label: 'All' },
-//   { value: 'odd', label: 'Odd' },
-//   { value: 'even', label: 'Even' },
-//   { value: 'custom', label: 'Custom' },
-// ];
 
 const nUpOptions = [1, 2, 4, 8, 16, 32];
 

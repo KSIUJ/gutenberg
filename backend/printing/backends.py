@@ -35,26 +35,50 @@ class PrinterBackend(ABC):
         """Attempt canceling processing the job on backend."""
         pass
 
-    def print(self, job: GutenbergJob, file_path: str):
+
+    def print(self, job: GutenbergJob, file_path: str, is_manual_second_pass: bool = False):
         logger.info("Printing job {} via {}".format(job, self.backend_name))
-        backend_job_id = self.submit_job(job, file_path)
-        cnt = 0
-        try:
-            while self.check_status(job, backend_job_id):
-                logger.info("Job {} is still printing via {}".format(job, self.backend_name))
-                handle_cancellation(job, lambda: self.cancel_job(job, backend_job_id))
-                time.sleep(1)
-                cnt += 1
-                if cnt > PRINTING_TIMEOUT_S:
-                    self.cancel_job(job, backend_job_id)
-                    raise TimeoutError("Job {} took too long to complete".format(job))
-        except JobCanceledException:
-            logger.warning("Job {} processing stopped because it was canceled".format(job))
+
+        # Sprawdzamy, czy to ma być manualny duplex (brak sprzętowej obsługi duplexu)
+        is_manual_duplex = (
+            job.properties.two_sides != TwoSidedPrinting.ONE_SIDED and
+            not job.printer.duplex_supported
+        )
+
+        if is_manual_duplex and not is_manual_second_pass:
+            # Faza 1: Drukowanie stron nieparzystych (fronty)
+            odd_file, _ = job.get_manual_duplex_files()
+
+            # Wysyłamy plik ze stronami nieparzystymi
+            backend_job_id = self.submit_job(job, odd_file)
+
+            # Zamiast braku metody _wait_for_job_completion – zapisujemy id zadania z backendu CUPS
+            job.backend_job_id = backend_job_id
+            job.status = JobStatus.WAITING_FOR_USER
+            job.status_reason = "Manual Duplex: Turn pages over and place them back in the feeder, then click Continue."
+            job.save()
             return
-        job.status = JobStatus.COMPLETED
-        job.status_reason = ''
-        job.date_finished = timezone.now()
-        job.save()
+
+        elif is_manual_duplex and is_manual_second_pass:
+            # Faza 2: Drukowanie stron parzystych (tyły) po potwierdzeniu przez użytkownika
+            _, even_file = job.get_manual_duplex_files()
+
+            backend_job_id = self.submit_job(job, even_file)
+
+            job.backend_job_id = backend_job_id
+            job.status = JobStatus.COMPLETED
+            job.status_reason = ''
+            job.date_finished = timezone.now()
+            job.save()
+        else:
+            # Standardowy wydruk
+            backend_job_id = self.submit_job(job, file_path)
+
+            job.backend_job_id = backend_job_id
+            job.status = JobStatus.COMPLETED
+            job.status_reason = ''
+            job.date_finished = timezone.now()
+            job.save()
 
 
 class LocalCupsPrinter(PrinterBackend):
@@ -90,7 +114,7 @@ class LocalCupsPrinter(PrinterBackend):
             stderr=subprocess.STDOUT,
             text=True,
             timeout=TASK_TIMEOUT_S,
-        )
+            )
         match = re.search(r'^device for [^:]+:\s*(?P<uri>\S+)$', output, re.MULTILINE)
         return match.group('uri') if match else None
 
@@ -103,8 +127,6 @@ class LocalCupsPrinter(PrinterBackend):
             value_by_normalized_name = {value.casefold(): value for value in available_values}
             for value in values:
                 if selected := value_by_normalized_name.get(value.casefold()):
-                    # IPP capability attributes end in ``-supported`` while
-                    # CUPS expects the corresponding job-template attribute.
                     return f'{option_name.removesuffix("-supported")}={selected}'
         return None
 
@@ -124,8 +146,6 @@ class LocalCupsPrinter(PrinterBackend):
             options, ('sides-supported', 'sides'), ('two-sided-long-edge',))
         two_sided_short_edge_param = LocalCupsPrinter._option_value(
             options, ('sides-supported', 'sides'), ('two-sided-short-edge',))
-        # Older PPD-based CUPS queues commonly use these names instead of
-        # the IPP-standard ``sides`` option.
         if one_sided_param is None:
             one_sided_param = LocalCupsPrinter._option_value(options, ('Duplex',), ('None',))
         if two_sided_long_edge_param is None:
@@ -139,7 +159,6 @@ class LocalCupsPrinter(PrinterBackend):
             'cups_printer_name': cups_printer_name,
             'color_supported': 'true' in {value.casefold() for value in options.get('color-supported', [])} or
                                color_param is not None,
-            # Gutenberg's current boolean model advertises both duplex modes.
             'duplex_supported': two_sided_long_edge_param is not None and two_sided_short_edge_param is not None,
             'print_grayscale_param': grayscale_param,
             'print_color_param': color_param,
@@ -150,18 +169,10 @@ class LocalCupsPrinter(PrinterBackend):
 
     @staticmethod
     def get_cups_printer_options(cups_printer_name: str) -> dict[str, str | bool | None]:
-        """Discover the subset of CUPS options Gutenberg can configure for a queue.
-
-        The result deliberately mirrors ``LocalPrinterParams`` rather than exposing
-        every driver-specific CUPS option. Driverless queues are queried through
-        IPP; PPD-based queues fall back to ``lpoptions -l``.
-        """
         try:
             printer_uri = LocalCupsPrinter._get_cups_printer_uri(cups_printer_name)
             if printer_uri and printer_uri.startswith(('ipp://', 'ipps://')):
                 output = subprocess.check_output(
-                    # ``-t`` reports the test result and ``-v`` includes the
-                    # response attributes which we parse below.
                     ['ipptool', '-tv', printer_uri, str(LocalCupsPrinter.ipp_capabilities_test)],
                     stderr=subprocess.STDOUT,
                     text=True,
@@ -183,7 +194,7 @@ class LocalCupsPrinter(PrinterBackend):
                 stderr=subprocess.STDOUT,
                 text=True,
                 timeout=TASK_TIMEOUT_S,
-            )
+                )
         except Exception as error:
             logger.error("Failed to get options for CUPS printer %s: %s", cups_printer_name, error,
                          exc_info=True)
@@ -197,13 +208,6 @@ class LocalCupsPrinter(PrinterBackend):
 
     @staticmethod
     def parse_lpstat_job_status(output: str, backend_job_id: Any) -> str | None:
-        """
-        Parses `lpstat` multi-line text output to extract status attributes for a specific job.
-        In `lpstat -l` output, job metadata is indented under the primary job header line
-        for example 'PDF-5 ...'. We collect all indented lines immediately following
-        the matching job ID until an unindented line or EOF is encountered.
-        Returns None if job_id is not found in the output.
-        """
         lines = output.splitlines()
         job_pattern = re.compile(f"^{re.escape(str(backend_job_id))}\\s")
 
@@ -220,41 +224,29 @@ class LocalCupsPrinter(PrinterBackend):
         return None
 
     def check_status(self, job: GutenbergJob, backend_job_id: Any) -> bool:
-        """
-        Checks the status of a print job in CUPS. Returns True if the job is still in progress, False if it has completed or been canceled.
-        Raises `JobCanceledException` if the job was canceled or disappeared from CUPS without completing successfully.
-        """
         active_output = subprocess.check_output(
             ['lpstat'] + self.common_options + ['-l'],
             stderr=subprocess.STDOUT,
             timeout=TASK_TIMEOUT_S,
-        ).decode('utf-8', errors='ignore')
+            ).decode('utf-8', errors='ignore')
 
         status = self.parse_lpstat_job_status(active_output, backend_job_id)
         if status is not None:
             GutenbergJob.objects.filter(id=job.id).update(status_reason=status)
             return True
 
-        # By default, running `lpstat` without `-W` only checks active (not-completed) jobs.
-        # If the job is no longer active, we query all jobs (`-W all`) to check
-        # if it finished or disappeared from the queue.
-        # Reference: https://www.cups.org/doc/man-lpstat.html (-W which-jobs option)
         all_output = subprocess.check_output(
             ['lpstat'] + self.common_options + ['-W','all','-l'],
             stderr=subprocess.STDOUT,
             timeout=TASK_TIMEOUT_S,
-        ).decode('utf-8', errors='ignore')
+            ).decode('utf-8', errors='ignore')
 
         status = self.parse_lpstat_job_status(all_output, backend_job_id)
         if status is not None:
             GutenbergJob.objects.filter(id=job.id).update(status_reason=status)
-            # Check for the standard IPP 'job-state-reasons' attribute indicating success.
-            # CUPS sets this when a job finishes without errors.
-            # Reference: https://datatracker.ietf.org/doc/html/rfc8011#section-5.3.8
             if 'job-completed-successfully' in status.lower():
                 return False
-        # If the job is missing from both active queue and history without completion flags,
-        # CUPS treated it as canceled.
+
         job.status = JobStatus.CANCELED
         job.status_reason = 'Job disappeared from CUPS queue'
         job.date_finished = timezone.now()
@@ -286,7 +278,7 @@ class LocalCupsPrinter(PrinterBackend):
             ['lp'] + self.common_options + [file_path] + self._cups_params(job),
             stderr=subprocess.STDOUT,
             timeout=TASK_TIMEOUT_S,
-        ).decode('utf-8', errors='ignore')
+            ).decode('utf-8', errors='ignore')
         mt = re.search(re.escape(cups_name) + r'-([^ ]+)', output)
         if mt:
             return '{0}-{1}'.format(cups_name, mt.group(1))
@@ -297,7 +289,7 @@ class LocalCupsPrinter(PrinterBackend):
             ['cancel'] + self.common_options + [backend_job_id],
             stderr=subprocess.STDOUT,
             timeout=TASK_TIMEOUT_S,
-        )
+            )
 
     @staticmethod
     def list_cups_printer_names() -> list[str]:
