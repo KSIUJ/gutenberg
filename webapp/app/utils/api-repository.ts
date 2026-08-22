@@ -8,6 +8,16 @@ export type User = {
   username: string;
   api_key: string;
   is_staff: boolean;
+  quota: QuotaPeriodUsage[];
+};
+
+export type QuotaPeriod = 'daily' | 'weekly' | 'monthly';
+
+export type QuotaPeriodUsage = {
+  period: QuotaPeriod;
+  limit_pages: number;
+  used_pages: number;
+  remaining_pages: number;
 };
 
 export type Printer = {

@@ -11,6 +11,11 @@ from django.utils import timezone
 
 from control.models import GutenbergJob, TwoSidedPrinting, JobStatus, PrinterType, Printer, PrintingProperties, \
     JobArtefact, JobArtefactType
+from control.quota_accounting import (
+    QuotaExceeded,
+    release_quota_for_job,
+    reserve_quota_for_job,
+)
 from printing.backends import DisabledPrinter, LocalCupsPrinter
 from printing.processing.converter import detect_file_format
 from printing.processing.final_pages import NoPagesToPrintException
@@ -108,13 +113,25 @@ def print_file(job_id):
                 for document in processed_documents
             )
 
-            job.status = JobStatus.PRINTING
-            job.status_reason = ''
-            job.date_processed = timezone.now()
             job.pages = (
                 sum_num_pages * job.properties.copies
             )
-            job.save()
+            job.save(update_fields=['pages'])
+
+            try:
+                reserve_quota_for_job(job)
+            except QuotaExceeded as ex:
+                job.status = JobStatus.CANCELED
+                job.status_reason = str(ex)
+                job.date_finished = timezone.now()
+                job.save(update_fields=['status', 'status_reason', 'date_finished'])
+                logger.info('Job %s canceled because its owner exceeded a quota', job.id)
+                return
+
+            job.status = JobStatus.PRINTING
+            job.status_reason = ''
+            job.date_processed = timezone.now()
+            job.save(update_fields=['status', 'status_reason', 'date_processed'])
 
             backend = {
                 PrinterType.DISABLED: DisabledPrinter,
@@ -131,10 +148,13 @@ def print_file(job_id):
                 )
 
     except JobCanceledException:
-        # Canceling job
-        pass
+        # The job was canceled before it finished.
+        if not getattr(job, 'quota_submission_accepted', False):
+            release_quota_for_job(job)
 
     except Exception as ex:
+        if not getattr(job, 'quota_submission_accepted', False):
+            release_quota_for_job(job)
         job.status = JobStatus.ERROR
         job.status_reason = repr(ex)
 

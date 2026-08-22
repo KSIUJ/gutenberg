@@ -42,19 +42,22 @@ class PrinterPermissionsAdmin(admin.TabularInline):
 
 class QuotaGroupAdminForm(forms.ModelForm):
     daily_limit = forms.IntegerField(
+        label='Daily page limit',
         required=False,
         min_value=0,
-        help_text='Leave blank for no group limit; 0 means unlimited.',
+        help_text='Maximum printed pages per day. Leave blank for no group quota; 0 means unlimited.',
     )
     weekly_limit = forms.IntegerField(
+        label='Weekly page limit',
         required=False,
         min_value=0,
-        help_text='Leave blank for no group limit; 0 means unlimited.',
+        help_text='Maximum printed pages per week. Leave blank for no group quota; 0 means unlimited.',
     )
     monthly_limit = forms.IntegerField(
+        label='Monthly page limit',
         required=False,
         min_value=0,
-        help_text='Leave blank for no group limit; 0 means unlimited.',
+        help_text='Maximum printed pages per month. Leave blank for no group quota; 0 means unlimited.',
     )
 
     class Meta:

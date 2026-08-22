@@ -12,11 +12,9 @@ from common.models import User
 
 
 class GroupQuota(models.Model):
-    """Quota limits made available to members of a Django group.
+    """Default page limits for members of a group.
 
-    A blank period does not contribute a limit.  Zero explicitly means that
-    the period is unlimited, while a positive value is a limit in printed
-    impressions.
+    Leave a period blank to not set a group limit. Zero means unlimited.
     """
 
     group = models.OneToOneField(Group, on_delete=models.CASCADE)
@@ -29,11 +27,7 @@ class GroupQuota(models.Model):
 
 
 class UserQuotaOverride(models.Model):
-    """Per-user replacements for limits inherited from quota groups.
-
-    The meaning of each field matches :class:`GroupQuota`: ``None`` inherits,
-    zero is unlimited, and a positive number is an explicit limit.
-    """
+    """Page limits set for one user instead of their group defaults."""
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     daily_limit = models.PositiveIntegerField(null=True, blank=True)
@@ -42,6 +36,63 @@ class UserQuotaOverride(models.Model):
 
     def __str__(self):
         return 'Quota override for {}'.format(self.user)
+
+
+class QuotaPeriod(models.TextChoices):
+    DAILY = 'daily', _('daily')
+    WEEKLY = 'weekly', _('weekly')
+    MONTHLY = 'monthly', _('monthly')
+
+
+class QuotaReservationState(models.TextChoices):
+    RESERVED = 'reserved', _('reserved')
+    CHARGED = 'charged', _('charged')
+    RELEASED = 'released', _('released')
+
+
+class QuotaUsage(models.Model):
+    """Page count for one user in one quota period."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    period = models.CharField(max_length=8, choices=QuotaPeriod.choices)
+    period_start = models.DateField()
+    reserved_impressions = models.PositiveIntegerField(default=0)
+    charged_impressions = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'period', 'period_start'],
+                name='unique_user_quota_period',
+            ),
+        ]
+
+
+class QuotaReservation(models.Model):
+    """Pages held or charged for a job in one quota period."""
+
+    job = models.ForeignKey(
+        'GutenbergJob',
+        on_delete=models.CASCADE,
+        related_name='quota_reservations',
+    )
+    usage = models.ForeignKey(QuotaUsage, on_delete=models.CASCADE)
+    impressions = models.PositiveIntegerField()
+    state = models.CharField(
+        max_length=10,
+        choices=QuotaReservationState.choices,
+        default=QuotaReservationState.RESERVED,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['job', 'usage'],
+                name='unique_job_quota_usage',
+            ),
+        ]
 
 
 class JobStatus(models.TextChoices):
