@@ -1,0 +1,15 @@
+# Query only the standard attributes required to configure Gutenberg's printer model.
+{
+    NAME "Get printer capabilities"
+    OPERATION get-printer-attributes
+    VERSION 2.0
+
+    GROUP operation
+    ATTR charset attributes-charset utf-8
+    ATTR language attributes-natural-language en
+    ATTR uri printer-uri $uri
+    # A comma-separated value makes this a 1setOf keyword attribute.
+    ATTR keyword requested-attributes color-supported,print-color-mode-supported,sides-supported
+
+    STATUS successful-ok
+}

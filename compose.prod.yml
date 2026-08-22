@@ -27,10 +27,7 @@ services:
     restart: unless-stopped
 
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: run_backend
+    image: ghcr.io/ksiuj/gutenberg-backend:${GUTENBERG_VERSION}
     container_name: gutenberg-backend
     environment:
       - HOME=/var/lib/gutenberg
@@ -38,7 +35,7 @@ services:
       - gutenberg_backend_logs:/var/log/gutenberg
       - gutenberg_backend_data:/var/lib/gutenberg
       - type: bind
-        source: ./backend/gutenberg/settings/docker_settings.py
+        source: ./docker_settings.py
         target: /etc/gutenberg/docker_settings.py
         read_only: true
       - type: bind
@@ -55,10 +52,7 @@ services:
       - gutenberg_django_secret_key
 
   celery:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: run_celery
+    image: ghcr.io/ksiuj/gutenberg-celery:${GUTENBERG_VERSION}
     container_name: gutenberg-celery
     environment:
       - HOME=/var/lib/gutenberg
@@ -71,7 +65,7 @@ services:
       - gutenberg_backend_logs:/var/log/gutenberg
       - gutenberg_backend_data:/var/lib/gutenberg
       - type: bind
-        source: ./backend/gutenberg/settings/docker_settings.py
+        source: ./docker_settings.py
         target: /etc/gutenberg/docker_settings.py
         read_only: true
       - type: bind
@@ -94,10 +88,7 @@ services:
     privileged: true
 
   proxy:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: run_nginx
+    image: ghcr.io/ksiuj/gutenberg-proxy:${GUTENBERG_VERSION}
     container_name: gutenberg-proxy
     ports:
       - "3000:80"
@@ -119,3 +110,4 @@ secrets:
     file: ./secrets/postgres_password.txt
   gutenberg_django_secret_key:
     file: ./secrets/django_secret_key.txt
+

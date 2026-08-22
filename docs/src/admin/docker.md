@@ -31,7 +31,7 @@ To run Gutenberg using the prebuilt Docker images, you need to download the `com
 mkdir gutenberg && cd gutenberg
 
 # Download compose.yml
-curl -O https://raw.githubusercontent.com/KSIUJ/gutenberg/main/compose.yml
+curl -o compose.yml -O https://raw.githubusercontent.com/KSIUJ/gutenberg/main/compose.prod.yml
 
 # Download and rename the settings template
 curl -o docker_settings.py https://raw.githubusercontent.com/KSIUJ/gutenberg/main/backend/gutenberg/settings/docker_settings.py.example

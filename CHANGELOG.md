@@ -5,43 +5,27 @@ See also [Creating new releases] for instructions on how to create a new release
 
 ## [Unreleased]
 ### Added
-- Added a new workflow (`docker-publish.yml`) to automatically build and publish `backend`, `celery`, and `proxy` images to the GitHub Container Registry [#184].
-- Added instructions in `docs/docker.md` and internal docs for users to fetch the required setup files (`compose.yml` and `docker_settings.py.example`) directly from the repository using `curl` [#184].
-- Introduced `compose.dev.yml` to support local development environments by allowing developers to build Docker images directly from source [#184].
-
-### Changed
-- Updated the `setup-ipp.vue` file to enhance the IPP configuration page [#201].
-- Replaced the legacy `docker-compose.yml` with a production-ready `compose.yml` that pulls prebuilt images from GHCR for end-users [#184].
-- Updated the `ImportError` message in `docker_server_overrides.py` to reflect that users will place `docker_settings.py` next to the `compose.yml` file [#184].
-
-### Fixed
-- Fixed a critical permission issue (`Permission denied: '/home/gutenberg-docker'`) in the `Dockerfile` to ensure the backend container correctly creates and assigns permissions to the user's home directory, preventing silent startup crashes [#201].
-
-### Changed
-- Migrated printing processing tests from `unittest` to `pytest`, parameterized test cases, and removed redundant `sys.modules` Django mocking [#194]
-### Added
-- Added new edge-case tests for page size ratio orientations, booklet odd-page imposition, disabled fit-to-page scaling, isolated temporary directories via `pytest` fixtures, and overlapping/unusual order input validators [#194]
-### Fixed
-- Fixed external CUPS job cancellation status detection [#179] 
-### Changed
+- Added REST API endpoints for print previews [#178]
 - Added configurable printer display order in the Django admin panel. [#181]
-- Modified nginx Docker image config to correctly pass the `X-Forwarded-Host` header [#175]
-- Changed default nginx location filenames [#175]
-- Added `GUTENBERG_TRUST_X_FORWARDED_HOST`, `GUTENBERG_TRUST_X_FORWARDED_PROTO` and `GUTENBERG_TRUST_X_REAL_IP` environment variables used to configure the nginx container [#175] 
-### Added
-- Added `GUTENBERG_TRUSTED_PROXY_IPS` environment variable for configuring trusted reverse proxy IP addresses when using `GUTENBERG_TRUST_X_FORWARDED_*` or `GUTENBERG_TRUST_X_REAL_IP` variables [#190]
-
-### Security
-- Nginx now requires explicit `GUTENBERG_TRUSTED_PROXY_IPS` configuration when `GUTENBERG_TRUST_X_FORWARDED_*` or `GUTENBERG_TRUST_X_REAL_IP` variables are enabled, preventing `X-Forwarded-*` header injection attacks [#190]
-### Added
-- Added `GUTENBERG_TRUST_X_FORWARDED_HOST`, `GUTENBERG_TRUST_X_FORWARDED_PROTO` and `GUTENBERG_TRUST_X_REAL_IP` environment variables used to configure the nginx container [#175] 
-- Added asynchronous REST API endpoints for generating, retrieving and canceling print previews [#178]
-- Added preview status, page metadata and print-job configuration version tracking [#178]
+- Added configuration environment variables used when Gutenberg is deployed behind a reverse proxy:
+  - `GUTENBERG_TRUST_X_FORWARDED_HOST`, `GUTENBERG_TRUST_X_FORWARDED_PROTO` and `GUTENBERG_TRUST_X_REAL_IP` [#175]
+  - `GUTENBERG_TRUSTED_PROXY_IPS` [#190]
+- Docker Images are now published in the GitHub Container Registry [#199]
+- Added automatic CUPS printer capability configuration when selecting a printer in the Django admin panel [#200]
 
 ### Changed
 - Modified nginx Docker image config to correctly pass the `X-Forwarded-Host` header [#175]
-- Changed default nginx location filenames [#175]
-- Reused the print PDF processing pipeline when generating preview page images [#178]
+- Changed the filenames and structure of nginx configuration files [#175], [#190]
+
+### Fixed
+- Fixed canceled CUPS job being incorrectly marked as completed [#179]
+
+### Tests
+- Added new edge-case tests for page size ratio orientations, booklet odd-page imposition,
+  disabled fit-to-page scaling, isolated temporary directories via `pytest` fixtures,
+  and overlapping/unusual order input validators [#194]
+- Migrated printing processing tests from `unittest` to `pytest`, parameterized test cases,
+  and removed redundant `sys.modules` Django mocking [#194]
 
 ## [4.0.0] - 2026-07-13
 ### Added
@@ -92,6 +76,8 @@ The previous significant commit was made on [2022-08-26](https://github.com/KSIU
 [#178]: https://github.com/KSIUJ/gutenberg/pull/178
 [#190]: https://github.com/KSIUJ/gutenberg/pull/190
 [#194]: https://github.com/KSIUJ/gutenberg/pull/194
+[#199]: https://github.com/KSIUJ/gutenberg/pull/199
+[#200]: https://github.com/KSIUJ/gutenberg/pull/200
 
 [keep a changelog]: https://keepachangelog.com/en/1.1.0/
 [OpenID Connect chapter]: https://ksiuj.github.io/gutenberg/admin/openid-connect.html

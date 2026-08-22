@@ -19,3 +19,7 @@
 .cups-printer-list-autocomplete li .autocomplete-button:hover, .cups-printer-list-autocomplete li .autocomplete-button:focus {
     color: var(--link-hover-color);
 }
+
+.cups-printer-options-status.error {
+    color: var(--error-fg);
+}
