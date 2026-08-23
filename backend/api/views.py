@@ -3,11 +3,7 @@ import os
 import tempfile
 from secrets import token_urlsafe
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from printing.services import (
-    create_printing_job as create_printing_job_helper,
-    validate_properties as validate_properties_helper,
-    run_job as run_job_helper,
-)
+from printing.services import create_printing_job,validate_properties, run_job
 from celery import current_app
 from django.contrib.auth import authenticate, login
 from django.db import transaction
@@ -171,7 +167,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
     ):
         # Delegation to services.py
         try:
-            job = create_printing_job_helper(
+            job = create_printing_job(
                 user=self.request.user,
                 printer_with_perms=printer_with_perms,
                 name='webrequest',
@@ -285,11 +281,11 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         return job
 
     def _run_job(self, job):
-        return run_job_helper(job, request_user=self.request.user)
+        return run_job(job, request_user=self.request.user)
 
     def _validate_properties(self, printer_id: int, properties, job):
         try:
-            validate_properties_helper(user=self.request.user, printer_id=printer_id, properties=properties, job=job)
+            validate_properties(user=self.request.user, printer_id=printer_id, properties=properties, job=job)
         except ObjectDoesNotExist:
             raise exceptions.NotFound("Selected printer does not exist")
         except ValidationError as ex:
