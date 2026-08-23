@@ -99,15 +99,14 @@ def run_job(job, request_user=None):
     except PrintPreview.DoesNotExist:
         preview = None
 
-    if preview is not None:
-        if preview.status in (PreviewStatus.PENDING, PreviewStatus.PROCESSING):
-            if preview.celery_task_id:
-                try:
-                    current_app.control.revoke(preview.celery_task_id, terminate=False)
-                except Exception:
-                    logger.exception("Failed to revoke previous preview task %s", preview.celery_task_id)
-            preview.status = PreviewStatus.CANCELED
-            preview.save(update_fields=['status', 'updated_at'])
+    if preview is not None and preview.status in (PreviewStatus.PENDING, PreviewStatus.PROCESSING):
+        if preview.celery_task_id:
+            try:
+                current_app.control.revoke(preview.celery_task_id, terminate=False)
+            except Exception:
+                logger.exception("Failed to revoke previous preview task %s", preview.celery_task_id)
+        preview.status = PreviewStatus.CANCELED
+        preview.save(update_fields=['status', 'updated_at'])
 
     job.status = JobStatus.PENDING
     job.save(update_fields=['status'])
@@ -126,13 +125,13 @@ def trigger_test_print_from_file(printer: Printer, user, file_path: str, *, colo
     Creates and enqueues a test print job for the given printer using a PDF file.
     Returns the created job.
     """
-    if getattr(printer, 'printer_type', None) not in (PrinterType.LOCAL_CUPS, 'LP',):
-        raise ValidationError("Test print is only supported for local CUPS printers (type LP).")
+    if not hasattr(printer, 'localprinterparams'):
+        raise ValidationError("Test print is only supported for printers with local CUPS configuration.")
 
     if color and not printer.color_supported:
-        raise ValidationError(f"Printer '{printer.name}' does not support color printing.")
+        raise ValidationError(f"Printer '{printer.name}' does not support colored printing.")
     if duplex and not printer.duplex_supported:
-        raise ValidationError(f"Printer '{printer.name}' does not support duplex printing.")
+        raise ValidationError(f"Printer '{printer.name}' does not support two-sided printing.")
 
     if not os.path.exists(file_path):
         raise ValidationError(f"Test document not found: {file_path}")
