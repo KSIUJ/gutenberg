@@ -128,6 +128,14 @@ class FinalPageProcessor:
             dy = target_center_y - current_center_y
             page.add_transformation(Transformation().translate(dx, dy))
 
+
+            # Modifying `cropbox` might also appear to modify `trimbox`, `bleedbox` or `artbox`, because
+            # if `trimbox`, `bleedbox` or `artbox` is not defined, then `cropbox` is used as the default value.
+            # In the same manner `mediabox` is used as the default for all others if they are not defined.
+            # Care must be taken to compute all the new values before modifying them.
+            #
+            # This behavior was the source of a bug in `pypdf` discovered while working on Gutenberg:
+            # https://github.com/py-pdf/pypdf/issues/3487
             new_attrs = dict()
             for attr in ['trimbox', 'bleedbox', 'artbox', 'cropbox', 'mediabox']:
                 current = getattr(page, attr)
@@ -170,9 +178,10 @@ class FinalPageProcessor:
 
     def create_manual_duplex_pages(self, final_pdf_path: str, reverse_even: bool = True) -> tuple[str, str]:
         """
-        Dzieli przetworzony plik PDF na dwa pliki:
-        - manual_duplex_odd.pdf (strony do pierwszego przebiegu)
-        - manual_duplex_even.pdf (strony do drugiego przebiegu z opcją odwrócenia kolejności)
+        Divides processed PDF file into 2 files:
+
+        - manual_duplex_odd.pdf (pages for the first pass)
+        - manual_duplex_even.pdf (pages for the second pass with order reversal)
         """
         reader = PdfReader(final_pdf_path)
         writer_odd = PdfWriter()
@@ -180,11 +189,11 @@ class FinalPageProcessor:
 
         total_pages = len(reader.pages)
 
-        # Strony nieparzyste (Front)
+        # Odd pages (Front)
         for i in range(0, total_pages, 2):
             writer_odd.add_page(reader.pages[i])
 
-        # Strony parzyste (Back)
+        # Even pages (Back)
         even_indices = list(range(1, total_pages, 2))
         has_blank = total_pages % 2 != 0
 

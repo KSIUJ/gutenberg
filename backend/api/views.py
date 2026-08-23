@@ -181,12 +181,12 @@ class PrintJobViewSet(viewsets.ModelViewSet):
         if job.status != JobStatus.WAITING_FOR_USER:
             raise InvalidStatus("Job is not waiting for user interaction")
 
-        # Zmienia status zadania, aby Celery kontynuował wydruk drugiej strony
+        # Change job status, so Celery can continue printing second page
         job.status = JobStatus.PENDING
         job.status_reason = "Manual duplex resumed by user"
         job.save()
 
-        # Wywołaj zadanie druku drugiej partii
+        # Invoke the second pass printing job
         print_file.delay(job.id, resume_manual_duplex=True)
         return Response(self.get_serializer(job).data)
 
@@ -203,7 +203,7 @@ class PrintJobViewSet(viewsets.ModelViewSet):
         orientation_requested: str,
         **_,
     ):
-        # 1. Tworzymy obiekt Job
+        # 1. Create Job object
         job = GutenbergJob.objects.create(
             name='webrequest',
             job_type=JobType.PRINT,
@@ -212,7 +212,7 @@ class PrintJobViewSet(viewsets.ModelViewSet):
             printer=printer_with_perms
         )
 
-        # 2. Tworzymy obiekt PrintingProperties bezpośrednio z relacją job
+        # 2. Create PrintingProperties object directly with Job relation
         properties = PrintingProperties.objects.create(
             job=job,
             color=color,
@@ -225,11 +225,11 @@ class PrintJobViewSet(viewsets.ModelViewSet):
             orientation_requested=orientation_requested,
         )
 
-        # 3. Walidujemy właściwości
+        # 3. Validate properties
         try:
             self._validate_properties(printer_with_perms.id, properties, job)
         except Exception:
-            # Jeśli walidacja nie przejdzie, usuwamy utworzony job z bazy i przepuszczamy wyjątek
+            # If validation fails, delete new job from the base and raise the exeption
             job.delete()
             raise
 
