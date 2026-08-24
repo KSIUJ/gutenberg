@@ -26,12 +26,24 @@
           <p-select
             id="printer-select"
             v-model="selectedPrinterId"
-            :options="printers.data.value"
+            :options="printerOptions"
             option-value="id"
             option-label="name"
+            option-disabled="disabled"
             fluid
             :loading="printers.pending.value"
-          />
+          >
+            <template #option="{ option }">
+              <div class="flex w-full items-center gap-2" :class="{ 'text-muted-color': option.disabled }">
+                <div>
+                  <div>{{ option.name }}</div>
+                  <div v-if="option.disabled" class="text-xs">
+                    Under maintenance{{ option.maintenance_message ? ` — ${option.maintenance_message}` : '' }}
+                  </div>
+                </div>
+              </div>
+            </template>
+          </p-select>
           <label for="printer-select">Printer</label>
         </p-float-label>
 
@@ -162,6 +174,11 @@ const printersErrorMessage = computed(() => {
   return getErrorMessage(printers.error.value) ?? 'Failed to load printer list';
 });
 
+const printerOptions = computed(() => (printers.data.value ?? []).map(printer => ({
+  ...printer,
+  disabled: !printer.is_available,
+})));
+
 const selectedPrinterId = computed<number | null>({
   get: () => getIntQueryParam(route.query.printer_id) ?? null,
   set: (value) => {
@@ -175,13 +192,14 @@ const selectedPrinterId = computed<number | null>({
   },
 });
 
-// Select the first printer if none is selected
+// Select the first available printer if none is selected, or if a bookmarked
+// printer has entered maintenance since the link was created.
 watchEffect(() => {
   if (!printers.data.value) return;
-  if (selectedPrinterId.value !== null) return;
-  const firstPrinter = printers.data.value.at(0);
-  if (!firstPrinter) return;
-  selectedPrinterId.value = firstPrinter.id;
+  const selectedPrinter = printers.data.value.find(printer => printer.id === selectedPrinterId.value);
+  if (selectedPrinter?.is_available) return;
+  const firstPrinter = printers.data.value.find(printer => printer.is_available);
+  selectedPrinterId.value = firstPrinter?.id ?? null;
 });
 
 const details = computed(() => {
@@ -190,7 +208,7 @@ const details = computed(() => {
   if (!printers.data.value) return null;
 
   const printer = printers.data.value.find(printer => printer.id === selectedPrinterId.value);
-  if (!printer) return null;
+  if (!printer || !printer.is_available) return null;
 
   return {
     ippTokenUrl: apiRepository.createIppUri($auth.me.value.api_key, selectedPrinterId.value),

@@ -40,7 +40,8 @@ class PrinterPermissionsAdmin(admin.TabularInline):
 
 class PrinterAdmin(admin.ModelAdmin):
     inlines = [LocalPrinterParamsInline, PrinterPermissionsAdmin]
-    list_display = ('name', 'display_order')
+    list_display = ('name', 'availability', 'display_order')
+    list_filter = ('availability',)
     ordering = ('display_order', 'name')
 
     def get_urls(self):

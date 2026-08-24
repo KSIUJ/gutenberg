@@ -16,6 +16,8 @@ export type Printer = {
   color_allowed: boolean;
   duplex_supported: boolean;
   supported_extensions: string;
+  is_available: boolean;
+  maintenance_message: string;
 };
 
 /**

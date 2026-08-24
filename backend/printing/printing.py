@@ -89,6 +89,17 @@ def print_file(job_id):
     logger.info("Processing job {}".format(job))
     handle_cancellation(job)
 
+    # A printer can enter maintenance after a job is queued. Check the current
+    # database value before any conversion work or CUPS submission.
+    job.printer.refresh_from_db()
+    if not job.printer.is_available:
+        job.status = JobStatus.ERROR
+        job.status_reason = job.printer.unavailable_message
+        job.date_finished = timezone.now()
+        job.save()
+        logger.info("Stopped queued job %s because its printer is under maintenance", job.id)
+        return
+
     job.status = JobStatus.PROCESSING
     job.status_reason = ''
     job.save()

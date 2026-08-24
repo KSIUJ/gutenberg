@@ -20,7 +20,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from api.exceptions import UnsupportedDocument, InvalidStatus
+from api.exceptions import UnsupportedDocument, InvalidStatus, PrinterUnavailable
 from api.serializers import GutenbergJobSerializer, PrinterSerializer, UserInfoSerializer, \
     CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer, LoginSerializer, \
     DeleteJobArtefactRequestSerializer, ChangeArtefactOrderRequestSerializer, JobArtefactSerializer, \
@@ -307,6 +307,8 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
                                                           printer_id=printer_id)
         if not printer_with_perms:
             raise exceptions.NotFound("Selected printer does not exist")
+        if not printer_with_perms.is_available:
+            raise PrinterUnavailable(printer_with_perms.unavailable_message)
         if properties.color and not printer_with_perms.color_allowed:
             raise exceptions.ValidationError("Color printing is not allowed on the selected printer")
         if properties.two_sides != TwoSidedPrinting.ONE_SIDED and not printer_with_perms.duplex_supported:

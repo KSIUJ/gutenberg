@@ -36,6 +36,11 @@ class PrinterType(models.TextChoices):
     LOCAL_CUPS = 'LP', _('local cups')
 
 
+class PrinterAvailability(models.TextChoices):
+    AVAILABLE = 'AVAILABLE', _('available')
+    MAINTENANCE = 'MAINTENANCE', _('under maintenance')
+
+
 class ImpositionTemplate(models.TextChoices):
     NONE = 'none', _('none'),
     BOOKLET = 'booklet', _('booklet')
@@ -55,6 +60,17 @@ class OrientationRequested(models.TextChoices):
 class Printer(models.Model):
     name = models.CharField(max_length=64)
     printer_type = models.CharField(max_length=10, default=PrinterType.DISABLED, choices=PrinterType.choices)
+    availability = models.CharField(
+        max_length=16,
+        default=PrinterAvailability.AVAILABLE,
+        choices=PrinterAvailability.choices,
+        help_text='Maintenance printers stay visible to users but cannot accept new jobs.',
+    )
+    maintenance_message = models.CharField(
+        max_length=240,
+        blank=True,
+        help_text='Optional message displayed to users while this printer is under maintenance.',
+    )
     color_supported = models.BooleanField(default=False)
     duplex_supported = models.BooleanField(default=False)
     display_order = models.PositiveIntegerField(
@@ -76,6 +92,17 @@ class Printer(models.Model):
 
     def __str__(self):
         return '{} ({})'.format(self.name, self.get_printer_type_display())
+
+    @property
+    def is_available(self):
+        return self.availability == PrinterAvailability.AVAILABLE
+
+    @property
+    def unavailable_message(self):
+        message = '{} is temporarily unavailable'.format(self.name)
+        if self.maintenance_message:
+            return '{}: {}'.format(message, self.maintenance_message)
+        return message
 
 
 # class Scaner(models.Model):

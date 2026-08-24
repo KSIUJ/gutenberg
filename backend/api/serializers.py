@@ -29,10 +29,14 @@ def _get_supported_extensions_default():
 class PrinterSerializer(serializers.ModelSerializer):
     supported_extensions = serializers.CharField(default=_get_supported_extensions_default)
     color_allowed = serializers.BooleanField()
+    is_available = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Printer
-        fields = ['id', 'name', 'color_allowed', 'duplex_supported', 'supported_extensions']
+        fields = [
+            'id', 'name', 'color_allowed', 'duplex_supported', 'supported_extensions',
+            'is_available', 'maintenance_message',
+        ]
 
 class CreatePrintJobRequestSerializer(serializers.Serializer):
     printer = serializers.IntegerField(required=True)
