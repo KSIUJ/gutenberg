@@ -6,10 +6,8 @@ All build targets are described in comments in the Dockerfile itself.
 The graph below visualizes the build-time layer dependencies.
 
 The images are based on Alpine Linux or on Debian. The variables `DEBIAN_VER` and `ALPINE_VER`
-are used to select versions of the base images. The same versions should albo be used
-when specifying image versions in `docker-compose.yml`. Using common versions let's
-Docker reduce the disk space used by the images.
-
+are used to select versions of the base images. The same versions should albo be used 
+when specifying image versions in `compose.yml`. Using common versions lets Docker reduce the disk space used by the images.
 ## Targets in Dockerfile
 - A solid line from `a` to `b` represents the `FROM a AS b` instruction.
 - A dashed line from `a` to `b` represents `COPY --from a` as a layer of target `b`. 
@@ -80,3 +78,13 @@ from `/app/backend/gutenberg/settings/docker_settings.py`.
 Build-time steps (like running the `collectstatic` command) use `docker_base.py` as the settings module.
 Run-time commands (starting the Django server and Celery worker) use `docker_server_overrides.py`.
 See the `ENV DJANGO_SETTINGS_MODULE=` commands in the `Dockerfile`.
+
+
+## Automatic Image Publishing
+Gutenberg uses GitHub Actions (`docker-publish.yml`) to automatically build and publish Docker images to the GitHub Container Registry (GHCR).
+The images are built automatically on every push to the `main` and `develop` branches, as well as whenever a new GitHub Release is published.
+The workflow uses the `docker/metadata-action` to dynamically generate tags. Images are tagged with the branch name (for example, `main`, `develop`) for branch pushes. For releases, they are tagged using Semantic Versioning (SemVer) based on the release tag.
+We do not publish images with a `latest` tag.
+Production deployments should
+rely on explicit release tags (like `v1.2.3`), a `latest` tag could break deployments when a new  major version of Gutenberg is released.   
+The `main` and `develop` tags reflect the latest state of those respective branches.

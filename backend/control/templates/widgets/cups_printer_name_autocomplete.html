@@ -1,4 +1,4 @@
-<div class="cups-printer-list-autocomplete">
+<div class="cups-printer-list-autocomplete" data-options-url="{{ cups_printer_options_url }}">
     <input
         class="vTextField"
         type="text"
@@ -22,4 +22,5 @@
     {% else %}
     <p class="empty-message">No CUPS printer found</p>
     {% endif %}
+    <p class="cups-printer-options-status" role="status" aria-live="polite"></p>
 </div>
