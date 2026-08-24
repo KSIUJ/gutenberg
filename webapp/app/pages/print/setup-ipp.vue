@@ -20,7 +20,10 @@
           You can print directly from your device using IPP.
         </p>
 
-        <p-float-label variant="in" class="mb-6">
+        <p-float-label
+          variant="in"
+          class="mb-6"
+        >
           <p-select
             id="printer-select"
             v-model="selectedPrinterId"
@@ -56,7 +59,10 @@
             class="mb-6"
           >
             <!-- INSTRUCTIONS FOR WINDOWS AND IOS (Require Basic Auth) -->
-            <div v-if="selectedOS === 'windows' || selectedOS === 'ios'" class="flex flex-col gap-4">
+            <div
+              v-if="selectedOS === 'windows' || selectedOS === 'ios'"
+              class="flex flex-col gap-4"
+            >
               <div class="mb-2 text-surface-700">
                 <p
                   v-if="selectedOS === 'windows'"
@@ -64,14 +70,20 @@
                 >
                   Follow these steps to add the printer on <strong>Windows 11</strong>:
                 </p>
-                <ol v-if="selectedOS === 'windows'" class="list-decimal list-inside space-y-1 mb-4 ml-1">
+                <ol
+                  v-if="selectedOS === 'windows'"
+                  class="list-decimal list-inside space-y-1 mb-4 ml-1"
+                >
                   <li>Open <strong>Settings</strong> > <strong>Bluetooth & devices</strong> > <strong>Printers & scanners</strong>.</li>
                   <li>Click <strong>Add device</strong> and then <strong>Add manually</strong>.</li>
                   <li>Choose <strong>Select a shared printer by name</strong>.</li>
                   <li>Paste the endpoint address below.</li>
                 </ol>
 
-                <p v-if="selectedOS === 'ios'" class="mb-4">
+                <p
+                  v-if="selectedOS === 'ios'"
+                  class="mb-4"
+                >
                   <strong>Note:</strong> iOS printing usually requires a Bonjour server on your network to discover the printer automatically. Once discovered, you will use the credentials below.
                 </p>
               </div>
@@ -88,7 +100,10 @@
                 />
                 <label for="ipp-basic-auth-url">Printer IPP Endpoint</label>
               </p-ifta-label>
-              <input-hint id="ipp-basic-auth-url-description" class="mb-4">
+              <input-hint
+                id="ipp-basic-auth-url-description"
+                class="mb-4"
+              >
                 You will be asked to authenticate using your username and IPP token when connecting.
               </input-hint>
 
@@ -117,7 +132,10 @@
                     />
                     <label for="ipp-password">Your IPP token/password</label>
                   </p-ifta-label>
-                  <input-hint id="ipp-password-description" warn>
+                  <input-hint
+                    id="ipp-password-description"
+                    warn
+                  >
                     Do not share this with others.
                   </input-hint>
                 </div>
@@ -125,16 +143,29 @@
             </div>
 
             <!-- INSTRUCTIONS FOR MACOS, LINUX, AND ANDROID (Require Secret URI) -->
-            <div v-if="selectedOS === 'macos' || selectedOS === 'linux' || selectedOS === 'android'" class="flex flex-col gap-4">
+            <div
+              v-if="selectedOS === 'macos' || selectedOS === 'linux' || selectedOS === 'android'"
+              class="flex flex-col gap-4"
+            >
               <div class="mb-2 text-surface-700">
-                <p v-if="selectedOS === 'macos'" class="mb-4">
+                <p
+                  v-if="selectedOS === 'macos'"
+                  class="mb-4"
+                >
                   Open <strong>System Settings > Printers & Scanners</strong>, click <strong>Add Printer</strong>, go to the <strong>IP</strong> tab, and use the Secret URI below. Set the protocol to IPP.
                 </p>
-                <p v-if="selectedOS === 'linux'" class="mb-4">
+                <!-- TODO: Verify the accessibility of this dialog -->
+                <p
+                  v-if="selectedOS === 'linux'"
+                  class="mb-4"
+                >
                   You can add this printer using the CUPS command line tool. (Tip: Avoid pasting secrets directly into interactive shell commands to keep them out of your shell history). Run a command similar to:<br>
                   <code class="block mt-2 p-2 bg-surface-100 rounded text-sm">lpadmin -p Gutenberg -v &lt;YOUR_SECRET_URI&gt; -E -m everywhere</code>
                 </p>
-                <p v-if="selectedOS === 'android'" class="mb-4">
+                <p
+                  v-if="selectedOS === 'android'"
+                  class="mb-4"
+                >
                   Use a 3rd party printing app (like CUPS Printing) and add the printer manually using your Secret URI below.
                 </p>
               </div>
@@ -151,7 +182,10 @@
                 />
                 <label for="ipp-token-url">Your personal IPP Secret URI</label>
               </p-ifta-label>
-              <input-hint id="ipp-token-url-description" warn>
+              <input-hint
+                id="ipp-token-url-description"
+                warn
+              >
                 Do not share this with others - all files printed using this address will be accounted to your quota.
               </input-hint>
             </div>
@@ -245,7 +279,7 @@ const selectedPrinterId = computed<number | null>({
     });
   },
 });
-
+// Select the first printer if none is selected
 watchEffect(() => {
   if (!printers.data.value) return;
   if (selectedPrinterId.value !== null) return;

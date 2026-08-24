@@ -29,8 +29,6 @@ services:
   backend:
     image: ghcr.io/ksiuj/gutenberg-backend:${GUTENBERG_VERSION}
     container_name: gutenberg-backend
-    environment:
-      - HOME=/var/lib/gutenberg
     volumes:
       - gutenberg_backend_logs:/var/log/gutenberg
       - gutenberg_backend_data:/var/lib/gutenberg
@@ -54,8 +52,6 @@ services:
   celery:
     image: ghcr.io/ksiuj/gutenberg-celery:${GUTENBERG_VERSION}
     container_name: gutenberg-celery
-    environment:
-      - HOME=/var/lib/gutenberg
     depends_on:
       db:
         condition: service_healthy

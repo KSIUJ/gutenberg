@@ -16,9 +16,11 @@ See also [Creating new releases] for instructions on how to create a new release
 ### Changed
 - Modified nginx Docker image config to correctly pass the `X-Forwarded-Host` header [#175]
 - Changed the filenames and structure of nginx configuration files [#175], [#190]
+- Enhanced the IPP configuration page UI in the webapp [#206]
 
 ### Fixed
 - Fixed canceled CUPS job being incorrectly marked as completed [#179]
+  Fixed backend Docker container startup crashes (permission denied) by ensuring the `gutenberg-docker` home directory is explicitly created with proper ownership [#206]
 
 ### Tests
 - Added new edge-case tests for page size ratio orientations, booklet odd-page imposition,
@@ -78,6 +80,7 @@ The previous significant commit was made on [2022-08-26](https://github.com/KSIU
 [#194]: https://github.com/KSIUJ/gutenberg/pull/194
 [#199]: https://github.com/KSIUJ/gutenberg/pull/199
 [#200]: https://github.com/KSIUJ/gutenberg/pull/200
+[#206]: https://github.com/KSIUJ/gutenberg/pull/206
 
 [keep a changelog]: https://keepachangelog.com/en/1.1.0/
 [OpenID Connect chapter]: https://ksiuj.github.io/gutenberg/admin/openid-connect.html
