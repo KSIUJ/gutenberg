@@ -115,7 +115,7 @@
                    `h-full` add `self-stretch` to opt back in. -->
               <preview-page-image
                 v-if="!isPaired"
-                :page="selectedUnit.pages[0]"
+                :page="selectedUnit.pages[0]!"
                 class="max-h-full max-w-full"
               />
 
@@ -160,14 +160,14 @@
                 <div class="flex min-w-0 flex-1 flex-col items-center gap-1">
                   <span class="text-xs font-medium text-muted-color">Front</span>
                   <preview-page-image
-                    :page="selectedUnit.pages[0]"
+                    :page="selectedUnit.pages[0]!"
                     class="min-h-0 max-w-full grow"
                   />
                 </div>
                 <div class="flex min-w-0 flex-1 flex-col items-center gap-1">
                   <span class="text-xs font-medium text-muted-color">Back</span>
                   <preview-page-image
-                    :page="selectedUnit.pages[1]"
+                    :page="selectedUnit.pages[1]!"
                     class="min-h-0 max-w-full grow"
                     :rotated="rotateBack180"
                   />
