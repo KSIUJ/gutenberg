@@ -44,7 +44,10 @@
                     v-if="option.disabled"
                     class="text-xs"
                   >
-                    Under maintenance{{ option.maintenance_message ? ` — ${option.maintenance_message}` : '' }}
+                    Under maintenance
+                    <template v-if="option.maintenance_message">
+                      — {{ option.maintenance_message }}
+                    </template>
                   </div>
                 </div>
               </div>
