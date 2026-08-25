@@ -38,12 +38,21 @@ export type CreatePrintJobRequest = {
 // TODO: Add the 'SCANNING' and 'WAITING_PAGE' statuses when scanning is implemented
 export type JobStatus = 'UNKNOWN' | 'INCOMING' | 'PENDING' | 'PROCESSING' | 'PRINTING' | 'COMPLETED' | 'CANCELED' | 'CANCELING' | 'ERROR';
 
+export type JobArtefact = {
+  id: number;
+  file: string;
+  artefact_type: string;
+  mime_type: string;
+  document_number: number;
+};
+
 export type PrintJob = {
   id: number;
   pages: number | null;
   printer: string | null;
   status: JobStatus;
   status_reason: string | null;
+  artefacts: JobArtefact[];
 };
 
 export type ListResponse<T> = {
@@ -51,6 +60,32 @@ export type ListResponse<T> = {
   next: string | null;
   previous: string | null;
   results: T[];
+};
+
+export type ChangePrintJobPropertiesRequest = Partial<CreatePrintJobRequest>;
+
+export type PreviewStatus = 'pending' | 'processing' | 'ready' | 'failed' | 'canceled';
+
+// Pages are already the final, imposed sheet sides that will be sent to the printer -
+// N-up/booklet layout and rotation are already applied by the backend.
+export type PrintPreviewPage = {
+  number: number;
+  image: string;
+  width: number;
+  height: number;
+};
+
+export type PrintPreview = {
+  id: number;
+  job: number;
+  status: PreviewStatus;
+  generation: number;
+  configuration_version: number;
+  page_count: number;
+  pages: PrintPreviewPage[];
+  error: string;
+  created_at: string;
+  updated_at: string;
 };
 
 export const Unauthenticated = Symbol('Unauthenticated');
@@ -114,6 +149,32 @@ export const createApiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => (
     return await fetch<PrintJob>(`/api/jobs/${jobId}/upload_artefact/`, {
       method: 'POST',
       body: formData,
+    });
+  },
+
+  async deleteArtefact(jobId: number, artefactId: number): Promise<PrintJob> {
+    return await fetch<PrintJob>(`/api/jobs/${jobId}/delete_artefact/`, {
+      method: 'DELETE',
+      body: { artefact_id: artefactId },
+    });
+  },
+
+  async changePrintJobProperties(jobId: number, body: ChangePrintJobPropertiesRequest): Promise<PrintJob> {
+    return await fetch<PrintJob>(`/api/jobs/${jobId}/change_properties/`, {
+      method: 'POST',
+      body,
+    });
+  },
+
+  async getJobPreview(jobId: number): Promise<PrintPreview> {
+    return await fetch<PrintPreview>(`/api/jobs/${jobId}/preview/`, {
+      method: 'GET',
+    });
+  },
+
+  async requestJobPreview(jobId: number): Promise<PrintPreview> {
+    return await fetch<PrintPreview>(`/api/jobs/${jobId}/preview/`, {
+      method: 'POST',
     });
   },
 

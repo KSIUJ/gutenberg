@@ -12,10 +12,12 @@ See also [Creating new releases] for instructions on how to create a new release
   - `GUTENBERG_TRUSTED_PROXY_IPS` [#190]
 - Docker Images are now published in the GitHub Container Registry [#199]
 - Added automatic CUPS printer capability configuration when selecting a printer in the Django admin panel [#200]
+- Added a web UI for print preview REST API added in [#178] 
 
 ### Changed
 - Modified nginx Docker image config to correctly pass the `X-Forwarded-Host` header [#175]
 - Changed the filenames and structure of nginx configuration files [#175], [#190]
+- Changed print jobs to be created when the first file is uploaded, not only when clicking Print, so preview can be shown before printing [#192]
 
 ### Fixed
 - Fixed canceled CUPS job being incorrectly marked as completed [#179]
