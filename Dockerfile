@@ -59,7 +59,7 @@ RUN apt-get update && apt-get install -y \
 ENV GUTENBERG_USERNAME="gutenberg-docker"
 ENV GUTENBERG_UID="659"
 ENV GUTENBERG_GID="659"
-RUN mkdir -p /home/gutenberg-docker && chown -R 659:659 /home/gutenberg-docker
+
 
 # setup_django target
 #   Syncs the uv project and copies all backend project files

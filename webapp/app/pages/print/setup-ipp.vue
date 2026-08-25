@@ -41,17 +41,12 @@
             <h3 class="text-sm font-semibold text-surface-500 mb-3 uppercase tracking-wider">
               Select your Operating System
             </h3>
-            <div class="flex flex-wrap gap-2">
-              <p-button
-                v-for="os in osOptions"
-                :key="os.id"
-                :label="os.label"
-                :severity="selectedOS === os.id ? 'primary' : 'secondary'"
-                :variant="selectedOS === os.id ? 'contained' : 'outlined'"
-                size="small"
-                @click="selectedOS = os.id"
-              />
-            </div>
+            <p-selectbutton
+              v-model="selectedOS"
+              :options="osOptions"
+              option-label="label"
+              option-value="id"
+            />
           </div>
           <!-- DYNAMIC INSTRUCTIONS: Change depending on the selected operating system -->
           <p-fieldset
