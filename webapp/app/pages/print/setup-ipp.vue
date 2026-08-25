@@ -34,10 +34,16 @@
             :loading="printers.pending.value"
           >
             <template #option="{ option }">
-              <div class="flex w-full items-center gap-2" :class="{ 'text-muted-color': option.disabled }">
+              <div
+                class="flex w-full items-center gap-2"
+                :class="{ 'text-muted-color': option.disabled }"
+              >
                 <div>
                   <div>{{ option.name }}</div>
-                  <div v-if="option.disabled" class="text-xs">
+                  <div
+                    v-if="option.disabled"
+                    class="text-xs"
+                  >
                     Under maintenance{{ option.maintenance_message ? ` — ${option.maintenance_message}` : '' }}
                   </div>
                 </div>
