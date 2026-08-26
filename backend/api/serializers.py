@@ -3,6 +3,7 @@ from rest_framework import serializers
 from common.models import User
 from control.models import GutenbergJob, Printer, TwoSidedPrinting, validate_pages_to_print, validate_n_up, \
     ImpositionTemplate, OrientationRequested, JobArtefact, PrintPreview, PrintPreviewPage
+from control.quota_accounting import quota_summary_for_user
 from gutenberg.worker_capabilities import get_formats_supported_by_workers
 
 
@@ -75,9 +76,22 @@ class ChangeArtefactOrderRequestSerializer(serializers.Serializer):
     )
 
 class UserInfoSerializer(serializers.ModelSerializer):
+    quota = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'username', 'api_key', 'is_staff']
+        fields = ['first_name', 'last_name', 'username', 'api_key', 'is_staff', 'quota']
+
+    def get_quota(self, user):
+        return [
+            {
+                'period': summary.period,
+                'limit_pages': summary.limit_pages,
+                'used_pages': summary.used_pages,
+                'remaining_pages': summary.remaining_pages,
+            }
+            for summary in quota_summary_for_user(user)
+        ]
 
 
 class LoginSerializer(serializers.Serializer):
