@@ -1,18 +1,20 @@
 import logging
 
 from celery.app.control import flatten_reply
+from django import forms
 from django.contrib import admin
+from django.contrib.auth.admin import GroupAdmin
+from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.urls import path
 
 from control.forms import LocalPrinterParamsForm
 from control.models import GutenbergJob, PrintingProperties, PrinterPermissions, LocalPrinterParams, Printer, \
-    JobArtefact
+    JobArtefact, GroupQuota
 from gutenberg.celery import app
 
 logger = logging.getLogger('gutenberg.control')
-
 
 class PrintingPropertiesInline(admin.TabularInline):
     model = PrintingProperties
@@ -36,6 +38,63 @@ class LocalPrinterParamsInline(admin.StackedInline):
 
 class PrinterPermissionsAdmin(admin.TabularInline):
     model = PrinterPermissions
+
+
+class QuotaGroupAdminForm(forms.ModelForm):
+    daily_limit = forms.IntegerField(
+        label='Daily page limit',
+        required=False,
+        min_value=0,
+        help_text='Maximum printed pages per day. Leave blank for no group quota; 0 means unlimited.',
+    )
+    weekly_limit = forms.IntegerField(
+        label='Weekly page limit',
+        required=False,
+        min_value=0,
+        help_text='Maximum printed pages per week. Leave blank for no group quota; 0 means unlimited.',
+    )
+    monthly_limit = forms.IntegerField(
+        label='Monthly page limit',
+        required=False,
+        min_value=0,
+        help_text='Maximum printed pages per month. Leave blank for no group quota; 0 means unlimited.',
+    )
+
+    class Meta:
+        model = Group
+        fields = ('name', 'permissions')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.instance.pk:
+            return
+        try:
+            quota = self.instance.groupquota
+        except GroupQuota.DoesNotExist:
+            return
+        for field_name in ('daily_limit', 'weekly_limit', 'monthly_limit'):
+            self.initial[field_name] = getattr(quota, field_name)
+
+
+class QuotaGroupAdmin(GroupAdmin):
+    form = QuotaGroupAdminForm
+    fieldsets = (
+        (None, {'fields': ('name',)}),
+        ('Permissions', {'fields': ('permissions',)}),
+        ('Print quota', {
+            'fields': ('daily_limit', 'weekly_limit', 'monthly_limit'),
+        }),
+    )
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        GroupQuota.objects.update_or_create(
+            group=obj,
+            defaults={
+                field_name: form.cleaned_data[field_name]
+                for field_name in ('daily_limit', 'weekly_limit', 'monthly_limit')
+            },
+        )
 
 
 class PrinterAdmin(admin.ModelAdmin):
@@ -95,3 +154,5 @@ class PrinterAdmin(admin.ModelAdmin):
 
 admin.site.register(Printer, PrinterAdmin)
 admin.site.register(GutenbergJob, GutenbergJobAdmin)
+admin.site.unregister(Group)
+admin.site.register(Group, QuotaGroupAdmin)

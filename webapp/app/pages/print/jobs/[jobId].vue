@@ -144,6 +144,7 @@ const STATUS_TO_STEP_MAP: Record<JobStatus, number | null> = {
 };
 
 const apiRepository = useApiRepository();
+const { $auth } = useNuxtApp();
 const route = useRoute();
 const toast = useToast();
 
@@ -160,8 +161,16 @@ watch(() => job.error.value, (error) => {
 useIntervalFn(() => {
   if (job.pending.value || !job.data.value) return;
   if (COMPLETED_STATUES.includes(job.data.value.status)) return;
-  job.refresh().catch();
+  job.refresh()
+    .then(() => $auth.refreshMe())
+    .catch();
 }, 1000);
+
+watch(
+  () => job.data.value?.status,
+  () => $auth.refreshMe().catch(),
+  { immediate: true },
+);
 
 const errorMessage = computed(() => {
   if (job.error.value) {
