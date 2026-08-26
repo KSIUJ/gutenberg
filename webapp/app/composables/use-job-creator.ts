@@ -278,7 +278,7 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
     try {
       document.state = 'uploading';
       const job = await apiRepository.uploadArtefact(currentJobId, document.file, false);
-      document.artefactId = job.artefacts.at(-1)?.id ?? null;
+      document.artefactId = job.uploaded_artefact_id;
       document.state = 'uploaded';
     } catch (error) {
       document.state = 'error';

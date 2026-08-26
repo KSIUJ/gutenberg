@@ -142,11 +142,11 @@ export const createApiRepository = <T>(fetch: $Fetch<T, NitroFetchRequest>) => (
     });
   },
 
-  async uploadArtefact(jobId: number, file: File, last: boolean): Promise<PrintJob> {
+  async uploadArtefact(jobId: number, file: File, last: boolean): Promise<PrintJob & { uploaded_artefact_id: number }> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('last', last ? '1' : '0');
-    return await fetch<PrintJob>(`/api/jobs/${jobId}/upload_artefact/`, {
+    return await fetch<PrintJob & { uploaded_artefact_id: number }>(`/api/jobs/${jobId}/upload_artefact/`, {
       method: 'POST',
       body: formData,
     });
