@@ -125,8 +125,6 @@ def trigger_test_print_from_file(printer: Printer, user, file_path: str, *, colo
     Creates and enqueues a test print job for the given printer using a PDF file.
     Returns the created job.
     """
-    if not hasattr(printer, 'localprinterparams'):
-        raise ValidationError("Test print is only supported for printers with local CUPS configuration.")
 
     if color and not printer.color_supported:
         raise ValidationError(f"Printer '{printer.name}' does not support colored printing.")
