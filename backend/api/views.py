@@ -75,10 +75,12 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = UploadJobArtefactRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            self._upload_artefact(job, **serializer.validated_data)
+            artefact = self._upload_artefact(job, **serializer.validated_data)
         except UnsupportedDocumentError as ex:
             raise UnsupportedDocument(str(ex))
-        return Response(self.get_serializer(job).data)
+        response_data = self.get_serializer(job).data
+        response_data['uploaded_artefact_id'] = artefact.id
+        return Response(response_data)
 
     @action(detail=True, methods=['delete'], name='Delete artefact')
     def delete_artefact(self, request, pk=None):
@@ -261,6 +263,7 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
             if artefact is not None and artefact.file.name:
                 artefact.file.delete(save=False)
             raise
+        return artefact
 
     def _change_order(self, new_order):
         job = self.get_object()

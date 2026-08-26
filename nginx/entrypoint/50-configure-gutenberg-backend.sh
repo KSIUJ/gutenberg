@@ -31,7 +31,7 @@ generate_config() {
   if [ "${GUTENBERG_TRUST_X_FORWARDED_PROTO}" = "1" ]; then
     echo '    proxy_set_header X-Forwarded-Host $http_x_forwarded_host;'
   else
-    echo '    proxy_set_header X-Forwarded-Host $host;'
+    echo '    proxy_set_header X-Forwarded-Host $http_host;'
   fi
   echo ''
   echo '    # [`SECURE_PROXY_SSL_HEADER`](https://docs.djangoproject.com/en/6.0/ref/settings/#secure-proxy-ssl-header)'

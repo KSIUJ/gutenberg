@@ -295,12 +295,17 @@
       <p-button
         label="Preview"
         severity="secondary"
-        disabled
-        @click="preview()"
+        :disabled="jobCreator.documents.length === 0 || jobCreator.selectedPrinter === null"
+        :loading="preview.status === 'preparing' || preview.status === 'generating'"
+        @click="preview.open()"
       />
     </template>
   </app-panel>
   <file-drop-target @files-dropped="(files) => jobCreator.addFiles(files)" />
+  <preview-dialog
+    :job-creator="jobCreator"
+    :preview="preview"
+  />
 </template>
 
 <script setup lang="ts">
@@ -309,6 +314,7 @@ import type { OrientationRequested } from '~/composables/use-job-creator';
 
 const printers = await usePrinters();
 const jobCreator = useJobCreator(printers);
+const preview = usePrintPreview(jobCreator);
 
 const printersErrorMessage = computed(() => {
   if (printers.error.value === undefined) return null;
@@ -378,8 +384,4 @@ const onFileSelect = (event: FileUploadSelectEvent) => {
 const formatExtensions = (extensions: string) => {
   return extensions.split(',').map(ext => ext.trim()).join(', ');
 };
-
-function preview() {
-  console.log('Preview clicked');
-}
 </script>
