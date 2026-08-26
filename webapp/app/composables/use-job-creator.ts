@@ -11,7 +11,8 @@ export type JobDocument = {
   localId: number;
   filename: string;
   file: File;
-  state: 'pending' | 'uploading' | 'uploaded' | 'error';
+  state: 'pending' | 'uploading' | 'uploaded' | 'removing' | 'error';
+  artefactId: number | null;
   remove(): void;
 };
 
@@ -38,6 +39,12 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
 
   const selectedPrinterId = ref(getDefaultPrinter()?.id ?? null);
   const documentQueue = ref<JobDocument[]>([]);
+
+  // The job used to only get created when "Print" was clicked; now it's created as soon as the
+  // first file is added, so a preview can be requested before that.
+  const jobId = ref<number | null>(null);
+  const lastSyncedSettings = ref<CreatePrintJobRequest | null>(null);
+
   const copyCount = ref(1);
   const duplexMode = ref<DuplexMode>('disabled');
   const colorMode = ref<ColorMode>('monochrome');
@@ -228,6 +235,29 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
     return list;
   });
 
+  const removeDocument = async (document: JobDocument) => {
+    if (printLoading.value || document.state === 'uploading' || document.state === 'removing') return;
+    if (document.state === 'uploaded' && document.artefactId !== null && jobId.value !== null) {
+      try {
+        document.state = 'removing';
+        await apiRepository.deleteArtefact(jobId.value, document.artefactId);
+      } catch (deleteError) {
+        document.state = 'uploaded';
+        console.error('Failed to remove document from job', deleteError);
+        toast.add({
+          severity: 'error',
+          summary: 'Failed to remove file',
+          detail: getErrorMessage(deleteError) ?? undefined,
+          life: 5000,
+        });
+        return;
+      }
+    }
+    documentQueue.value = documentQueue.value.filter(
+      candidate => candidate.localId !== document.localId,
+    );
+  };
+
   let nextLocalFileId = 0;
   const addFiles = (files: File[]) => {
     documentQueue.value.push(...files.map(file => reactive({
@@ -235,29 +265,22 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
       file,
       filename: file.name,
       state: 'pending' as const,
+      artefactId: null,
       remove() {
-        if (printLoading.value) return;
-        documentQueue.value = documentQueue.value.filter(
-          document => document.localId !== this.localId,
-        );
+        removeDocument(this).catch((removeError: unknown) => {
+          console.error('Unexpected error while removing document', removeError);
+        });
       },
     })));
     optionsExpanded.value = true;
   };
 
-  const tryCancel = async (jobId: number) => {
-    try {
-      await apiRepository.cancelPrintJob(jobId);
-    } catch (error) {
-      console.warn('Failed to cancel job after error', error);
-    }
-  };
-
-  const uploadDocument = async (jobId: number, document: JobDocument, isLast: boolean) => {
+  const uploadDocument = async (currentJobId: number, document: JobDocument) => {
     if (document.state !== 'pending' && document.state !== 'error') return;
     try {
       document.state = 'uploading';
-      await apiRepository.uploadArtefact(jobId, document.file, isLast);
+      const job = await apiRepository.uploadArtefact(currentJobId, document.file, false);
+      document.artefactId = job.uploaded_artefact_id;
       document.state = 'uploaded';
     } catch (error) {
       document.state = 'error';
@@ -265,32 +288,40 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
     }
   };
 
-  const completePrintJob = async (jobId: number) => {
-    try {
-      const documents = [...documentQueue.value];
-      for (const document of documents) {
-        await uploadDocument(jobId, document, false);
-      }
-      await apiRepository.runJob(jobId);
-    } catch (error) {
-      await tryCancel(jobId);
-      throw error;
+  // Creates the job if it doesn't exist yet, updates it if the settings changed, and uploads
+  // any documents that haven't made it to the server yet.
+  const ensureJobUpToDate = async (): Promise<number> => {
+    showSerializationErrors.value = true;
+    const settings = serializedSettings.value.value;
+    if (settings === null) {
+      throw new Error('Cannot create or update the job: current settings are not valid');
     }
-    await navigateTo(`/print/jobs/${jobId}/`);
+
+    if (jobId.value === null) {
+      const job = await apiRepository.createPrintJob(settings);
+      jobId.value = job.id;
+      lastSyncedSettings.value = settings;
+    } else if (JSON.stringify(settings) !== JSON.stringify(lastSyncedSettings.value)) {
+      await apiRepository.changePrintJobProperties(jobId.value, settings);
+      lastSyncedSettings.value = settings;
+    }
+
+    for (const document of documentQueue.value) {
+      await uploadDocument(jobId.value, document);
+    }
+
+    return jobId.value;
   };
 
   const print = async () => {
-    showSerializationErrors.value = true;
-    if (printLoading.value || serializedSettings.value.value === null) return;
+    if (printLoading.value) return;
 
     try {
       printLoading.value = true;
       printError.value = null;
-      documentQueue.value.forEach((document) => {
-        document.state = 'pending';
-      });
-      const job = await apiRepository.createPrintJob(serializedSettings.value.value);
-      await completePrintJob(job.id);
+      const currentJobId = await ensureJobUpToDate();
+      await apiRepository.runJob(currentJobId);
+      await navigateTo(`/print/jobs/${currentJobId}/`);
     } catch (error) {
       console.error('Failed to create print job', error);
       printError.value = error;
@@ -318,5 +349,7 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
     printLoading,
     optionsExpanded: readonly(optionsExpanded),
     expandOptions,
+    jobId: readonly(jobId),
+    ensureJobUpToDate,
   });
 };
