@@ -157,7 +157,7 @@
           aria-labelledby="imposition-template-select"
         />
 
-        <h2 class="mt-8 text-header ">
+        <h2 class="mt-8 text-header">
           Printing options
         </h2>
 
@@ -185,7 +185,7 @@
             v-if="duplexEnabled && !jobCreator.selectedPrinter?.duplex_supported"
             class="mt-1 text-amber-600 dark:text-amber-400"
           >
-            This printer does not support automatic duplex. You will be asked to flip the pages manually during printing.
+            This printer does not support automatic two-sided printing. You will be asked to flip the pages manually during printing.
           </input-hint>
 
           <template v-if="jobCreator.duplexMode !== 'disabled'">
@@ -211,9 +211,9 @@
               </template>
             </p-select-button>
 
-            <!-- INSTRUKCJA RĘCZNEGO DRUKU DWUSTRONNEGO -->
+            <!-- DYNAMICZNA INSTRUKCJA RĘCZNEGO DRUKU DWUSTRONNEGO -->
             <p-message
-              v-if="!jobCreator.selectedPrinter?.duplex_supported"
+              v-if="!jobCreator.selectedPrinter?.duplex_supported && manualDuplexInstructions.length > 0"
               severity="warn"
               class="mt-3"
             >
@@ -222,14 +222,14 @@
                   <i class="pi pi-exclamation-triangle" />
                   Manual duplex instruction:
                 </div>
-                <div v-if="jobCreator.duplexMode === 'duplex-long-edge'">
-                  • Odd pages will print first.<br>
-                  • Place printed pages back in the tray <b>face DOWN</b>, rotated <b>180° horizontally</b> (flip along long edge).
-                </div>
-                <div v-else>
-                  • Odd pages will print first.<br>
-                  • Place printed pages back in the tray <b>face DOWN</b>, flipped <b>vertically</b> (flip along short edge).
-                </div>
+                <ul class="list-disc list-inside space-y-1">
+                  <li
+                    v-for="(step, index) in manualDuplexInstructions"
+                    :key="index"
+                  >
+                    <span v-html="step" />
+                  </li>
+                </ul>
               </div>
             </p-message>
           </template>
@@ -301,6 +301,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { FileUploadSelectEvent } from 'primevue';
 import type { OrientationRequested } from '~/composables/use-job-creator';
 
@@ -321,7 +322,7 @@ const duplexEnabled = computed({
   get: () => jobCreator.duplexMode !== 'disabled',
   set: (value) => {
     if (value && jobCreator.duplexMode === 'disabled') {
-      jobCreator.duplexMode = 'duplex-long-edge';
+      jobCreator.duplexMode = 'duplex-unspecified';
     }
     if (!value) jobCreator.duplexMode = 'disabled';
   },
@@ -354,6 +355,39 @@ const orientationRequestedOptions = [
   { value: 'PORTRAIT' as OrientationRequested, label: 'Portrait' },
   { value: 'LANDSCAPE' as OrientationRequested, label: 'Landscape' },
 ];
+
+const manualDuplexInstructions = computed(() => {
+  const printer = jobCreator.selectedPrinter;
+  if (!printer || printer.duplex_supported) return [];
+
+  const instructions: string[] = [];
+
+  const firstPass = printer.manual_duplex_first_pass ?? 'ODD';
+  if (firstPass === 'ODD') {
+    instructions.push('Odd pages will print first.');
+  } else {
+    instructions.push('Even pages will print first.');
+  }
+
+  const faceOrientation = printer.manual_duplex_face_orientation ?? 'DOWN';
+  const faceText = faceOrientation === 'UP' ? 'face <b>UP</b>' : 'face <b>DOWN</b>';
+
+  const isLongEdge = jobCreator.duplexMode === 'duplex-long-edge';
+  const feedEdge = printer.manual_duplex_feed_edge ?? (isLongEdge ? 'LONG' : 'SHORT');
+
+  let rotationText = '';
+  if (feedEdge === 'LONG') {
+    rotationText = 'rotated <b>180° horizontally</b> (flip along long edge)';
+  } else {
+    rotationText = 'flipped <b>vertically</b> (flip along short edge)';
+  }
+
+  instructions.push(
+    `Place printed pages back in the tray ${faceText}, ${rotationText}.`
+  );
+
+  return instructions;
+});
 
 const onFileSelect = (event: FileUploadSelectEvent) => {
   jobCreator.addFiles(event.files);

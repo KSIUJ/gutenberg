@@ -30,8 +30,8 @@ class JobArtefactAdmin(admin.TabularInline):
 
 class GutenbergJobAdmin(admin.ModelAdmin):
     inlines = [PrintingPropertiesInline, JobArtefactAdmin]
-    readonly_fields = ('pages', 'date_created', 'date_processed', 'date_finished', 'manual_duplex_current_pass')
-    list_display = ('date_created', 'owner', 'name', 'job_type', 'status', 'manual_duplex_current_pass', 'pages')
+    readonly_fields = ('pages', 'date_created', 'date_processed', 'date_finished', 'is_manual_duplex_second_pass')
+    list_display = ('date_created', 'owner', 'name', 'job_type', 'status', 'is_manual_duplex_second_pass', 'pages')
     list_filter = ('date_created', 'owner', 'job_type', 'status')
 
 

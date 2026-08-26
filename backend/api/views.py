@@ -190,6 +190,21 @@ class PrintJobViewSet(viewsets.ModelViewSet):
         print_file.delay(job.id, resume_manual_duplex=True)
         return Response(self.get_serializer(job).data)
 
+
+    @action(detail=True, methods=['get'], url_path='preview', name='Print preview')
+    def preview(self, request, pk=None):
+        job = self.get_object()
+
+        try:
+            preview = job.preview
+        except PrintPreview.DoesNotExist:
+            raise exceptions.NotFound(
+                'A preview has not been requested for this job'
+            )
+
+        serializer = PrintPreviewSerializer(preview, context={'request': request})
+        return Response(serializer.data)
+
     def _create_printing_job(
         self,
         printer_with_perms,
@@ -319,6 +334,14 @@ class PrintJobViewSet(viewsets.ModelViewSet):
             raise exceptions.NotFound("Selected printer does not exist")
         if properties.color and not printer_with_perms.color_allowed:
             raise exceptions.ValidationError("Color printing is not allowed on the selected printer")
+        if properties.two_sides != TwoSidedPrinting.ONE_SIDED:
+            has_hardware_duplex = printer_with_perms.duplex_supported
+            has_manual_duplex = getattr(printer_with_perms, 'manual_duplex_enabled', False)
+
+            if not (has_hardware_duplex or has_manual_duplex):
+                raise exceptions.ValidationError(
+                    "Two-sided printing is not supported on the selected printer."
+                )
 
 
 class PrinterViewSet(viewsets.ReadOnlyModelViewSet):
@@ -328,7 +351,7 @@ class PrinterViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return Printer.get_queryset_for_user(user).all().order_by('name')
+        return Printer.get_queryset_for_user(user).all().order_by('display_order', 'name')
 
 
 def _generate_token():
@@ -385,6 +408,10 @@ class LoginApiView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get(self, request, *args, **kwargs):
+        """
+        Rotate the CSRF token. According to the `rotate_token` function documentation,
+        it should always be called on login.
+        """
         rotate_token(request)
         return Response(status=status.HTTP_204_NO_CONTENT)
 

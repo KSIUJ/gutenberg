@@ -17,6 +17,8 @@ class JobStatus(models.TextChoices):
     PENDING = 'PENDING', _('pending')
     PROCESSING = 'PROCESSING', _('processing')
     PRINTING = 'PRINTING', _('printing')
+    # SCANNING = 'SCANNING', _('scanning')
+    # WAITING_FOR_NEXT_PAGE = 'WAITING_PAGE', _('waiting for next page')
     WAITING_FOR_USER_ACTION = 'WAITING_ACT', _('waiting for user action')
     COMPLETED = 'COMPLETED', _('completed')
     CANCELED = 'CANCELED', _('canceled')
@@ -112,13 +114,13 @@ class LocalPrinterParams(models.Model):
     print_two_sided_long_edge_param = models.CharField(max_length=64, null=True, blank=True)
     print_two_sided_short_edge_param = models.CharField(max_length=64, null=True, blank=True)
 
-    # Parametry ręcznego druku dwustronnego (Manual Duplex)
+    # Manual duplex printing parameters
     manual_duplex_enabled = models.BooleanField(default=False)
     manual_duplex_first_pass = models.CharField(
         max_length=4, default=ManualDuplexFirstPass.ODD, choices=ManualDuplexFirstPass.choices
     )
-    manual_duplex_first_pass_reverse = models.BooleanField(default=False)
-    manual_duplex_second_pass_reverse = models.BooleanField(default=False)
+    #manual_duplex_first_pass_reverse = models.BooleanField(default=False)
+    #manual_duplex_second_pass_reverse = models.BooleanField(default=False)
     manual_duplex_face_orientation = models.CharField(
         max_length=4, default=ManualDuplexFaceOrientation.UP, choices=ManualDuplexFaceOrientation.choices
     )
@@ -165,6 +167,7 @@ class JobType(models.TextChoices):
 class GutenbergJob(models.Model):
     name = models.CharField(max_length=128)
     job_type = models.CharField(max_length=10, default=JobType.UNKNOWN, choices=JobType.choices)
+    # scaner = models.ForeignKey(Scaner, null=True, blank=True, on_delete=models.SET_NULL)
     printer = models.ForeignKey(Printer, null=True, blank=True, on_delete=models.SET_NULL)
     owner = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
     pages = models.IntegerField(null=True, blank=True)
@@ -177,7 +180,8 @@ class GutenbergJob(models.Model):
     configuration_version = models.PositiveIntegerField(default=1)
 
     # Statystyki i śledzenie przebiegu ręcznego duplexu
-    manual_duplex_current_pass = models.IntegerField(default=1)
+    #manual_duplex_current_pass = models.IntegerField(default=1)
+    is_manual_duplex_second_pass = models.BooleanField(default=False)
 
     # preview metadata (used by web UI)
     # preview_status = models.CharField(
@@ -212,6 +216,7 @@ class JobArtefact(models.Model):
     file = models.FileField(upload_to='artefacts/%Y/%m/%d/')
     artefact_type = models.CharField(max_length=4, default=JobArtefactType.SOURCE, choices=JobArtefactType.choices)
     mime_type = models.CharField(max_length=100, default='application/octet-stream')
+    #document ordering starts from 1, 0 means something went wrong
     document_number = models.IntegerField(default=0)
 
     def __str__(self):

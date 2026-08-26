@@ -35,46 +35,51 @@ class PrinterBackend(ABC):
         """Attempt canceling processing the job on backend."""
         pass
 
-
     def print(self, job: GutenbergJob, file_path: str, is_manual_second_pass: bool = False):
         logger.info("Printing job {} via {}".format(job, self.backend_name))
 
-        # Sprawdzamy, czy to ma być manualny duplex (brak sprzętowej obsługi duplexu)
+        # Check if manual duplex is required (no hardware duplex support)
         is_manual_duplex = (
             job.properties.two_sides != TwoSidedPrinting.ONE_SIDED and
             not job.printer.duplex_supported
         )
 
+        # Select the file to print based on the pass
         if is_manual_duplex and not is_manual_second_pass:
-            # 1 phase: Printing odd pages (fronts)
-            odd_file, _ = job.get_manual_duplex_files()
+            file_to_print, _ = job.get_manual_duplex_files()
+        elif is_manual_duplex and is_manual_second_pass:
+            _, file_to_print = job.get_manual_duplex_files()
+        else:
+            file_to_print = file_path
 
-            # Send files with odd pages
-            backend_job_id = self.submit_job(job, odd_file)
+        # Submit job to the CUPS backend
+        backend_job_id = self.submit_job(job, file_to_print)
+        job.backend_job_id = backend_job_id
+        job.save()
 
-            # Instead of missing the _wait_for_job_completion method - we store the job id from the backend CUPS
-            job.backend_job_id = backend_job_id
+        # Monitor print completion with cancellation and timeout handling
+        cnt = 0
+        try:
+            while self.check_status(job, backend_job_id):
+                logger.info("Job {} is still printing via {}".format(job, self.backend_name))
+                handle_cancellation(job, lambda: self.cancel_job(job, backend_job_id))
+                time.sleep(1)
+                cnt += 1
+                if cnt > PRINTING_TIMEOUT_S:
+                    self.cancel_job(job, backend_job_id)
+                    raise TimeoutError("Job {} took too long to complete".format(job))
+        except JobCanceledException:
+            logger.warning("Job {} processing stopped because it was canceled".format(job))
+            return
+
+        # Update status based on execution phase
+        if is_manual_duplex and not is_manual_second_pass:
+            # First pass completed (odd pages); wait for user action
             job.status = JobStatus.WAITING_FOR_USER
             job.status_reason = "Manual Duplex: Turn pages over and place them back in the feeder, then click Continue."
             job.save()
-            return
-
-        elif is_manual_duplex and is_manual_second_pass:
-            # 2 phase: Printing even pages after user confirmation
-            _, even_file = job.get_manual_duplex_files()
-
-            backend_job_id = self.submit_job(job, even_file)
-
-            job.backend_job_id = backend_job_id
-            job.status = JobStatus.COMPLETED
-            job.status_reason = ''
-            job.date_finished = timezone.now()
-            job.save()
         else:
-            # Standard printing
-            backend_job_id = self.submit_job(job, file_path)
-
-            job.backend_job_id = backend_job_id
+            # Second pass or standard printing completed
             job.status = JobStatus.COMPLETED
             job.status_reason = ''
             job.date_finished = timezone.now()
@@ -323,15 +328,6 @@ class LocalCupsPrinter(PrinterBackend):
             stderr=subprocess.STDOUT,
             timeout=TASK_TIMEOUT_S,
             )
-
-    @staticmethod
-    def list_cups_printer_names() -> list[str]:
-        try:
-            result = subprocess.check_output(['lpstat'] + LocalCupsPrinter.common_options + ['-e'], text=True)
-            return [line.strip() for line in result.splitlines() if line.strip()]
-        except Exception as error:
-            logger.error(f"Failed to list printers in CUPS using lpstat: {str(error)}", exc_info=True)
-            return []
 
 
 class DisabledPrinter(PrinterBackend):
