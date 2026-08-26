@@ -1,5 +1,4 @@
 import logging
-
 from celery.app.control import flatten_reply
 from django import forms
 from django.contrib import admin
@@ -21,6 +20,7 @@ from control.models import (
     PrinterPermissions,
     PrintingProperties,
 )
+from control.views import trigger_test_print_view
 from gutenberg.celery import app
 
 logger = logging.getLogger('gutenberg.control')
