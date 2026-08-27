@@ -19,10 +19,10 @@ from api.exceptions import UnsupportedDocument, InvalidStatus
 from api.serializers import GutenbergJobSerializer, PrinterSerializer, UserInfoSerializer, \
     CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer, LoginSerializer, \
     DeleteJobArtefactRequestSerializer, ChangeArtefactOrderRequestSerializer, JobArtefactSerializer, \
-    ChangePrintJobPropertiesRequestSerializer
+    ChangePrintJobPropertiesRequestSerializer, PrintPreviewSerializer
 from common.models import User
 from control.models import GutenbergJob, Printer, JobStatus, PrintingProperties, TwoSidedPrinting, JobArtefact, \
-    JobArtefactType, JobType
+    JobArtefactType, JobType, PrintPreview
 from gutenberg.worker_capabilities import get_formats_supported_by_workers
 from printing.printing import print_file
 from printing.processing.converter import detect_file_format
@@ -69,9 +69,6 @@ class PrintJobViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         try:
             self._upload_artefact(job, **serializer.validated_data)
-            if serializer.validated_data.get('preview'):
-                from printing.printing import generate_preview_for_job
-                generate_preview_for_job.delay(job.id)
         except UnsupportedDocumentError as ex:
             raise UnsupportedDocument(str(ex))
         job.refresh_from_db()
@@ -150,47 +147,6 @@ class PrintJobViewSet(viewsets.ModelViewSet):
         serializer = JobArtefactSerializer(artefacts, many=True, context={'request': request})
         return Response(serializer.data)
 
-    @action(detail=True, methods=['get'], name='Preview')
-    def preview(self, request, pk=None):
-        job = self.get_object()
-        pages = job.preview_meta.get('pages', []) if getattr(job, 'preview_meta', None) else []
-        urls = [request.build_absolute_uri(settings.MEDIA_URL + f"{job.preview_dir()}/{p}") for p in pages]
-        return Response({'status': job.preview_status, 'pages': urls, 'page_count': job.preview_pages})
-
-    @action(detail=True, methods=['post'], name='Regenerate preview')
-    def regenerate_preview(self, request, pk=None):
-        job = self.get_object()
-        max_pages = int(request.data.get('max_pages', 5))
-        dpi = int(request.data.get('dpi', 150))
-        job.preview_status = 'PENDING'
-        job.save(update_fields=['preview_status'])
-        from printing.printing import generate_preview_for_job
-        generate_preview_for_job.delay(job.id, max_pages=max_pages, dpi=dpi)
-        return Response({'status': 'started'})
-
-    @action(detail=True, methods=['post'], name='Send to printer (from preview)')
-    def send_from_preview(self, request, pk=None):
-        job = self.get_object()
-        self._validate_properties(job.printer.id, job.properties, job)
-        self._run_job(job)
-        return Response(self.get_serializer(job).data)
-
-    @action(detail=True, methods=['post'], name='Resume manual duplex')
-    def resume_manual_duplex(self, request, pk=None):
-        job = self.get_object()
-        if job.status != JobStatus.WAITING_FOR_USER:
-            raise InvalidStatus("Job is not waiting for user interaction")
-
-        # Change job status, so Celery can continue printing second page
-        job.status = JobStatus.PENDING
-        job.status_reason = "Manual duplex resumed by user"
-        job.save()
-
-        # Invoke the second pass printing job
-        print_file.delay(job.id, resume_manual_duplex=True)
-        return Response(self.get_serializer(job).data)
-
-
     @action(detail=True, methods=['get'], url_path='preview', name='Print preview')
     def preview(self, request, pk=None):
         job = self.get_object()
@@ -205,6 +161,27 @@ class PrintJobViewSet(viewsets.ModelViewSet):
         serializer = PrintPreviewSerializer(preview, context={'request': request})
         return Response(serializer.data)
 
+    @action(detail=True, methods=['post'], name='Send to printer (from preview)')
+    def send_from_preview(self, request, pk=None):
+        job = self.get_object()
+        self._validate_properties(job.printer.id, job.properties, job)
+        self._run_job(job)
+        return Response(self.get_serializer(job).data)
+
+    @action(detail=True, methods=['post'], name='Resume manual duplex')
+    def resume_manual_duplex(self, request, pk=None):
+        job = self.get_object()
+        if job.status != JobStatus.WAITING_FOR_USER_ACTION:
+            raise InvalidStatus("Job is not waiting for user action")
+
+        job.is_manual_duplex_second_pass = True
+        job.status = JobStatus.PENDING
+        job.status_reason = "Manual duplex resumed by user"
+        job.save(update_fields=['is_manual_duplex_second_pass', 'status', 'status_reason'])
+
+        print_file.delay(job.id)
+        return Response(self.get_serializer(job).data)
+
     def _create_printing_job(
         self,
         printer_with_perms,
@@ -218,7 +195,6 @@ class PrintJobViewSet(viewsets.ModelViewSet):
         orientation_requested: str,
         **_,
     ):
-        # 1. Create Job object
         job = GutenbergJob.objects.create(
             name='webrequest',
             job_type=JobType.PRINT,
@@ -227,7 +203,6 @@ class PrintJobViewSet(viewsets.ModelViewSet):
             printer=printer_with_perms
         )
 
-        # 2. Create PrintingProperties object directly with Job relation
         properties = PrintingProperties.objects.create(
             job=job,
             color=color,
@@ -240,11 +215,9 @@ class PrintJobViewSet(viewsets.ModelViewSet):
             orientation_requested=orientation_requested,
         )
 
-        # 3. Validate properties
         try:
             self._validate_properties(printer_with_perms.id, properties, job)
         except Exception:
-            # If validation fails, delete new job from the base and raise the exeption
             job.delete()
             raise
 
@@ -408,10 +381,6 @@ class LoginApiView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get(self, request, *args, **kwargs):
-        """
-        Rotate the CSRF token. According to the `rotate_token` function documentation,
-        it should always be called on login.
-        """
         rotate_token(request)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
