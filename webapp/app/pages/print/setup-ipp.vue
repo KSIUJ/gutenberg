@@ -44,8 +44,8 @@
             <p-select-button
               v-model="selectedOS"
               :options="osOptions"
-              optionLabel="label"
-              optionValue="id"
+              option-label="label"
+              option-value="id"
             />
           </div>
           <!-- DYNAMIC INSTRUCTIONS: Change depending on the selected operating system -->
