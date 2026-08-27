@@ -41,11 +41,11 @@
             <h3 class="text-sm font-semibold text-surface-500 mb-3 uppercase tracking-wider">
               Select your Operating System
             </h3>
-            <p-selectbutton
+            <p-select-button
               v-model="selectedOS"
               :options="osOptions"
-              option-label="label"
-              option-value="id"
+              optionLabel="label"
+              optionValue="id"
             />
           </div>
           <!-- DYNAMIC INSTRUCTIONS: Change depending on the selected operating system -->
