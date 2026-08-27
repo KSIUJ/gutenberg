@@ -155,8 +155,8 @@ class Printer(models.Model):
         blank=True,
         help_text='Optional message displayed to users while this printer is under maintenance.',
     )
-    color_supported = models.BooleanField(default=False)
-    duplex_supported = models.BooleanField(default=False)
+    color_supported = models.BooleanField(default=False, verbose_name="Colored printing supported")
+    duplex_supported = models.BooleanField(default=False, verbose_name="Two-sided printing supported")
     display_order = models.PositiveIntegerField(
         default=0,
         help_text="Printers are displayed in ascending order. Lower values appear first. The first printer in the list is used as the default."
