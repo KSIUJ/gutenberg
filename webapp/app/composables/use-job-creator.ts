@@ -34,7 +34,7 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
   const toast = useToast();
 
   const getDefaultPrinter = () => {
-    return printers.data.value?.at(0) ?? null;
+    return printers.data.value?.find(printer => printer.is_available) ?? null;
   };
 
   const selectedPrinterId = ref(getDefaultPrinter()?.id ?? null);
@@ -72,15 +72,17 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
   watchEffect(() => {
     if (printers.data.value === undefined) return;
 
-    const firstPrinter = printers.data.value.at(0) ?? null;
+    const firstPrinter = getDefaultPrinter();
     if (selectedPrinterId.value === null && firstPrinter !== null) {
       selectedPrinterId.value = firstPrinter.id;
-    } else if (selectedPrinterId.value !== null && selectedPrinter.value === null) {
+    } else if (selectedPrinterId.value !== null && (selectedPrinter.value === null || !selectedPrinter.value.is_available)) {
+      const unavailableMessage = selectedPrinter.value?.maintenance_message;
       selectedPrinterId.value = firstPrinter?.id ?? null;
       toast.add({
         severity: 'warn',
-        summary: 'The previously selected printer is no longer available',
-        detail: firstPrinter === null ? undefined : `The printer "${firstPrinter.name}" was selected instead`,
+        summary: 'The previously selected printer is unavailable',
+        detail: unavailableMessage
+          || (firstPrinter === null ? undefined : `The printer "${firstPrinter.name}" was selected instead`),
       });
     }
   });
@@ -110,10 +112,10 @@ export const useJobCreator = (printers: _AsyncData<Printer[] | undefined, NuxtEr
   });
 
   const serializePrinterId = (): JobResult<number> => {
-    if (selectedPrinterId.value === null) {
+    if (selectedPrinterId.value === null || !selectedPrinter.value?.is_available) {
       return error({
         field: 'printer',
-        message: 'No printer selected',
+        message: selectedPrinter.value?.maintenance_message || 'No available printer selected',
       });
     }
     return ok(selectedPrinterId.value);

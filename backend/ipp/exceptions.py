@@ -54,3 +54,8 @@ class DocumentFormatError(IppError):
 class NotPossibleError(IppError):
     def error_code(self):
         return StatusCodeEnum.client_error_not_possible
+
+
+class PrinterUnavailableError(IppError):
+    def error_code(self):
+        return StatusCodeEnum.server_error_not_accepting_jobs

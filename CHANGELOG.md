@@ -12,6 +12,7 @@ See also [Creating new releases] for instructions on how to create a new release
   - `GUTENBERG_TRUSTED_PROXY_IPS` [#190]
 - Docker Images are now published in the GitHub Container Registry [#199]
 - Added automatic CUPS printer capability configuration when selecting a printer in the Django admin panel [#200]
+- Added 4 test print buttons to the Printer admin page. Buttons: one-sided grayscale, one-sided colored,two-sided grayscale, two-sided colored [#196]
 - Added a web UI for print preview REST API added in [#178] , [#210]
 
 ### Changed
@@ -80,6 +81,7 @@ The previous significant commit was made on [2022-08-26](https://github.com/KSIU
 [#178]: https://github.com/KSIUJ/gutenberg/pull/178
 [#190]: https://github.com/KSIUJ/gutenberg/pull/190
 [#194]: https://github.com/KSIUJ/gutenberg/pull/194
+[#196]: https://github.com/KSIUJ/gutenberg/pull/196
 [#199]: https://github.com/KSIUJ/gutenberg/pull/199
 [#200]: https://github.com/KSIUJ/gutenberg/pull/200
 [#206]: https://github.com/KSIUJ/gutenberg/pull/206

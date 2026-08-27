@@ -28,12 +28,33 @@
           <p-select
             id="printer-select"
             v-model="jobCreator.selectedPrinterId"
-            :options="printers.data.value"
+            :options="printerOptions"
             option-value="id"
             option-label="name"
+            option-disabled="disabled"
             fluid
             :loading="printers.pending.value"
-          />
+          >
+            <template #option="{ option }">
+              <div
+                class="flex w-full items-center gap-2"
+                :class="{ 'text-muted-color': option.disabled }"
+              >
+                <div>
+                  <div>{{ option.name }}</div>
+                  <div
+                    v-if="option.disabled"
+                    class="text-xs"
+                  >
+                    Under maintenance
+                    <template v-if="option.maintenance_message">
+                      — {{ option.maintenance_message }}
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </p-select>
           <label for="printer-select">Printer</label>
         </p-float-label>
       </div>
@@ -299,6 +320,11 @@ const printersErrorMessage = computed(() => {
   if (printers.error.value === undefined) return null;
   return getErrorMessage(printers.error.value) ?? 'Failed to load printer list';
 });
+
+const printerOptions = computed(() => (printers.data.value ?? []).map(printer => ({
+  ...printer,
+  disabled: !printer.is_available,
+})));
 
 const duplexOptions = [
   { value: 'duplex-long-edge' as DuplexMode, label: 'Long edge', description: 'for vertical documents' },

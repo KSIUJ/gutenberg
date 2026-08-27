@@ -10,6 +10,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from control.models import GutenbergJob, TwoSidedPrinting, JobStatus
+from control.quota_accounting import charge_quota_for_job
 from printing.utils import JobCanceledException, TASK_TIMEOUT_S, PRINTING_TIMEOUT_S, handle_cancellation
 
 logger = logging.getLogger('gutenberg.worker')
@@ -38,6 +39,10 @@ class PrinterBackend(ABC):
     def print(self, job: GutenbergJob, file_path: str):
         logger.info("Printing job {} via {}".format(job, self.backend_name))
         backend_job_id = self.submit_job(job, file_path)
+        # CUPS has the document now. Do not give the held pages back if the
+        # database update below fails: the printer may still print them.
+        job.quota_submission_accepted = True
+        charge_quota_for_job(job)
         cnt = 0
         try:
             while self.check_status(job, backend_job_id):

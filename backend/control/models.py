@@ -11,6 +11,90 @@ from django.utils.translation import gettext_lazy as _
 from common.models import User
 
 
+class GroupQuota(models.Model):
+    """Default page limits for members of a group.
+
+    Leave a period blank to not set a group limit. Zero means unlimited.
+    """
+
+    group = models.OneToOneField(Group, on_delete=models.CASCADE)
+    daily_limit = models.PositiveIntegerField(null=True, blank=True)
+    weekly_limit = models.PositiveIntegerField(null=True, blank=True)
+    monthly_limit = models.PositiveIntegerField(null=True, blank=True)
+
+    def __str__(self):
+        return 'Quota for group {}'.format(self.group)
+
+
+class UserQuotaOverride(models.Model):
+    """Page limits set for one user instead of their group defaults."""
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    daily_limit = models.PositiveIntegerField(null=True, blank=True)
+    weekly_limit = models.PositiveIntegerField(null=True, blank=True)
+    monthly_limit = models.PositiveIntegerField(null=True, blank=True)
+
+    def __str__(self):
+        return 'Quota override for {}'.format(self.user)
+
+
+class QuotaPeriod(models.TextChoices):
+    DAILY = 'daily', _('daily')
+    WEEKLY = 'weekly', _('weekly')
+    MONTHLY = 'monthly', _('monthly')
+
+
+class QuotaReservationState(models.TextChoices):
+    RESERVED = 'reserved', _('reserved')
+    CHARGED = 'charged', _('charged')
+    RELEASED = 'released', _('released')
+
+
+class QuotaUsage(models.Model):
+    """Page count for one user in one quota period."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    period = models.CharField(max_length=8, choices=QuotaPeriod.choices)
+    period_start = models.DateField()
+    reserved_impressions = models.PositiveIntegerField(default=0)
+    charged_impressions = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'period', 'period_start'],
+                name='unique_user_quota_period',
+            ),
+        ]
+
+
+class QuotaReservation(models.Model):
+    """Pages held or charged for a job in one quota period."""
+
+    job = models.ForeignKey(
+        'GutenbergJob',
+        on_delete=models.CASCADE,
+        related_name='quota_reservations',
+    )
+    usage = models.ForeignKey(QuotaUsage, on_delete=models.CASCADE)
+    impressions = models.PositiveIntegerField()
+    state = models.CharField(
+        max_length=10,
+        choices=QuotaReservationState.choices,
+        default=QuotaReservationState.RESERVED,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['job', 'usage'],
+                name='unique_job_quota_usage',
+            ),
+        ]
+
+
 class JobStatus(models.TextChoices):
     UNKNOWN = 'UNKNOWN', _('unknown')
     INCOMING = 'INCOMING', _('incoming')
@@ -36,6 +120,11 @@ class PrinterType(models.TextChoices):
     LOCAL_CUPS = 'LP', _('local cups')
 
 
+class PrinterAvailability(models.TextChoices):
+    AVAILABLE = 'AVAILABLE', _('available')
+    MAINTENANCE = 'MAINTENANCE', _('under maintenance')
+
+
 class ImpositionTemplate(models.TextChoices):
     NONE = 'none', _('none'),
     BOOKLET = 'booklet', _('booklet')
@@ -55,8 +144,19 @@ class OrientationRequested(models.TextChoices):
 class Printer(models.Model):
     name = models.CharField(max_length=64)
     printer_type = models.CharField(max_length=10, default=PrinterType.DISABLED, choices=PrinterType.choices)
-    color_supported = models.BooleanField(default=False)
-    duplex_supported = models.BooleanField(default=False)
+    availability = models.CharField(
+        max_length=16,
+        default=PrinterAvailability.AVAILABLE,
+        choices=PrinterAvailability.choices,
+        help_text='Maintenance printers stay visible to users but cannot accept new jobs.',
+    )
+    maintenance_message = models.CharField(
+        max_length=240,
+        blank=True,
+        help_text='Optional message displayed to users while this printer is under maintenance.',
+    )
+    color_supported = models.BooleanField(default=False, verbose_name="Colored printing supported")
+    duplex_supported = models.BooleanField(default=False, verbose_name="Two-sided printing supported")
     display_order = models.PositiveIntegerField(
         default=0,
         help_text="Printers are displayed in ascending order. Lower values appear first. The first printer in the list is used as the default."
@@ -76,6 +176,17 @@ class Printer(models.Model):
 
     def __str__(self):
         return '{} ({})'.format(self.name, self.get_printer_type_display())
+
+    @property
+    def is_available(self):
+        return self.availability == PrinterAvailability.AVAILABLE
+
+    @property
+    def unavailable_message(self):
+        message = '{} is temporarily unavailable'.format(self.name)
+        if self.maintenance_message:
+            return '{}: {}'.format(message, self.maintenance_message)
+        return message
 
 
 # class Scaner(models.Model):
