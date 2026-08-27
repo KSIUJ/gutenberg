@@ -309,7 +309,8 @@ class PrintJobViewSet(viewsets.ModelViewSet):
             raise exceptions.ValidationError("Color printing is not allowed on the selected printer")
         if properties.two_sides != TwoSidedPrinting.ONE_SIDED:
             has_hardware_duplex = printer_with_perms.duplex_supported
-            has_manual_duplex = getattr(printer_with_perms, 'manual_duplex_enabled', False)
+            local_params = getattr(printer_with_perms, 'localprinterparams', None)
+            has_manual_duplex = local_params.manual_duplex_enabled if local_params else False
 
             if not (has_hardware_duplex or has_manual_duplex):
                 raise exceptions.ValidationError(
