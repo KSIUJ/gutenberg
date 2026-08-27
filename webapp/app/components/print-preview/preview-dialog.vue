@@ -34,10 +34,12 @@
               {{ unitPositionLabel }}
             </p>
           </div>
-          <button
-            type="button"
+          <p-button
             aria-label="Close preview"
-            class="focus-ring flex size-9 shrink-0 items-center justify-center rounded-border text-muted-color hover:bg-surface-100"
+            severity="secondary"
+            variant="text"
+            rounded
+            class="shrink-0"
             @click="preview.close()"
           >
             <svg
@@ -52,7 +54,7 @@
                 stroke-linecap="round"
               />
             </svg>
-          </button>
+          </p-button>
         </div>
 
         <!-- Main viewer -->
@@ -71,13 +73,14 @@
             <preview-status-message variant="error">
               {{ preview.errorMessage ?? 'Failed to generate the print preview.' }}
               <template #action>
-                <button
-                  type="button"
-                  class="focus-ring mt-2 rounded-border border border-surface px-3 py-1.5 text-sm font-medium hover:bg-surface-100"
+                <p-button
+                  label="Try again"
+                  severity="secondary"
+                  variant="outlined"
+                  size="small"
+                  class="mt-2"
                   @click="preview.regenerate()"
-                >
-                  Try again
-                </button>
+                />
               </template>
             </preview-status-message>
           </template>
@@ -89,11 +92,13 @@
           <template v-else>
             <!-- A "unit" is one printed side, or a front/back pair for duplex/booklet. Using one
                  concept for both means the nav/selection logic only needs writing once. -->
-            <button
+            <p-button
               v-if="hasPrevUnit"
-              type="button"
               aria-label="Previous page"
-              class="focus-ring flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-0 text-color shadow hover:bg-surface-100"
+              severity="secondary"
+              rounded
+              raised
+              class="shrink-0"
               @click="goPrevUnit"
             >
               <svg
@@ -107,7 +112,7 @@
                 stroke-linecap="round"
                 stroke-linejoin="round"
               /></svg>
-            </button>
+            </p-button>
 
             <div class="flex h-full min-w-0 grow items-center justify-center overflow-hidden">
               <!-- This wrapper's `items-center` makes a child's `h-full` not resolve, since
@@ -184,11 +189,13 @@
               </preview-status-message>
             </div>
 
-            <button
+            <p-button
               v-if="hasNextUnit"
-              type="button"
               aria-label="Next page"
-              class="focus-ring flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-0 text-color shadow hover:bg-surface-100"
+              severity="secondary"
+              rounded
+              raised
+              class="shrink-0"
               @click="goNextUnit"
             >
               <svg
@@ -202,7 +209,7 @@
                 stroke-linecap="round"
                 stroke-linejoin="round"
               /></svg>
-            </button>
+            </p-button>
           </template>
         </div>
 
@@ -211,10 +218,13 @@
           v-if="units.length > 1"
           class="flex shrink-0 items-center gap-1 border-t border-surface bg-surface-0 px-1 py-2"
         >
-          <button
-            type="button"
+          <p-button
             aria-label="Scroll thumbnails left"
-            class="focus-ring flex size-7 shrink-0 items-center justify-center rounded-full text-muted-color hover:bg-surface-100"
+            severity="secondary"
+            variant="text"
+            rounded
+            size="small"
+            class="shrink-0"
             @click="scrollThumbnails(-1)"
           >
             <svg
@@ -228,7 +238,7 @@
               stroke-linecap="round"
               stroke-linejoin="round"
             /></svg>
-          </button>
+          </p-button>
 
           <div
             ref="thumbnailStripRef"
@@ -257,10 +267,13 @@
             </div>
           </div>
 
-          <button
-            type="button"
+          <p-button
             aria-label="Scroll thumbnails right"
-            class="focus-ring flex size-7 shrink-0 items-center justify-center rounded-full text-muted-color hover:bg-surface-100"
+            severity="secondary"
+            variant="text"
+            rounded
+            size="small"
+            class="shrink-0"
             @click="scrollThumbnails(1)"
           >
             <svg
@@ -274,7 +287,7 @@
               stroke-linecap="round"
               stroke-linejoin="round"
             /></svg>
-          </button>
+          </p-button>
         </div>
 
         <!-- Footer -->
