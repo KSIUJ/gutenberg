@@ -45,6 +45,10 @@ setup_permissions() {
 
     # Change ownership of app directory
     chown -R "$GUTENBERG_UID:$GUTENBERG_GID" /app
+
+    # Ensure the dynamic home directory exists and has correct permissions
+        mkdir -p "/home/$GUTENBERG_USERNAME"
+        chown -R "$GUTENBERG_UID:$GUTENBERG_GID" "/home/$GUTENBERG_USERNAME"
 }
 
 case "$1" in

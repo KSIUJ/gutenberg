@@ -89,6 +89,7 @@ class BaseIppEverywhereService(BaseIppService, ABC):
     def __init__(self, actor_name: str, printer_name: str, printer_uri: str, printer_tls: bool,
                  printer_basic_auth: bool, printer_color: bool, printer_duplex: bool, printer_icon: str,
                  supported_ipp_formats: List[str], default_ipp_format: str, webpage_uri: str,
+                 printer_accepting_jobs: bool = True, printer_state_message: str = 'idle',
                  request_factory=IppRequest) -> None:
         super().__init__(actor_name, request_factory=request_factory)
         self.printer_name = printer_name
@@ -101,6 +102,8 @@ class BaseIppEverywhereService(BaseIppService, ABC):
         self.supported_ipp_formats = supported_ipp_formats
         self.default_ipp_format = default_ipp_format
         self.webpage_uri = webpage_uri
+        self.printer_accepting_jobs = printer_accepting_jobs
+        self.printer_state_message = printer_state_message
 
     @abstractmethod
     def _create_job(self, operation, job_template) -> int:
@@ -134,6 +137,9 @@ class BaseIppEverywhereService(BaseIppService, ABC):
     def _cancel_job(self, job: Any) -> None:
         raise NotImplementedError
 
+    def _ensure_accepting_jobs(self) -> None:
+        """Hook for implementations that can temporarily stop accepting jobs."""
+
     def _find_job(self, operation) -> Tuple[int, JobStateEnum, bool, Any]:
         if not (operation.printer_uri and operation.job_id) and not operation.job_uri:
             raise BadRequestError('no job info provided')
@@ -159,8 +165,8 @@ class BaseIppEverywhereService(BaseIppService, ABC):
                 printer_info="Gutenberg - {}".format(self.printer_name),
                 printer_more_info=self.webpage_uri,
                 # TODO: this is fine?
-                printer_state=PrinterStateEnum.idle,
-                printer_state_message="idle",
+                printer_state=PrinterStateEnum.idle if self.printer_accepting_jobs else PrinterStateEnum.stopped,
+                printer_state_message=self.printer_state_message,
                 # TODO: https://www.shutterstock.com/search/sisyphus
                 queued_job_count=1,
                 # TODO: WHAT?
@@ -202,6 +208,7 @@ class BaseIppEverywhereService(BaseIppService, ABC):
     def validate_job(self, request: IppRequest) -> IppResponse:
         operation = request.read_group(PrintJobRequestOperationGroup)
         logger.debug("ValidateJob:\n" + str(operation))
+        self._ensure_accepting_jobs()
         if operation.document_format and operation.document_format not in self.supported_ipp_formats:
             raise DocumentFormatError("Unsupported format: {}".format(operation.document_format))
         return response_for(request, [

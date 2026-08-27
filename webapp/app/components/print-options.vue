@@ -28,12 +28,33 @@
           <p-select
             id="printer-select"
             v-model="jobCreator.selectedPrinterId"
-            :options="printers.data.value"
+            :options="printerOptions"
             option-value="id"
             option-label="name"
+            option-disabled="disabled"
             fluid
             :loading="printers.pending.value"
-          />
+          >
+            <template #option="{ option }">
+              <div
+                class="flex w-full items-center gap-2"
+                :class="{ 'text-muted-color': option.disabled }"
+              >
+                <div>
+                  <div>{{ option.name }}</div>
+                  <div
+                    v-if="option.disabled"
+                    class="text-xs"
+                  >
+                    Under maintenance
+                    <template v-if="option.maintenance_message">
+                      — {{ option.maintenance_message }}
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </p-select>
           <label for="printer-select">Printer</label>
         </p-float-label>
       </div>
@@ -292,12 +313,17 @@
       <p-button
         label="Preview"
         severity="secondary"
-        disabled
-        @click="preview()"
+        :disabled="jobCreator.documents.length === 0 || jobCreator.selectedPrinter === null"
+        :loading="preview.status === 'preparing' || preview.status === 'generating'"
+        @click="preview.open()"
       />
     </template>
   </app-panel>
   <file-drop-target @files-dropped="(files) => jobCreator.addFiles(files)" />
+  <preview-dialog
+    :job-creator="jobCreator"
+    :preview="preview"
+  />
 </template>
 
 <script setup lang="ts">
@@ -307,11 +333,17 @@ import type { OrientationRequested } from '~/composables/use-job-creator';
 
 const printers = await usePrinters();
 const jobCreator = useJobCreator(printers);
+const preview = usePrintPreview(jobCreator);
 
 const printersErrorMessage = computed(() => {
   if (printers.error.value === undefined) return null;
   return getErrorMessage(printers.error.value) ?? 'Failed to load printer list';
 });
+
+const printerOptions = computed(() => (printers.data.value ?? []).map(printer => ({
+  ...printer,
+  disabled: !printer.is_available,
+})));
 
 const duplexOptions = [
   { value: 'duplex-long-edge' as DuplexMode, label: 'Long edge', description: 'for vertical documents' },
@@ -396,8 +428,4 @@ const onFileSelect = (event: FileUploadSelectEvent) => {
 const formatExtensions = (extensions: string) => {
   return extensions.split(',').map(ext => ext.trim()).join(', ');
 };
-
-function preview() {
-  console.log('Preview clicked');
-}
 </script>

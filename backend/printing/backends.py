@@ -10,6 +10,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from control.models import GutenbergJob, TwoSidedPrinting, JobStatus
+from control.quota_accounting import charge_quota_for_job
 from printing.utils import JobCanceledException, TASK_TIMEOUT_S, PRINTING_TIMEOUT_S, handle_cancellation
 
 logger = logging.getLogger('gutenberg.worker')
@@ -54,6 +55,11 @@ class PrinterBackend(ABC):
 
         # Submit job to the CUPS backend
         backend_job_id = self.submit_job(job, file_to_print)
+
+        # Charge quota after successful submission
+        job.quota_submission_accepted = True
+        charge_quota_for_job(job)
+
         job.backend_job_id = backend_job_id
         job.save()
 
@@ -75,7 +81,7 @@ class PrinterBackend(ABC):
         # Update status based on execution phase
         if is_manual_duplex and not is_manual_second_pass:
             # First pass completed (odd pages); wait for user action
-            job.status = JobStatus.WAITING_FOR_USER
+            job.status = JobStatus.WAITING_FOR_USER_ACTION
             job.status_reason = "Manual Duplex: Turn pages over and place them back in the feeder, then click Continue."
             job.save()
         else:

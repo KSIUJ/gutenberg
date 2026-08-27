@@ -164,6 +164,7 @@ export default defineNuxtConfig({
         'StepItem',
         'StepPanel',
         'Stepper',
+        'Tag',
         'Toast',
         'ToggleSwitch',
       ],

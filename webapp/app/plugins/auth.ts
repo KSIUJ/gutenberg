@@ -41,11 +41,16 @@ export default defineNuxtPlugin({
       me.value = await apiRepository.getMe();
     };
 
+    const refreshMe = async () => {
+      me.value = await apiRepository.getMe();
+    };
+
     const auth = {
       me: readonly(me),
       clearMe,
       login,
       resetIppToken,
+      refreshMe,
     };
 
     return {

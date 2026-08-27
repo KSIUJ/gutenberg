@@ -1,6 +1,8 @@
 import logging
 from secrets import token_urlsafe
 from django.conf import settings
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.db import transaction
 from django.contrib.auth import authenticate, login
 from django.middleware.csrf import rotate_token
 from django.utils.decorators import method_decorator
@@ -15,7 +17,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from api.exceptions import UnsupportedDocument, InvalidStatus
+from api.exceptions import UnsupportedDocument, InvalidStatus, PrinterUnavailable
 from api.serializers import GutenbergJobSerializer, PrinterSerializer, UserInfoSerializer, \
     CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer, LoginSerializer, \
     DeleteJobArtefactRequestSerializer, ChangeArtefactOrderRequestSerializer, JobArtefactSerializer, \
@@ -68,11 +70,13 @@ class PrintJobViewSet(viewsets.ModelViewSet):
         serializer = UploadJobArtefactRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            self._upload_artefact(job, **serializer.validated_data)
+            artefact = self._upload_artefact(job, **serializer.validated_data)
         except UnsupportedDocumentError as ex:
             raise UnsupportedDocument(str(ex))
-        job.refresh_from_db()
-        return Response(self.get_serializer(job).data)
+
+        response_data = self.get_serializer(job).data
+        response_data['uploaded_artefact_id'] = artefact.id
+        return Response(response_data)
 
     @action(detail=True, methods=['delete'], name='Delete artefact')
     def delete_artefact(self, request, pk=None):
@@ -266,14 +270,29 @@ class PrintJobViewSet(viewsets.ModelViewSet):
         return job
 
     def _upload_artefact(self, job, file, **_):
-        artefact = JobArtefact.objects.create(job=job, artefact_type=JobArtefactType.SOURCE, file=file, document_number=job.next_document_number)
-        job.next_document_number += 1
-        job.save()
-        file_type = detect_file_format(artefact.file.path)
+        artefact = None
+        file_type = detect_file_format(file.path if hasattr(file, 'path') else file.name)
         if file_type not in get_formats_supported_by_workers()["mime_types"]:
             raise UnsupportedDocumentError("Unsupported file type: {}".format(file_type))
-        artefact.mime_type = file_type
-        artefact.save()
+
+        try:
+            with transaction.atomic():
+                file.seek(0)
+                artefact = JobArtefact.objects.create(
+                    job=job,
+                    artefact_type=JobArtefactType.SOURCE,
+                    file=file,
+                    document_number=job.next_document_number,
+                )
+                job.next_document_number += 1
+                job.save(update_fields=['next_document_number'])
+                artefact.mime_type = file_type
+                artefact.save(update_fields=['mime_type'])
+        except Exception:
+            if artefact is not None and artefact.file.name:
+                artefact.file.delete(save=False)
+            raise
+        return artefact
 
     def _change_order(self, new_order):
         job = self.get_object()
@@ -305,10 +324,12 @@ class PrintJobViewSet(viewsets.ModelViewSet):
         printer_with_perms = Printer.get_printer_for_user(user=self.request.user, printer_id=printer_id)
         if not printer_with_perms:
             raise exceptions.NotFound("Selected printer does not exist")
-        if properties.color and not printer_with_perms.color_allowed:
+        if not getattr(printer_with_perms, 'is_available', True):
+            raise PrinterUnavailable(getattr(printer_with_perms, 'unavailable_message', 'Printer unavailable'))
+        if properties.color and not getattr(printer_with_perms, 'color_allowed', True):
             raise exceptions.ValidationError("Color printing is not allowed on the selected printer")
         if properties.two_sides != TwoSidedPrinting.ONE_SIDED:
-            has_hardware_duplex = printer_with_perms.duplex_supported
+            has_hardware_duplex = getattr(printer_with_perms, 'duplex_supported', False)
             local_params = getattr(printer_with_perms, 'localprinterparams', None)
             has_manual_duplex = local_params.manual_duplex_enabled if local_params else False
 
