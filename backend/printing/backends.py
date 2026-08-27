@@ -53,10 +53,10 @@ class PrinterBackend(ABC):
         else:
             file_to_print = file_path
 
-        # Submit job to the CUPS backend
+        # Submit job to backend
         backend_job_id = self.submit_job(job, file_to_print)
 
-        # Charge quota after successful submission
+        # Quota accounting integration from origin/develop
         job.quota_submission_accepted = True
         charge_quota_for_job(job)
 
@@ -138,8 +138,6 @@ class LocalCupsPrinter(PrinterBackend):
             value_by_normalized_name = {value.casefold(): value for value in available_values}
             for value in values:
                 if selected := value_by_normalized_name.get(value.casefold()):
-                    # IPP capability attributes end in ``-supported`` while
-                    # CUPS expects the corresponding job-template attribute.
                     return f'{option_name.removesuffix("-supported")}={selected}'
         return None
 
@@ -159,8 +157,6 @@ class LocalCupsPrinter(PrinterBackend):
             options, ('sides-supported', 'sides'), ('two-sided-long-edge',))
         two_sided_short_edge_param = LocalCupsPrinter._option_value(
             options, ('sides-supported', 'sides'), ('two-sided-short-edge',))
-        # Older PPD-based CUPS queues commonly use these names instead of
-        # the IPP-standard ``sides`` option.
         if one_sided_param is None:
             one_sided_param = LocalCupsPrinter._option_value(options, ('Duplex',), ('None',))
         if two_sided_long_edge_param is None:
@@ -174,7 +170,6 @@ class LocalCupsPrinter(PrinterBackend):
             'cups_printer_name': cups_printer_name,
             'color_supported': 'true' in {value.casefold() for value in options.get('color-supported', [])} or
                                color_param is not None,
-            # Gutenberg's current boolean model advertises both duplex modes.
             'duplex_supported': two_sided_long_edge_param is not None and two_sided_short_edge_param is not None,
             'print_grayscale_param': grayscale_param,
             'print_color_param': color_param,
@@ -185,18 +180,11 @@ class LocalCupsPrinter(PrinterBackend):
 
     @staticmethod
     def get_cups_printer_options(cups_printer_name: str) -> dict[str, str | bool | None]:
-        """Discover the subset of CUPS options Gutenberg can configure for a queue.
-
-        The result deliberately mirrors ``LocalPrinterParams`` rather than exposing
-        every driver-specific CUPS option. Driverless queues are queried through
-        IPP; PPD-based queues fall back to ``lpoptions -l``.
-        """
+        """Discover the subset of CUPS options Gutenberg can configure for a queue."""
         try:
             printer_uri = LocalCupsPrinter._get_cups_printer_uri(cups_printer_name)
             if printer_uri and printer_uri.startswith(('ipp://', 'ipps://')):
                 output = subprocess.check_output(
-                    # ``-t`` reports the test result and ``-v`` includes the
-                    # response attributes which we parse below.
                     ['ipptool', '-tv', printer_uri, str(LocalCupsPrinter.ipp_capabilities_test)],
                     stderr=subprocess.STDOUT,
                     text=True,
@@ -232,13 +220,6 @@ class LocalCupsPrinter(PrinterBackend):
 
     @staticmethod
     def parse_lpstat_job_status(output: str, backend_job_id: Any) -> str | None:
-        """
-        Parses `lpstat` multi-line text output to extract status attributes for a specific job.
-        In `lpstat -l` output, job metadata is indented under the primary job header line
-        for example 'PDF-5 ...'. We collect all indented lines immediately following
-        the matching job ID until an unindented line or EOF is encountered.
-        Returns None if job_id is not found in the output.
-        """
         lines = output.splitlines()
         job_pattern = re.compile(f"^{re.escape(str(backend_job_id))}\\s")
 
@@ -255,10 +236,6 @@ class LocalCupsPrinter(PrinterBackend):
         return None
 
     def check_status(self, job: GutenbergJob, backend_job_id: Any) -> bool:
-        """
-        Checks the status of a print job in CUPS. Returns True if the job is still in progress, False if it has completed or been canceled.
-        Raises `JobCanceledException` if the job was canceled or disappeared from CUPS without completing successfully.
-        """
         active_output = subprocess.check_output(
             ['lpstat'] + self.common_options + ['-l'],
             stderr=subprocess.STDOUT,
@@ -270,10 +247,6 @@ class LocalCupsPrinter(PrinterBackend):
             GutenbergJob.objects.filter(id=job.id).update(status_reason=status)
             return True
 
-        # By default, running `lpstat` without `-W` only checks active (not-completed) jobs.
-        # If the job is no longer active, we query all jobs (`-W all`) to check
-        # if it finished or disappeared from the queue.
-        # Reference: https://www.cups.org/doc/man-lpstat.html (-W which-jobs option)
         all_output = subprocess.check_output(
             ['lpstat'] + self.common_options + ['-W','all','-l'],
             stderr=subprocess.STDOUT,
@@ -283,14 +256,9 @@ class LocalCupsPrinter(PrinterBackend):
         status = self.parse_lpstat_job_status(all_output, backend_job_id)
         if status is not None:
             GutenbergJob.objects.filter(id=job.id).update(status_reason=status)
-            # Check for the standard IPP 'job-state-reasons' attribute indicating success.
-            # CUPS sets this when a job finishes without errors.
-            # Reference: https://datatracker.ietf.org/doc/html/rfc8011#section-5.3.8
             if 'job-completed-successfully' in status.lower():
                 return False
 
-        # If the job is missing from both active queue and history without completion flags,
-        # CUPS treated it as canceled.
         job.status = JobStatus.CANCELED
         job.status_reason = 'Job disappeared from CUPS queue'
         job.date_finished = timezone.now()
