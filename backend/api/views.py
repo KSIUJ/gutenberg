@@ -14,7 +14,7 @@ from api.serializers import (
     JobArtefactSerializer,
 )
 from control.models import Printer, GutenbergJob, JobArtefact, JobStatus
-from control.quotas import QuotaExceededException
+from control.quotas import QuotaExceeded
 
 logger = logging.getLogger('gutenberg.api')
 
@@ -51,7 +51,7 @@ class GutenbergJobViewSet(
     def create(self, request, *args, **kwargs):
         try:
             return super().create(request, *args, **kwargs)
-        except QuotaExceededException as exc:
+        except QuotaExceeded as exc:
             raise QuotaExceededAPIException(detail=str(exc))
 
     @action(detail=True, methods=['post'], url_path='continue-manual-duplex')
