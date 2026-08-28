@@ -48,6 +48,7 @@ const formattedState = (state: JobDocument['state']) => {
       pending: 'Pending',
       uploading: 'Uploading…',
       uploaded: 'Uploaded',
+      removing: 'Removing…',
     }[state],
     color: 'text-muted-color',
   };

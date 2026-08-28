@@ -12,13 +12,18 @@ See also [Creating new releases] for instructions on how to create a new release
   - `GUTENBERG_TRUSTED_PROXY_IPS` [#190]
 - Docker Images are now published in the GitHub Container Registry [#199]
 - Added automatic CUPS printer capability configuration when selecting a printer in the Django admin panel [#200]
+- Added 4 test print buttons to the Printer admin page. Buttons: one-sided grayscale, one-sided colored,two-sided grayscale, two-sided colored [#196]
+- Added a web UI for print preview REST API added in [#178] , [#210]
 
 ### Changed
 - Modified nginx Docker image config to correctly pass the `X-Forwarded-Host` header [#175]
 - Changed the filenames and structure of nginx configuration files [#175], [#190]
+- Changed print jobs to be created when the first file is uploaded, not only when clicking Print, so preview can be shown before printing [#210]
+- Enhanced the IPP configuration page UI in the webapp [#206]
 
 ### Fixed
 - Fixed canceled CUPS job being incorrectly marked as completed [#179]
+  Fixed backend Docker container startup crashes (permission denied) by ensuring the `gutenberg-docker` home directory is explicitly created with proper ownership [#206]
 
 ### Tests
 - Added new edge-case tests for page size ratio orientations, booklet odd-page imposition,
@@ -76,8 +81,11 @@ The previous significant commit was made on [2022-08-26](https://github.com/KSIU
 [#178]: https://github.com/KSIUJ/gutenberg/pull/178
 [#190]: https://github.com/KSIUJ/gutenberg/pull/190
 [#194]: https://github.com/KSIUJ/gutenberg/pull/194
+[#196]: https://github.com/KSIUJ/gutenberg/pull/196
 [#199]: https://github.com/KSIUJ/gutenberg/pull/199
 [#200]: https://github.com/KSIUJ/gutenberg/pull/200
+[#206]: https://github.com/KSIUJ/gutenberg/pull/206
+[#210]: https://github.com/KSIUJ/gutenberg/pull/210
 
 [keep a changelog]: https://keepachangelog.com/en/1.1.0/
 [OpenID Connect chapter]: https://ksiuj.github.io/gutenberg/admin/openid-connect.html

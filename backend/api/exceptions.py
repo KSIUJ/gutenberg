@@ -95,3 +95,9 @@ class InvalidStatus(exceptions.APIException):
             self.additional_info = additional_info
 
         super().__init__(detail, code)
+
+
+class PrinterUnavailable(exceptions.APIException):
+    status_code = 409
+    default_detail = 'The selected printer is temporarily unavailable.'
+    default_code = 'printer_unavailable'

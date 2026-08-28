@@ -14,7 +14,7 @@ import printing
 from common.models import User
 from control.models import Printer, TwoSidedPrinting, GutenbergJob, JobStatus
 from ipp.constants import JobStateEnum, ValueTagsEnum
-from ipp.exceptions import NotPossibleError, DocumentFormatError
+from ipp.exceptions import NotPossibleError, DocumentFormatError, PrinterUnavailableError
 from ipp.proto import IppRequest, ipp_timestamp, AttributeGroup, IppResponse
 from ipp.proto_operations import JobObjectAttributeGroupFull, JobObjectAttributeGroup
 from ipp.service import BaseIppEverywhereService
@@ -43,7 +43,9 @@ class GutenbergIppService(BaseIppEverywhereService):
                          printer_icon=printer_icon,
                          supported_ipp_formats=SUPPORTED_IPP_FORMATS,
                          default_ipp_format=DEFAULT_IPP_FORMAT,
-                         webpage_uri=webpage_uri)
+                         webpage_uri=webpage_uri,
+                         printer_accepting_jobs=printer.is_available,
+                         printer_state_message='idle' if printer.is_available else printer.unavailable_message)
 
     @staticmethod
     def _job_status_to_ipp(status):
@@ -60,6 +62,7 @@ class GutenbergIppService(BaseIppEverywhereService):
         }.get(status, ValueTagsEnum.unknown)
 
     def _create_job(self, operation, job_template) -> int:
+        self._ensure_accepting_jobs()
         name = slugify(operation.job_name) if operation.job_name else 'ipp'
         pages_to_print = None
         if job_template.page_ranges:
@@ -82,6 +85,7 @@ class GutenbergIppService(BaseIppEverywhereService):
         )
 
     def _submit_job(self, request: IppRequest, operation, job_id) -> int:
+        self._ensure_accepting_jobs()
         try:
             return submit_print_job(
                 document_buffer=request.http_request,
@@ -91,6 +95,11 @@ class GutenbergIppService(BaseIppEverywhereService):
             )
         except printing.utils.DocumentFormatError as ex:
             raise DocumentFormatError(ex)
+
+    def _ensure_accepting_jobs(self):
+        self.printer.refresh_from_db()
+        if not self.printer.is_available:
+            raise PrinterUnavailableError(self.printer.unavailable_message)
 
     def _get_job_uri(self, job_id) -> str:
         return f'{self.base_uri}job/{job_id}'
