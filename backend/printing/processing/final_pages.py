@@ -110,7 +110,7 @@ class FinalPageProcessor:
                 scale = min(
                     self.input_page_size.width_pt() / page.trimbox.width,
                     self.input_page_size.height_pt() / page.trimbox.height,
-                )
+                    )
                 page.scale_by(scale)
 
             left_x = next_col * self.input_page_size.width_pt()
@@ -127,6 +127,7 @@ class FinalPageProcessor:
             dx = target_center_x - current_center_x
             dy = target_center_y - current_center_y
             page.add_transformation(Transformation().translate(dx, dy))
+
 
             # Modifying `cropbox` might also appear to modify `trimbox`, `bleedbox` or `artbox`, because
             # if `trimbox`, `bleedbox` or `artbox` is not defined, then `cropbox` is used as the default value.
@@ -152,7 +153,6 @@ class FinalPageProcessor:
             page.trimbox.left = max(page.trimbox.left, left_x)
             page.trimbox.right = min(page.trimbox.right, right_x)
 
-            # TODO: When borderless printing is added, the bleed box for the outer pages can be expanded here
             page.bleedbox.bottom = max(page.bleedbox.bottom, bottom_y)
             page.bleedbox.top = min(page.bleedbox.top, top_y)
             page.bleedbox.left = max(page.bleedbox.left, left_x)
@@ -175,3 +175,51 @@ class FinalPageProcessor:
         with open(out, "xb") as output_file:
             writer.write(output_file)
         return out
+
+    def create_manual_duplex_pages(self, final_pdf_path: str, reverse_even: bool = True) -> tuple[str, str]:
+        """
+        Divides processed PDF file into 2 files:
+
+        - manual_duplex_odd.pdf (pages for the first pass)
+        - manual_duplex_even.pdf (pages for the second pass with order reversal)
+        """
+        reader = PdfReader(final_pdf_path)
+        writer_odd = PdfWriter()
+        writer_even = PdfWriter()
+
+        total_pages = len(reader.pages)
+
+        # Odd pages (Front)
+        for i in range(0, total_pages, 2):
+            writer_odd.add_page(reader.pages[i])
+
+        # Even pages (Back)
+        even_indices = list(range(1, total_pages, 2))
+        has_blank = total_pages % 2 != 0
+
+        if reverse_even:
+            even_indices.reverse()
+
+        for idx in even_indices:
+            writer_even.add_page(reader.pages[idx])
+
+        if has_blank:
+            blank_args = {
+                'width': self.final_page_size.width_pt(),
+                'height': self.final_page_size.height_pt(),
+            }
+            if reverse_even:
+                writer_even.insert_blank_page(index=0, **blank_args)
+            else:
+                writer_even.add_blank_page(**blank_args)
+
+        odd_path = os.path.join(self.work_dir, 'manual_duplex_odd.pdf')
+        even_path = os.path.join(self.work_dir, 'manual_duplex_even.pdf')
+
+        with open(odd_path, "wb") as f_odd:
+            writer_odd.write(f_odd)
+
+        with open(even_path, "wb") as f_even:
+            writer_even.write(f_even)
+
+        return odd_path, even_path
