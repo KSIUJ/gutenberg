@@ -59,9 +59,33 @@ class PrinterBackend(ABC):
 
         # CUPS has the document now. Do not give the held pages back if the
         # database update below fails: the printer may still print them.
+
+        # Check if manual duplex is required (no hardware duplex support)
+        is_manual_duplex = (
+            job.properties.two_sides != TwoSidedPrinting.ONE_SIDED and
+            not job.printer.duplex_supported
+        )
+
+        # Select the file to print based on the pass
+        if is_manual_duplex and not is_manual_second_pass:
+            file_to_print, _ = job.get_manual_duplex_files()
+        elif is_manual_duplex and is_manual_second_pass:
+            _, file_to_print = job.get_manual_duplex_files()
+        else:
+            file_to_print = file_path
+
+        # Submit job to backend
+        backend_job_id = self.submit_job(job, file_to_print)
+
+        # Quota accounting integration from origin/develop
         job.quota_submission_accepted = True
         charge_quota_for_job(job)
 
+
+        job.backend_job_id = backend_job_id
+        job.save()
+
+        # Monitor print completion with cancellation and timeout handling
         cnt = 0
         try:
             while self.check_status(job, backend_job_id):
@@ -80,6 +104,19 @@ class PrinterBackend(ABC):
         if is_manual_duplex and not is_manual_second_pass:
             # First pass completed (odd pages); wait for user action
             job.status = JobStatus.WAITING_FOR_USER
+            job.status_reason = "Manual Duplex: Turn pages over and place them back in the feeder, then click Continue."
+            job.save()
+        else:
+            # Second pass or standard printing completed
+            job.status = JobStatus.COMPLETED
+            job.status_reason = ''
+            job.date_finished = timezone.now()
+            job.save()
+
+        # Update status based on execution phase
+        if is_manual_duplex and not is_manual_second_pass:
+            # First pass completed (odd pages); wait for user action
+            job.status = JobStatus.WAITING_FOR_USER_ACTION
             job.status_reason = "Manual Duplex: Turn pages over and place them back in the feeder, then click Continue."
             job.save()
         else:
@@ -123,7 +160,7 @@ class LocalCupsPrinter(PrinterBackend):
             stderr=subprocess.STDOUT,
             text=True,
             timeout=TASK_TIMEOUT_S,
-            )
+        )
         match = re.search(r'^device for [^:]+:\s*(?P<uri>\S+)$', output, re.MULTILINE)
         return match.group('uri') if match else None
 
@@ -216,7 +253,7 @@ class LocalCupsPrinter(PrinterBackend):
                 stderr=subprocess.STDOUT,
                 text=True,
                 timeout=TASK_TIMEOUT_S,
-                )
+            )
         except Exception as error:
             logger.error("Failed to get options for CUPS printer %s: %s", cups_printer_name, error,
                          exc_info=True)
@@ -261,7 +298,7 @@ class LocalCupsPrinter(PrinterBackend):
             ['lpstat'] + self.common_options + ['-l'],
             stderr=subprocess.STDOUT,
             timeout=TASK_TIMEOUT_S,
-            ).decode('utf-8', errors='ignore')
+        ).decode('utf-8', errors='ignore')
 
         status = self.parse_lpstat_job_status(active_output, backend_job_id)
         if status is not None:
@@ -276,7 +313,7 @@ class LocalCupsPrinter(PrinterBackend):
             ['lpstat'] + self.common_options + ['-W','all','-l'],
             stderr=subprocess.STDOUT,
             timeout=TASK_TIMEOUT_S,
-            ).decode('utf-8', errors='ignore')
+        ).decode('utf-8', errors='ignore')
 
         status = self.parse_lpstat_job_status(all_output, backend_job_id)
         if status is not None:
@@ -289,6 +326,7 @@ class LocalCupsPrinter(PrinterBackend):
 
         # If the job is missing from both active queue and history without completion flags,
         # CUPS treated it as canceled.
+
         job.status = JobStatus.CANCELED
         job.status_reason = 'Job disappeared from CUPS queue'
         job.date_finished = timezone.now()
@@ -320,7 +358,7 @@ class LocalCupsPrinter(PrinterBackend):
             ['lp'] + self.common_options + [file_path] + self._cups_params(job),
             stderr=subprocess.STDOUT,
             timeout=TASK_TIMEOUT_S,
-            ).decode('utf-8', errors='ignore')
+        ).decode('utf-8', errors='ignore')
         mt = re.search(re.escape(cups_name) + r'-([^ ]+)', output)
         if mt:
             return '{0}-{1}'.format(cups_name, mt.group(1))
@@ -331,7 +369,16 @@ class LocalCupsPrinter(PrinterBackend):
             ['cancel'] + self.common_options + [backend_job_id],
             stderr=subprocess.STDOUT,
             timeout=TASK_TIMEOUT_S,
-            )
+        )
+
+    @staticmethod
+    def list_cups_printer_names() -> list[str]:
+        try:
+            result = subprocess.check_output(['lpstat'] + LocalCupsPrinter.common_options + ['-e'], text=True)
+            return [line.strip() for line in result.splitlines() if line.strip()]
+        except Exception as error:
+            logger.error(f"Failed to list printers in CUPS using lpstat: {str(error)}", exc_info=True)
+            return []
 
 
 class DisabledPrinter(PrinterBackend):

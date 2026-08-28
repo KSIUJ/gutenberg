@@ -1,36 +1,59 @@
 import logging
 from secrets import token_urlsafe
-from django.db import transaction
-from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from printing.services import create_printing_job, validate_properties, run_job
-from celery import current_app
+
 from django.contrib.auth import authenticate, login
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.db import transaction
 from django.middleware.csrf import rotate_token
 from django.utils.decorators import method_decorator
+from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.debug import sensitive_post_parameters
-from rest_framework import viewsets, status, exceptions
+
+from rest_framework import exceptions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import APIException
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from api.exceptions import UnsupportedDocument, InvalidStatus, PrinterUnavailable
-from api.serializers import GutenbergJobSerializer, PrinterSerializer, UserInfoSerializer, \
-    CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer, LoginSerializer, \
-    DeleteJobArtefactRequestSerializer, ChangeArtefactOrderRequestSerializer, JobArtefactSerializer, \
-    ChangePrintJobPropertiesRequestSerializer, PrintPreviewSerializer
+from api.exceptions import InvalidStatus, PrinterUnavailable, UnsupportedDocument
+from api.serializers import (
+    ChangeArtefactOrderRequestSerializer,
+    ChangePrintJobPropertiesRequestSerializer,
+    CreatePrintJobRequestSerializer,
+    DeleteJobArtefactRequestSerializer,
+    GutenbergJobSerializer,
+    JobArtefactSerializer,
+    LoginSerializer,
+    PrinterSerializer,
+    PrintPreviewSerializer,
+    UploadJobArtefactRequestSerializer,
+    UserInfoSerializer,
+)
 from common.models import User
-from control.models import GutenbergJob, Printer, JobStatus, PrintingProperties, TwoSidedPrinting, JobArtefact, \
-    JobArtefactType, JobType, PrintPreview
+from control.models import (
+    GutenbergJob,
+    JobArtefact,
+    JobArtefactType,
+    JobStatus,
+    Printer,
+    PrintingProperties,
+    PrintPreview,
+    TwoSidedPrinting,
+)
 from gutenberg.worker_capabilities import get_formats_supported_by_workers
-from printing.printing import print_file
+from printing.printing import run_job, validate_properties
 from printing.processing.converter import detect_file_format
+from printing.services import create_printing_job
+from printing.tasks import print_job
 
 logger = logging.getLogger('gutenberg.api.printing')
+
 
 class LargeResultsSetPagination(PageNumberPagination):
     page_size = 1000
@@ -42,6 +65,12 @@ class UnsupportedDocumentError(ValueError):
     pass
 
 
+class QuotaExceededAPIException(APIException):
+    status_code = status.HTTP_400_BAD_REQUEST
+    default_detail = _('Print quota exceeded.')
+    default_code = 'quota_exceeded'
+
+
 class PrintJobViewSet(viewsets.ModelViewSet):
     serializer_class = GutenbergJobSerializer
     permission_classes = [IsAuthenticated]
@@ -50,16 +79,17 @@ class PrintJobViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = GutenbergJob.objects.filter(owner=user)
-        return queryset.all().order_by('date_created')
+        return GutenbergJob.objects.filter(owner=user).order_by('date_created')
 
     @action(detail=True, methods=['post'], name='Cancel job')
     def cancel(self, request, pk=None):
         job = self.get_object()
         GutenbergJob.objects.filter(id=job.id).filter(status=JobStatus.INCOMING).update(
-            status=JobStatus.CANCELED)
-        GutenbergJob.objects.filter(id=job.id).exclude(status__in=GutenbergJob.COMPLETED_STATUSES).update(
-            status=JobStatus.CANCELING)
+            status=JobStatus.CANCELED
+        )
+        GutenbergJob.objects.filter(id=job.id).exclude(
+            status__in=GutenbergJob.COMPLETED_STATUSES
+        ).update(status=JobStatus.CANCELING)
         job.refresh_from_db()
         return Response(self.get_serializer(job).data)
 
@@ -67,7 +97,10 @@ class PrintJobViewSet(viewsets.ModelViewSet):
     def upload_artefact(self, request, pk=None):
         job = self.get_object()
         if job.status != JobStatus.INCOMING:
-            raise InvalidStatus("Invalid job status for this request", additional_info="current status: {}".format(job.status))
+            raise InvalidStatus(
+                "Invalid job status for this request",
+                additional_info="current status: {}".format(job.status),
+            )
         serializer = UploadJobArtefactRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
@@ -83,7 +116,10 @@ class PrintJobViewSet(viewsets.ModelViewSet):
     def delete_artefact(self, request, pk=None):
         job = self.get_object()
         if job.status != JobStatus.INCOMING:
-            raise InvalidStatus("Invalid job status for this request", additional_info="current status: {}".format(job.status))
+            raise InvalidStatus(
+                "Invalid job status for this request",
+                additional_info="current status: {}".format(job.status),
+            )
         serializer = DeleteJobArtefactRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         artefact_id = serializer.validated_data['artefact_id']
@@ -98,7 +134,10 @@ class PrintJobViewSet(viewsets.ModelViewSet):
     def change_artefact_order(self, request, pk=None):
         job = self.get_object()
         if job.status != JobStatus.INCOMING:
-            raise InvalidStatus("Invalid job status for this request", additional_info="current status: {}".format(job.status))
+            raise InvalidStatus(
+                "Invalid job status for this request",
+                additional_info="current status: {}".format(job.status),
+            )
         serializer = ChangeArtefactOrderRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -116,11 +155,14 @@ class PrintJobViewSet(viewsets.ModelViewSet):
     def create_job(self, request):
         serializer = CreatePrintJobRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
-                                                          printer_id=serializer.validated_data['printer'])
+        printer_with_perms = Printer.get_printer_for_user(
+            user=self.request.user, printer_id=serializer.validated_data['printer']
+        )
         if not printer_with_perms:
             raise exceptions.NotFound("Selected printer does not exist")
-        job = self._create_printing_job(printer_with_perms=printer_with_perms, **serializer.validated_data)
+        job = self._create_printing_job(
+            printer_with_perms=printer_with_perms, **serializer.validated_data
+        )
         return Response(self.get_serializer(job).data)
 
     @action(detail=True, methods=['post'], name='Change job properties')
@@ -131,12 +173,15 @@ class PrintJobViewSet(viewsets.ModelViewSet):
         printer_id = serializer.validated_data.get('printer')
         if printer_id is None:
             printer_id = job.printer.id
-        printer_with_perms = Printer.get_printer_for_user(user=self.request.user,
-                                                          printer_id=printer_id)
+        printer_with_perms = Printer.get_printer_for_user(
+            user=self.request.user, printer_id=printer_id
+        )
         if not printer_with_perms:
             raise exceptions.NotFound("Selected printer does not exist")
 
-        job = self._change_properties(printer_with_perms=printer_with_perms, **serializer.validated_data)
+        job = self._change_properties(
+            printer_with_perms=printer_with_perms, **serializer.validated_data
+        )
         return Response(self.get_serializer(job).data)
 
     @action(detail=True, methods=['get'], name='Validate job properties')
@@ -155,13 +200,10 @@ class PrintJobViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'], url_path='preview', name='Print preview')
     def preview(self, request, pk=None):
         job = self.get_object()
-
         try:
             preview = job.preview
         except PrintPreview.DoesNotExist:
-            raise exceptions.NotFound(
-                'A preview has not been requested for this job'
-            )
+            raise exceptions.NotFound('A preview has not been requested for this job')
 
         serializer = PrintPreviewSerializer(preview, context={'request': request})
         return Response(serializer.data)
@@ -173,7 +215,7 @@ class PrintJobViewSet(viewsets.ModelViewSet):
         self._run_job(job)
         return Response(self.get_serializer(job).data)
 
-    @action(detail=True, methods=['post'], name='Resume manual duplex')
+    @action(detail=True, methods=['post'], url_path='resume-manual-duplex', name='Resume manual duplex')
     def resume_manual_duplex(self, request, pk=None):
         job = self.get_object()
         if job.status != JobStatus.WAITING_FOR_USER_ACTION:
@@ -184,8 +226,10 @@ class PrintJobViewSet(viewsets.ModelViewSet):
         job.status_reason = "Manual duplex resumed by user"
         job.save(update_fields=['is_manual_duplex_second_pass', 'status', 'status_reason'])
 
-        print_file.delay(job.id)
+        print_job.delay(job.id, is_manual_second_pass=True)
         return Response(self.get_serializer(job).data)
+
+    # --- METODY POMOCNICZE W DOWOLNYM DLA PrintJobViewSet ---
 
     def _create_printing_job(
         self,
@@ -222,7 +266,7 @@ class PrintJobViewSet(viewsets.ModelViewSet):
 
     def _change_properties(
         self,
-        printer_with_perms = None,
+        printer_with_perms=None,
         copies: int = None,
         pages_to_print: str = None,
         color: bool = None,
@@ -347,7 +391,6 @@ def _generate_token():
 
 
 class MeView(RetrieveAPIView):
-    queryset = User.objects.all()
     serializer_class = UserInfoSerializer
     permission_classes = [IsAuthenticated]
 
@@ -358,19 +401,19 @@ class MeView(RetrieveAPIView):
         return self.request.user
 
 
-class ResetApiTokenView(APIView):
+class JobArtefactViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = JobArtefact.objects.all()
+    serializer_class = JobArtefactSerializer
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, *args, **kwargs):
-        self.request.user.api_key = _generate_token()
-        self.request.user.save()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    def get_queryset(self):
+        return JobArtefact.objects.filter(job__owner=self.request.user)
 
 
 class LoginApiView(APIView):
     @classmethod
     def as_view(cls, **initkwargs):
-        view = super(APIView, cls).as_view(**initkwargs)
+        view = super().as_view(**initkwargs)
         view.cls = cls
         view.initkwargs = initkwargs
         return view

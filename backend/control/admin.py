@@ -25,6 +25,7 @@ from gutenberg.celery import app
 
 logger = logging.getLogger('gutenberg.control')
 
+
 class PrintingPropertiesInline(admin.TabularInline):
     model = PrintingProperties
 
@@ -132,7 +133,6 @@ class PrinterAdmin(admin.ModelAdmin):
     readonly_fields = ('test_print_controls',)
 
     def get_urls(self):
-        """Returns HTML for Django admin list view"""
         urls = super().get_urls()
         custom_urls = [
             path(
@@ -149,9 +149,6 @@ class PrinterAdmin(admin.ModelAdmin):
         return custom_urls + urls
 
     def test_print_controls(self, obj):
-        """
-        Renders action buttons for test prints in different configurations (one-sided/two-sided, colored/grayscale).
-        """
         if not obj or not obj.pk:
             return "-"
 
@@ -187,11 +184,9 @@ class PrinterAdmin(admin.ModelAdmin):
     test_print_controls.short_description = 'Test Print Options'
 
     class Media:
-        """Class for loading js script"""
         js = ('js/admin_test_print.js',)
 
     def cups_printer_options_view(self, request):
-        """Return Gutenberg's supported CUPS settings for a selected queue."""
         if request.method != 'GET':
             return HttpResponseNotAllowed(['GET'])
 
