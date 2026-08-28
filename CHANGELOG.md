@@ -24,7 +24,7 @@ See also [Creating new releases] for instructions on how to create a new release
 ### Fixed
 - Fixed canceled CUPS job being incorrectly marked as completed [#179]
   Fixed backend Docker container startup crashes (permission denied) by ensuring the `gutenberg-docker` home directory is explicitly created with proper ownership [#206]
-- Migrated native print preview buttons to PrimeVue components [#216]
+
 ### Tests
 - Added new edge-case tests for page size ratio orientations, booklet odd-page imposition,
   disabled fit-to-page scaling, isolated temporary directories via `pytest` fixtures,
