@@ -5,9 +5,9 @@
     aria-label="Print preview"
     dismissable-mask
     :draggable="false"
-    @hide="preview.close()"
     class="sm:h-[min(90vh,56rem)] sm:w-[min(90vw,52rem)] max-sm:maximized-dialog"
     content-class="flex flex-col overflow-hidden px-0"
+    @update:visible="onVisibilityUpdate"
   >
     <template #header>
       <div>
@@ -282,6 +282,12 @@ const props = defineProps<{
   jobCreator: ReturnType<typeof useJobCreator>;
   preview: ReturnType<typeof usePrintPreview>;
 }>();
+
+const onVisibilityUpdate = (value) => {
+  if (value === false) {
+    props.preview.close();
+  }
+};
 
 const isBooklet = computed(() => props.jobCreator.impositionTemplate === 'booklet');
 
