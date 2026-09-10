@@ -1,6 +1,6 @@
 import tailwindcss from '@tailwindcss/vite';
-import type {NuxtPage} from '@nuxt/schema';
-import {GutenbergPreset} from './app/style/gutenberg-preset';
+import type { NuxtPage } from '@nuxt/schema';
+import { GutenbergPreset } from './app/style/gutenberg-preset';
 import * as path from 'node:path';
 
 const isDev = process.env.NODE_ENV === 'development';

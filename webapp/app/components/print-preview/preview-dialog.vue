@@ -274,7 +274,7 @@
 </template>
 
 <script setup lang="ts">
-import {onKeyStroke} from '@vueuse/core';
+import { onKeyStroke } from '@vueuse/core';
 
 type Unit = { pages: PrintPreviewPage[] };
 
@@ -283,8 +283,8 @@ const props = defineProps<{
   preview: ReturnType<typeof usePrintPreview>;
 }>();
 
-const onVisibilityUpdate = (value) => {
-  if (value === false) {
+const onVisibilityUpdate = (value: boolean) => {
+  if (!value) {
     props.preview.close();
   }
 };
