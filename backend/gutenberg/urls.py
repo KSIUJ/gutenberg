@@ -24,8 +24,10 @@ import api.urls
 import ipp.urls
 import printing.urls
 from printing.views import webapp_login
+from gutenberg.views import health
 
 urlpatterns = [
+    path('health/', health, name='health'),
     path('admin/', admin.site.urls),
 
     path('', include(printing.urls)),

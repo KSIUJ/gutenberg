@@ -84,6 +84,18 @@ After starting all Docker containers, the command below can be used to create a 
 docker exec -it gutenberg-backend ./manage.py createsuperuser
 ```
 
+## Health check
+The `/health/` endpoint does not require authentication and can be used by external monitoring.
+It returns `200` with `{"status": "ok", "database": "ok"}` when the backend can reach the database,
+and `503` otherwise:
+
+```bash
+curl -f http://localhost:3000/health/
+```
+
+The request must use a host listed in `ALLOWED_HOSTS` and, if `GUTENBERG_TRUSTED_PROXY_IPS` is set,
+come from one of the trusted proxy addresses.
+
 ## NGINX config files
 The `run_nginx` target describes an NGINX Docker image with configuration required for running Gutenberg itself.
 The default configuration file for NGINX, `/etc/nginx/nginx.conf` contains
