@@ -36,13 +36,56 @@ class PrinterBackend(ABC):
         """Attempt canceling processing the job on backend."""
         pass
 
-    def print(self, job: GutenbergJob, file_path: str):
+    def print(self, job: GutenbergJob, file_path: str, is_manual_second_pass: bool = False):
         logger.info("Printing job {} via {}".format(job, self.backend_name))
-        backend_job_id = self.submit_job(job, file_path)
+
+        # Check if manual duplex is required (no hardware duplex support)
+        is_manual_duplex = (
+            job.properties.two_sides != TwoSidedPrinting.ONE_SIDED and
+            not job.printer.duplex_supported
+        )
+
+        # Select the file to print based on the pass
+        if is_manual_duplex and not is_manual_second_pass:
+            file_to_print, _ = job.get_manual_duplex_files()
+        elif is_manual_duplex and is_manual_second_pass:
+            _, file_to_print = job.get_manual_duplex_files()
+        else:
+            file_to_print = file_path
+
+        # Submit job to the CUPS backend
+        backend_job_id = self.submit_job(job, file_to_print)
+        job.backend_job_id = backend_job_id
+
         # CUPS has the document now. Do not give the held pages back if the
         # database update below fails: the printer may still print them.
+
+        # Check if manual duplex is required (no hardware duplex support)
+        is_manual_duplex = (
+            job.properties.two_sides != TwoSidedPrinting.ONE_SIDED and
+            not job.printer.duplex_supported
+        )
+
+        # Select the file to print based on the pass
+        if is_manual_duplex and not is_manual_second_pass:
+            file_to_print, _ = job.get_manual_duplex_files()
+        elif is_manual_duplex and is_manual_second_pass:
+            _, file_to_print = job.get_manual_duplex_files()
+        else:
+            file_to_print = file_path
+
+        # Submit job to backend
+        backend_job_id = self.submit_job(job, file_to_print)
+
+        # Quota accounting integration from origin/develop
         job.quota_submission_accepted = True
         charge_quota_for_job(job)
+
+
+        job.backend_job_id = backend_job_id
+        job.save()
+
+        # Monitor print completion with cancellation and timeout handling
         cnt = 0
         try:
             while self.check_status(job, backend_job_id):
@@ -56,10 +99,32 @@ class PrinterBackend(ABC):
         except JobCanceledException:
             logger.warning("Job {} processing stopped because it was canceled".format(job))
             return
-        job.status = JobStatus.COMPLETED
-        job.status_reason = ''
-        job.date_finished = timezone.now()
-        job.save()
+
+        # Update status based on execution phase
+        if is_manual_duplex and not is_manual_second_pass:
+            # First pass completed (odd pages); wait for user action
+            job.status = JobStatus.WAITING_FOR_USER
+            job.status_reason = "Manual Duplex: Turn pages over and place them back in the feeder, then click Continue."
+            job.save()
+        else:
+            # Second pass or standard printing completed
+            job.status = JobStatus.COMPLETED
+            job.status_reason = ''
+            job.date_finished = timezone.now()
+            job.save()
+
+        # Update status based on execution phase
+        if is_manual_duplex and not is_manual_second_pass:
+            # First pass completed (odd pages); wait for user action
+            job.status = JobStatus.WAITING_FOR_USER_ACTION
+            job.status_reason = "Manual Duplex: Turn pages over and place them back in the feeder, then click Continue."
+            job.save()
+        else:
+            # Second pass or standard printing completed
+            job.status = JobStatus.COMPLETED
+            job.status_reason = ''
+            job.date_finished = timezone.now()
+            job.save()
 
 
 class LocalCupsPrinter(PrinterBackend):
@@ -258,8 +323,10 @@ class LocalCupsPrinter(PrinterBackend):
             # Reference: https://datatracker.ietf.org/doc/html/rfc8011#section-5.3.8
             if 'job-completed-successfully' in status.lower():
                 return False
+
         # If the job is missing from both active queue and history without completion flags,
         # CUPS treated it as canceled.
+
         job.status = JobStatus.CANCELED
         job.status_reason = 'Job disappeared from CUPS queue'
         job.date_finished = timezone.now()

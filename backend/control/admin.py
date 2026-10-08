@@ -25,6 +25,7 @@ from gutenberg.celery import app
 
 logger = logging.getLogger('gutenberg.control')
 
+
 class PrintingPropertiesInline(admin.TabularInline):
     model = PrintingProperties
 
@@ -35,14 +36,32 @@ class JobArtefactAdmin(admin.TabularInline):
 
 class GutenbergJobAdmin(admin.ModelAdmin):
     inlines = [PrintingPropertiesInline, JobArtefactAdmin]
-    readonly_fields = ('pages', 'date_created', 'date_processed', 'date_finished')
-    list_display = ('date_created', 'owner', 'name', 'job_type', 'status', 'pages')
+    readonly_fields = ('pages', 'date_created', 'date_processed', 'date_finished', 'is_manual_duplex_second_pass')
+    list_display = ('date_created', 'owner', 'name', 'job_type', 'status', 'is_manual_duplex_second_pass', 'pages')
     list_filter = ('date_created', 'owner', 'job_type', 'status')
 
 
 class LocalPrinterParamsInline(admin.StackedInline):
     model = LocalPrinterParams
     form = LocalPrinterParamsForm
+    fieldsets = (
+        (None, {
+            'fields': (
+                'cups_printer_name', 'print_grayscale_param', 'print_color_param',
+                'print_one_sided_param', 'print_two_sided_long_edge_param', 'print_two_sided_short_edge_param'
+            )
+        }),
+        ('Manual Duplex Settings', {
+            'fields': (
+                'manual_duplex_enabled',
+                'manual_duplex_first_pass',
+                'manual_duplex_first_pass_reverse',
+                'manual_duplex_second_pass_reverse',
+                'manual_duplex_face_orientation',
+                'manual_duplex_feed_edge',
+            )
+        }),
+    )
 
 
 class PrinterPermissionsAdmin(admin.TabularInline):
@@ -114,7 +133,6 @@ class PrinterAdmin(admin.ModelAdmin):
     readonly_fields = ('test_print_controls',)
 
     def get_urls(self):
-        """Returns HTML for Django admin list view"""
         urls = super().get_urls()
         custom_urls = [
             path(
@@ -131,9 +149,6 @@ class PrinterAdmin(admin.ModelAdmin):
         return custom_urls + urls
 
     def test_print_controls(self, obj):
-        """
-        Renders action buttons for test prints in different configurations (one-sided/two-sided, colored/grayscale).
-        """
         if not obj or not obj.pk:
             return "-"
 
@@ -169,11 +184,9 @@ class PrinterAdmin(admin.ModelAdmin):
     test_print_controls.short_description = 'Test Print Options'
 
     class Media:
-        """Class for loading js script"""
         js = ('js/admin_test_print.js',)
 
     def cups_printer_options_view(self, request):
-        """Return Gutenberg's supported CUPS settings for a selected queue."""
         if request.method != 'GET':
             return HttpResponseNotAllowed(['GET'])
 
