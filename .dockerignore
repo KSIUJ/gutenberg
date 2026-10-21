@@ -19,6 +19,9 @@
 /webapp/.nuxt
 /webapp/.output
 
+# Documentation
+/docs/book
+
 # local env files
 /.env.local
 /.env.*.local
