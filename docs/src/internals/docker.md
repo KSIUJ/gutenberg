@@ -15,14 +15,13 @@ when specifying image versions in `compose.yml`. Using common versions lets Dock
 flowchart TD
     nginx{{"`_nginx..._
         (alpine)`"}}
-    rust{{"`_rust..._
-        (alpine)`"}}
+    alpine{{"`_alpine..._`"}}
     node{{"`_node..._
         (alpine)`"}}
     uv{{"`_uv:python..._
         (debian)`"}}
         
-    rust --> build_docs
+    alpine --> build_docs
     
     node --> build_webapp
 

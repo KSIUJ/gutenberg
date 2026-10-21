@@ -28,15 +28,16 @@ RUN pnpm run build
 #
 #   outputs:
 #   - /app/docs/book
-FROM rust:1.90-alpine${ALPINE_VER} AS build_docs
+FROM alpine:${ALPINE_VER} AS build_docs
+
+ARG MDBOOK_VER=0.5.4
+ARG MDBOOK_MERMAID_VER=0.17.1
 
 WORKDIR /app/docs
 
-# Install cargo-binstall and then use it to install other crates
-RUN apk add curl
-RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | sh
-
-RUN cargo binstall mdbook@0.5.2 mdbook-mermaid@0.17.0
+RUN apk add --no-cache curl \
+ && curl -fsSL "https://github.com/rust-lang/mdBook/releases/download/v${MDBOOK_VER}/mdbook-v${MDBOOK_VER}-$(uname -m)-unknown-linux-musl.tar.gz" | tar -xz -C /usr/local/bin \
+ && curl -fsSL "https://github.com/badboy/mdbook-mermaid/releases/download/v${MDBOOK_MERMAID_VER}/mdbook-mermaid-v${MDBOOK_MERMAID_VER}-$(uname -m)-unknown-linux-musl.tar.gz" | tar -xz -C /usr/local/bin
 
 COPY ./docs /app/docs/
 RUN mdbook build

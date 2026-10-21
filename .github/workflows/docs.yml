@@ -27,23 +27,20 @@ jobs:
         with:
           sparse-checkout: |
             docs
+            Dockerfile
+            .dockerignore
 
-      - uses: cargo-bins/cargo-binstall@main
-
-      - name: Install mdBook and plugins
-        run: >
-          cargo binstall -y
-          mdbook
-          mdbook-mermaid
-
-      - name: Build book
-        working-directory: docs
-        run: mdbook build
+      - name: Build documentation with Docker
+        # Using an environment variable avoids word-splitting and shell injection
+        # if the runner temp directory path contains spaces or special characters.
+        env:
+          OUTPUT_DIR: ${{ runner.temp }}/book
+        run: docker build --target build_docs --output "type=local,dest=$OUTPUT_DIR,src=/app/docs/book" .
 
       - name: Upload GitHub Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./docs/book
+          path: ${{ runner.temp }}/book
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
