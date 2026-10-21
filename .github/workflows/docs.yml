@@ -33,8 +33,8 @@ jobs:
       - name: Install mdBook and plugins
         run: >
           cargo binstall -y
-          mdbook
-          mdbook-mermaid
+          mdbook@0.5.4
+          mdbook-mermaid@0.17.1
 
       - name: Build book
         working-directory: docs

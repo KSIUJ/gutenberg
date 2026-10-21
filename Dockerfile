@@ -30,8 +30,8 @@ RUN pnpm run build
 #   - /app/docs/book
 FROM alpine:${ALPINE_VER} AS build_docs
 
-ARG MDBOOK_VER=0.5.2
-ARG MDBOOK_MERMAID_VER=0.17.0
+ARG MDBOOK_VER=0.5.4
+ARG MDBOOK_MERMAID_VER=0.17.1
 
 WORKDIR /app/docs
 
