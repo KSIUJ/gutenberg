@@ -16,22 +16,22 @@
     "@nuxt/eslint": "^1.17.0",
     "@primeuix/themes": "^2.0.3 <3.0.0",
     "@primevue/nuxt-module": "^4.5.5 <5.0.0",
-    "@tailwindcss/vite": "^4.3.3",
+    "@tailwindcss/vite": "^4.3.4",
     "@vueuse/core": "^14.4.0",
-    "eslint": "^10.8.1",
+    "eslint": "^10.14.0",
     "js-cookie": "^3.0.8",
-    "nuxt": "^4.5.2",
-    "primevue": "^4.4.1 <5.0.0",
-    "tailwindcss": "^4.3.3",
+    "nuxt": "^4.6.4",
+    "primevue": "^4.5.5 <5.0.0",
+    "tailwindcss": "^4.3.4",
     "tailwindcss-primeui": "^0.6.1",
-    "vue": "^3.5.41",
-    "vue-router": "^5.2.0"
+    "vue": "^3.5.44",
+    "vue-router": "^5.4.0"
   },
-  "packageManager": "pnpm@10.18.2+sha512.9fb969fa749b3ade6035e0f109f0b8a60b5d08a1a87fdf72e337da90dcc93336e2280ca4e44f2358a649b83c17959e9993e777c2080879f3801e6f0d999ad3dd",
+  "packageManager": "pnpm@12.16.1+sha512.091d1dee7927575661b25dab3c2ae31cafc1c54d6b71ed6a6600cf0c1cb10434a447eae14015f1b23e2e6bedeed79df94a932e2164d2832280dce3fb32f656d1",
   "devDependencies": {
     "@types/js-cookie": "^3.0.6",
     "eslint-plugin-tailwindcss": "4.3.0",
     "typescript": "^6.0.3",
-    "vue-tsc": "^3.3.10"
+    "vue-tsc": "^3.3.14"
   }
 }
