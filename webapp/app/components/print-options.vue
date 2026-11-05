@@ -113,17 +113,6 @@
           Processing options
         </h2>
 
-        <!--      <label id="page-filter-select" class="text-label px-form">Filter printed pages</label> -->
-        <!--      <SelectButton -->
-        <!--        :options="pageFilterOptions" -->
-        <!--        option-value="value" -->
-        <!--        data-key="value" -->
-        <!--        option-label="label" -->
-        <!--        :allow-empty="false" -->
-        <!--        fluid -->
-        <!--        aria-labelledby="page-filter-select" -->
-        <!--      /> -->
-
         <div>
           <p-float-label variant="in">
             <p-input-text
@@ -189,7 +178,7 @@
           aria-labelledby="imposition-template-select"
         />
 
-        <h2 class="mt-8 text-header ">
+        <h2 class="mt-8 text-header">
           Printing options
         </h2>
 
@@ -206,17 +195,24 @@
           <label for="copy-number-input">Number of copies</label>
         </p-float-label>
 
-        <template v-if="jobCreator.selectedPrinter?.duplex_supported">
+        <div>
           <labeled-toggle
             v-model="duplexEnabled"
             label="Enable two&dash;sided printing"
             input-id="duplex-enabled"
           />
 
+          <input-hint
+            v-if="duplexEnabled && !jobCreator.selectedPrinter?.duplex_supported"
+            class="mt-1 text-amber-600 dark:text-amber-400"
+          >
+            This printer does not support automatic two-sided printing. You will be asked to flip the pages manually during printing.
+          </input-hint>
+
           <template v-if="jobCreator.duplexMode !== 'disabled'">
             <label
               id="duplex-mode-select"
-              class="text-label px-form"
+              class="mt-3 block text-label px-form"
             >Flip backside around</label>
             <p-select-button
               v-model="jobCreator.duplexMode"
@@ -235,8 +231,30 @@
                 </div>
               </template>
             </p-select-button>
+
+            <!-- DYNAMICZNA INSTRUKCJA RĘCZNEGO DRUKU DWUSTRONNEGO -->
+            <p-message
+              v-if="!jobCreator.selectedPrinter?.duplex_supported && manualDuplexInstructions.length > 0"
+              severity="warn"
+              class="mt-3"
+            >
+              <div class="text-sm space-y-1">
+                <div class="font-semibold flex items-center gap-1">
+                  <i class="pi pi-exclamation-triangle" />
+                  Manual duplex instruction:
+                </div>
+                <ul class="list-disc list-inside space-y-1">
+                  <li
+                    v-for="(step, index) in manualDuplexInstructions"
+                    :key="index"
+                  >
+                    <span v-html="step" />
+                  </li>
+                </ul>
+              </div>
+            </p-message>
           </template>
-        </template>
+        </div>
 
         <div>
           <label
@@ -309,6 +327,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { FileUploadSelectEvent } from 'primevue';
 import type { OrientationRequested } from '~/composables/use-job-creator';
 
@@ -330,6 +349,7 @@ const duplexOptions = [
   { value: 'duplex-long-edge' as DuplexMode, label: 'Long edge', description: 'for vertical documents' },
   { value: 'duplex-short-edge' as DuplexMode, label: 'Short edge', description: 'for horizontal documents' },
 ];
+
 const duplexEnabled = computed({
   get: () => jobCreator.duplexMode !== 'disabled',
   set: (value) => {
@@ -340,8 +360,6 @@ const duplexEnabled = computed({
   },
 });
 
-// Uses Tailwind color classes, see
-// https://tailwindcss.com/docs/detecting-classes-in-source-files#how-classes-are-detected
 const colorOptions = computed(() => [
   {
     value: 'monochrome' as ColorMode,
@@ -357,13 +375,6 @@ const colorOptions = computed(() => [
   },
 ]);
 
-// const pageFilterOptions = [
-//   { value: 'all', label: 'All' },
-//   { value: 'odd', label: 'Odd' },
-//   { value: 'even', label: 'Even' },
-//   { value: 'custom', label: 'Custom' },
-// ];
-
 const nUpOptions = [1, 2, 4, 8, 16, 32];
 
 const impositionTemplateOptions = [
@@ -376,6 +387,39 @@ const orientationRequestedOptions = [
   { value: 'PORTRAIT' as OrientationRequested, label: 'Portrait' },
   { value: 'LANDSCAPE' as OrientationRequested, label: 'Landscape' },
 ];
+
+const manualDuplexInstructions = computed(() => {
+  const printer = jobCreator.selectedPrinter;
+  if (!printer || printer.duplex_supported) return [];
+
+  const instructions: string[] = [];
+
+  const firstPass = printer.manual_duplex_first_pass ?? 'ODD';
+  if (firstPass === 'ODD') {
+    instructions.push('Odd pages will print first.');
+  } else {
+    instructions.push('Even pages will print first.');
+  }
+
+  const faceOrientation = printer.manual_duplex_face_orientation ?? 'DOWN';
+  const faceText = faceOrientation === 'UP' ? 'face <b>UP</b>' : 'face <b>DOWN</b>';
+
+  const isLongEdge = jobCreator.duplexMode === 'duplex-long-edge';
+  const feedEdge = printer.manual_duplex_feed_edge ?? (isLongEdge ? 'LONG' : 'SHORT');
+
+  let rotationText = '';
+  if (feedEdge === 'LONG') {
+    rotationText = 'rotated <b>180° horizontally</b> (flip along long edge)';
+  } else {
+    rotationText = 'flipped <b>vertically</b> (flip along short edge)';
+  }
+
+  instructions.push(
+    `Place printed pages back in the tray ${faceText}, ${rotationText}.`
+  );
+
+  return instructions;
+});
 
 const onFileSelect = (event: FileUploadSelectEvent) => {
   jobCreator.addFiles(event.files);
