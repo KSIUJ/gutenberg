@@ -149,6 +149,7 @@ export default defineNuxtConfig({
         'Button',
         'ConfirmDialog',
         'Divider',
+        'Dialog',
         'Fieldset',
         'FileUpload',
         'FloatLabel',

@@ -1,26 +1,6 @@
 <template>
   <div class="flex max-w-xs flex-col items-center gap-3 text-center">
-    <svg
-      v-if="variant === 'loading'"
-      viewBox="0 0 24 24"
-      fill="none"
-      class="size-8 animate-spin text-primary"
-    >
-      <circle
-        cx="12"
-        cy="12"
-        r="9"
-        stroke="currentColor"
-        stroke-width="2.5"
-        stroke-opacity="0.25"
-      />
-      <path
-        d="M21 12a9 9 0 0 0-9-9"
-        stroke="currentColor"
-        stroke-width="2.5"
-        stroke-linecap="round"
-      />
-    </svg>
+    <loading-spinner v-if="variant === 'loading'" />
     <svg
       v-else
       viewBox="0 0 24 24"
