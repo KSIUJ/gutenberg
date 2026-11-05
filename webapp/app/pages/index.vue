@@ -69,7 +69,7 @@
           <b class="text-primary">KSI&nbsp;UJ</b>:
         </p>
         <big-link
-          href="https://ksi.ii.uj.edu.pl/"
+          href="https://ksi.sh/"
           :img-src="ksiPoweredByLogo"
           alt="&quot;Powered by KSI&quot; logo"
         >
