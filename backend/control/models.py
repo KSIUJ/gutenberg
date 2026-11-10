@@ -103,6 +103,7 @@ class JobStatus(models.TextChoices):
     PRINTING = 'PRINTING', _('printing')
     # SCANNING = 'SCANNING', _('scanning')
     # WAITING_FOR_NEXT_PAGE = 'WAITING_PAGE', _('waiting for next page')
+    WAITING_FOR_USER_ACTION = 'WAITING_ACT', _('waiting for user action')
     COMPLETED = 'COMPLETED', _('completed')
     CANCELED = 'CANCELED', _('canceled')
     CANCELING = 'CANCELING', _('canceling')
@@ -113,6 +114,21 @@ class TwoSidedPrinting(models.TextChoices):
     ONE_SIDED = 'OS', _('one sided')
     TWO_SIDED_LONG_EDGE = 'TL', _('two sided long edge')
     TWO_SIDED_SHORT_EDGE = 'TS', _('two sided short edge')
+
+
+class ManualDuplexFirstPass(models.TextChoices):
+    ODD = 'ODD', _('odd pages first')
+    EVEN = 'EVEN', _('even pages first')
+
+
+class ManualDuplexFaceOrientation(models.TextChoices):
+    UP = 'UP', _('face up')
+    DOWN = 'DOWN', _('face down')
+
+
+class ManualDuplexFeedEdge(models.TextChoices):
+    LONG = 'LONG', _('long edge')
+    SHORT = 'SHORT', _('short edge')
 
 
 class PrinterType(models.TextChoices):
@@ -209,12 +225,24 @@ class LocalPrinterParams(models.Model):
     print_two_sided_long_edge_param = models.CharField(max_length=64, null=True, blank=True)
     print_two_sided_short_edge_param = models.CharField(max_length=64, null=True, blank=True)
 
+    # Manual duplex printing parameters
+    manual_duplex_enabled = models.BooleanField(default=False)
+    manual_duplex_first_pass = models.CharField(
+        max_length=4, default=ManualDuplexFirstPass.ODD, choices=ManualDuplexFirstPass.choices
+    )
+    #manual_duplex_first_pass_reverse = models.BooleanField(default=False)
+    #manual_duplex_second_pass_reverse = models.BooleanField(default=False)
+    manual_duplex_face_orientation = models.CharField(
+        max_length=4, default=ManualDuplexFaceOrientation.UP, choices=ManualDuplexFaceOrientation.choices
+    )
+    manual_duplex_feed_edge = models.CharField(
+        max_length=5, default=ManualDuplexFeedEdge.LONG, choices=ManualDuplexFeedEdge.choices
+    )
 
 # class LocalScanerParams(models.Model):
 #     scaner = models.OneToOneField(Scaner, on_delete=models.CASCADE)
 #
 #     scanimage_name = models.CharField(max_length=128)
-
 
 class PrinterPermissions(models.Model):
     printer = models.ForeignKey(Printer, on_delete=models.CASCADE)
@@ -250,8 +278,8 @@ class JobType(models.TextChoices):
 class GutenbergJob(models.Model):
     name = models.CharField(max_length=128)
     job_type = models.CharField(max_length=10, default=JobType.UNKNOWN, choices=JobType.choices)
-    printer = models.ForeignKey(Printer, null=True, blank=True, on_delete=models.SET_NULL)
     # scaner = models.ForeignKey(Scaner, null=True, blank=True, on_delete=models.SET_NULL)
+    printer = models.ForeignKey(Printer, null=True, blank=True, on_delete=models.SET_NULL)
     owner = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
     pages = models.IntegerField(null=True, blank=True)
     status = models.CharField(max_length=12, default=JobStatus.UNKNOWN, choices=JobStatus.choices)
@@ -261,6 +289,18 @@ class GutenbergJob(models.Model):
     date_finished = models.DateTimeField(null=True, blank=True)
     next_document_number = models.IntegerField(default=1)
     configuration_version = models.PositiveIntegerField(default=1)
+
+    # Statystyki i śledzenie przebiegu ręcznego duplexu
+    #manual_duplex_current_pass = models.IntegerField(default=1)
+    is_manual_duplex_second_pass = models.BooleanField(default=False)
+
+    # preview metadata (used by web UI)
+    # preview_status = models.CharField(
+    #     max_length=12,
+    #     choices=[('PENDING', 'pending'), ('PROCESSING', 'processing'), ('READY', 'ready'), ('FAILED', 'failed')],
+    #     default='PENDING')
+    # preview_pages = models.IntegerField(default=0)
+    # preview_meta = models.JSONField(default=dict, blank=True)
 
     def __str__(self):
         return "{} - {} - {} - {}".format(self.date_created, self.job_type, self.name, self.owner)
@@ -366,7 +406,7 @@ def validate_pages_to_print(value):
 def validate_n_up(value: int):
     if isqrt(value) ** 2 == value:
         return
-    if value%2 == 0 and 2 * (isqrt(value//2) ** 2) == value:
+    if value % 2 == 0 and 2 * (isqrt(value // 2) ** 2) == value:
         return
     raise ValueError("n must be a perfect square or a perfect square times 2")
 
