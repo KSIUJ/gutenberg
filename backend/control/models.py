@@ -1,14 +1,12 @@
 import re
-from math import isqrt
-
+from common.models import User
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import F, Max, Q, IntegerField
 from django.db.models.functions import Cast
 from django.utils.translation import gettext_lazy as _
-
-from common.models import User
+from math import isqrt
 
 
 class JobStatus(models.TextChoices):
@@ -159,6 +157,13 @@ class GutenbergJob(models.Model):
     def not_completed(self):
         return not self.completed
 
+    @property
+    def total_upload_size(self) -> int:
+        return sum(
+            artefact.size
+            for artefact in self.artefacts.filter(artefact_type=JobArtefactType.SOURCE)
+        )
+
 
 class JobArtefactType(models.TextChoices):
     SOURCE = 'SC', _('source')
@@ -173,6 +178,13 @@ class JobArtefact(models.Model):
     mime_type = models.CharField(max_length=100, default='application/octet-stream')
     #document ordering starts from 1, 0 means something went wrong
     document_number = models.IntegerField(default=0)
+
+    @property
+    def size(self) -> int:
+        try:
+            return self.file.size if self.file else 0
+        except FileNotFoundError:
+            return 0
 
     def __str__(self):
         return self.file.name

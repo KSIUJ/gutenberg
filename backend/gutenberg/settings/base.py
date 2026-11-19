@@ -212,6 +212,8 @@ MEDIA_ROOT = '/tmp/print/'
 MEDIA_URL = '/media/'
 # Format of date to append to each filename
 PRINT_DATE_FORMAT = '%Y-%m-%dT%H-%M-%S-%f'
+# Maximum total size of uploaded files for a single print job in bytes (default: 100 MiB)
+JOB_MAX_UPLOAD_SIZE = 100 * 1024 * 1024
 
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'

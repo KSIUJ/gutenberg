@@ -84,6 +84,12 @@ class UnsupportedDocument(exceptions.APIException):
     default_code = 'unsupported_document'
 
 
+class FileTooLarge(exceptions.APIException):
+    status_code = 413
+    default_detail = 'The uploaded file is too large.'
+    default_code = 'file_too_large'
+
+
 class InvalidStatus(exceptions.APIException):
     status_code = 422
     default_detail =  'Invalid Job status for this request.'

@@ -278,13 +278,16 @@
         @click="preview()"
       />
     </template>
+    <file-drop-target
+      v-if="jobCreator.selectedPrinter !== null"
+      @files-dropped="(files) => jobCreator.addFiles(files)"
+    />
   </app-panel>
-  <file-drop-target @files-dropped="(files) => jobCreator.addFiles(files)" />
 </template>
 
 <script setup lang="ts">
-import type { FileUploadSelectEvent } from 'primevue';
-import type { OrientationRequested } from '~/composables/use-job-creator';
+import type {FileUploadSelectEvent} from 'primevue';
+import type {OrientationRequested} from '~/composables/use-job-creator';
 
 const printers = await usePrinters();
 const jobCreator = useJobCreator(printers);

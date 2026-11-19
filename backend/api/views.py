@@ -1,21 +1,5 @@
 import logging
-from secrets import token_urlsafe
-
-from django.contrib.auth import authenticate, login
-from django.middleware.csrf import rotate_token
-from django.utils.decorators import method_decorator
-from django.views.decorators.cache import never_cache
-from django.views.decorators.csrf import csrf_protect
-from django.views.decorators.debug import sensitive_post_parameters
-from rest_framework import viewsets, status, exceptions
-from rest_framework.decorators import action
-from rest_framework.generics import RetrieveAPIView
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.views import APIView
-
-from api.exceptions import UnsupportedDocument, InvalidStatus
+from api.exceptions import UnsupportedDocument, InvalidStatus, FileTooLarge
 from api.serializers import GutenbergJobSerializer, PrinterSerializer, UserInfoSerializer, \
     CreatePrintJobRequestSerializer, UploadJobArtefactRequestSerializer, LoginSerializer, \
     DeleteJobArtefactRequestSerializer, ChangeArtefactOrderRequestSerializer, JobArtefactSerializer, \
@@ -23,9 +7,25 @@ from api.serializers import GutenbergJobSerializer, PrinterSerializer, UserInfoS
 from common.models import User
 from control.models import GutenbergJob, Printer, JobStatus, PrintingProperties, TwoSidedPrinting, JobArtefact, \
     JobArtefactType, JobType
+from django.conf import settings
+from django.contrib.auth import authenticate, login
+from django.db import transaction
+from django.middleware.csrf import rotate_token
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.debug import sensitive_post_parameters
 from gutenberg.worker_capabilities import get_formats_supported_by_workers
 from printing.printing import print_file
 from printing.processing.converter import detect_file_format
+from rest_framework import viewsets, status, exceptions
+from rest_framework.decorators import action
+from rest_framework.generics import RetrieveAPIView
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from secrets import token_urlsafe
 
 logger = logging.getLogger('gutenberg.api.printing')
 
@@ -214,14 +214,36 @@ class PrintJobViewSet(viewsets.ReadOnlyModelViewSet):
         return job
 
     def _upload_artefact(self, job, file, **_):
-        artefact = JobArtefact.objects.create(job=job, artefact_type=JobArtefactType.SOURCE, file=file, document_number=job.next_document_number)
-        job.next_document_number += 1
-        job.save()
-        file_type = detect_file_format(artefact.file.path)
-        if file_type not in get_formats_supported_by_workers()["mime_types"]:
-            raise UnsupportedDocumentError("Unsupported file type: {}".format(file_type))
-        artefact.mime_type = file_type
-        artefact.save()
+        if job.total_upload_size + file.size > settings.JOB_MAX_UPLOAD_SIZE:
+            raise FileTooLarge()
+
+        artefact = JobArtefact(job=job, artefact_type=JobArtefactType.SOURCE)
+        artefact.file.save(file.name, file, save=False)
+        try:
+            file_type = detect_file_format(artefact.file.path)
+            if file_type not in get_formats_supported_by_workers()["mime_types"]:
+                raise UnsupportedDocumentError("Unsupported file type: {}".format(file_type))
+            artefact.mime_type = file_type
+
+            with transaction.atomic():
+                locked_job = GutenbergJob.objects.select_for_update().get(pk=job.pk)
+                if locked_job.status != JobStatus.INCOMING:
+                    raise InvalidStatus(
+                        "Invalid job status for this request",
+                        additional_info="current status: {}".format(locked_job.status),
+                    )
+                if locked_job.total_upload_size + file.size > settings.JOB_MAX_UPLOAD_SIZE:
+                    raise FileTooLarge()
+
+                artefact.document_number = locked_job.next_document_number
+                artefact.save()
+                locked_job.next_document_number += 1
+                locked_job.save(update_fields=['next_document_number'])
+                job.next_document_number = locked_job.next_document_number
+        except Exception:
+            if artefact.file.name:
+                artefact.file.delete(save=False)
+            raise
 
     def _change_order(self, new_order):
         job = self.get_object()
