@@ -4,6 +4,8 @@ The changes below are formatted according to [keep a changelog].
 See also [Creating new releases] for instructions on how to create a new release.
 
 ## [Unreleased]
+- Increased NGINX client request size limit
+- Added `JOB_MAX_UPLOAD_SIZE` setting
 - ...
 
 ## [4.0.0] - 2026-07-13
